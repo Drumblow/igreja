@@ -9,7 +9,7 @@ use actix_cors::Cors;
 use actix_web::{middleware::Logger, web, App, HttpServer};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
-use crate::api::handlers::{auth_handler, health_handler, member_handler};
+use crate::api::handlers::{auth_handler, family_handler, health_handler, member_handler, member_history_handler, ministry_handler};
 use crate::config::AppConfig;
 use crate::infrastructure::database;
 
@@ -73,8 +73,26 @@ async fn main() -> std::io::Result<()> {
             .service(member_handler::get_member)
             .service(member_handler::create_member)
             .service(member_handler::update_member)
-            .service(member_handler::delete_member)
-    })
+            .service(member_handler::delete_member)            // Member History
+            .service(member_history_handler::get_member_history)
+            .service(member_history_handler::create_member_history)
+            // Families
+            .service(family_handler::list_families)
+            .service(family_handler::get_family)
+            .service(family_handler::create_family)
+            .service(family_handler::update_family)
+            .service(family_handler::delete_family)
+            .service(family_handler::add_family_member)
+            .service(family_handler::remove_family_member)
+            // Ministries
+            .service(ministry_handler::list_ministries)
+            .service(ministry_handler::get_ministry)
+            .service(ministry_handler::create_ministry)
+            .service(ministry_handler::update_ministry)
+            .service(ministry_handler::delete_ministry)
+            .service(ministry_handler::list_ministry_members)
+            .service(ministry_handler::add_ministry_member)
+            .service(ministry_handler::remove_ministry_member)    })
     .bind(&server_addr)?
     .run()
     .await

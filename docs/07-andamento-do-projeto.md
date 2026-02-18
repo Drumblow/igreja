@@ -1,8 +1,8 @@
 # 📊 Andamento do Projeto — Igreja Manager
 
-> **Última atualização:** 19 de fevereiro de 2026  
-> **Versão do documento:** 1.1  
-> **Status geral do projeto:** Em Desenvolvimento Ativo (~38% concluído)
+> **Última atualização:** 18 de fevereiro de 2026  
+> **Versão do documento:** 1.2  
+> **Status geral do projeto:** Em Desenvolvimento Ativo (~42% concluído)
 
 ---
 
@@ -18,7 +18,7 @@ O **Igreja Manager** é uma plataforma de gestão para igrejas composta por **5 
 | Banco de Dados (Schema) | ![100%](https://img.shields.io/badge/100%25-brightgreen) | ✅ Concluído |
 | Infraestrutura (Docker) | ![90%](https://img.shields.io/badge/90%25-green) | ✅ Funcional |
 | Backend — Autenticação | ![90%](https://img.shields.io/badge/90%25-green) | 🟢 Quase completo |
-| Backend — Membros | ![85%](https://img.shields.io/badge/85%25-green) | 🟢 Quase completo |
+| Backend — Membros | ![95%](https://img.shields.io/badge/95%25-green) | 🟢 Famílias + Ministérios + Histórico |
 | Backend — Financeiro | ![0%](https://img.shields.io/badge/0%25-red) | 🔴 Não iniciado |
 | Backend — Patrimônio | ![0%](https://img.shields.io/badge/0%25-red) | 🔴 Não iniciado |
 | Backend — EBD | ![0%](https://img.shields.io/badge/0%25-red) | 🔴 Não iniciado |
@@ -88,11 +88,11 @@ Toda a documentação de especificação foi finalizada, totalizando **~5.052 li
 | Tabela | Campos | Utilizada no Backend? | Utilizada no Frontend? |
 |--------|:------:|:---------------------:|:----------------------:|
 | `members` | 35+ | ✅ CRUD completo | ✅ Lista + Detalhe |
-| `families` | 5 | ❌ Sem API | ❌ Sem UI |
-| `family_relationships` | 5 | ❌ Sem API | ❌ Sem UI |
-| `ministries` | 7 | ❌ Sem API | ❌ Sem UI |
-| `member_ministries` | 5 | ❌ Sem API | ❌ Sem UI |
-| `member_history` | 6 | ❌ Sem API | ❌ Sem UI |
+| `families` | 5 | ✅ CRUD completo | ❌ Sem UI |
+| `family_relationships` | 5 | ✅ Add/Remove | ❌ Sem UI |
+| `ministries` | 7 | ✅ CRUD completo | ❌ Sem UI |
+| `member_ministries` | 5 | ✅ Add/Remove | ❌ Sem UI |
+| `member_history` | 6 | ✅ List/Create | ❌ Sem UI |
 
 #### Módulo Financeiro (5 tabelas)
 
@@ -223,7 +223,7 @@ backend/src/
 - Bloqueio de conta após 5 tentativas falhas (15 min de lock)
 - Rastreamento de `failed_attempts` e `locked_until`
 
-#### Membros (6 endpoints)
+#### Membros (8 endpoints)
 
 | Método | Rota | Auth | Descrição | Status |
 |--------|------|------|-----------|--------|
@@ -233,6 +233,33 @@ backend/src/
 | `POST` | `/api/v1/members` | ✅ `members:create` | Criar membro (35 campos) | ✅ Completo |
 | `PUT` | `/api/v1/members/{id}` | ✅ `members:update` | Atualizar membro (campos dinâmicos) | ✅ Completo |
 | `DELETE` | `/api/v1/members/{id}` | ✅ `members:delete` | Soft delete | ✅ Completo |
+| `GET` | `/api/v1/members/{id}/history` | ✅ JWT | Histórico de eventos do membro | ✅ Completo |
+| `POST` | `/api/v1/members/{id}/history` | ✅ `members:write` | Registrar evento no histórico | ✅ Completo |
+
+#### Famílias (7 endpoints) — ✅ NOVO
+
+| Método | Rota | Auth | Descrição | Status |
+|--------|------|------|-----------|--------|
+| `GET` | `/api/v1/families` | ✅ JWT | Listar famílias com paginação | ✅ Completo |
+| `GET` | `/api/v1/families/{id}` | ✅ JWT | Detalhes da família com membros | ✅ Completo |
+| `POST` | `/api/v1/families` | ✅ `members:write` | Criar família (com membros opcionais) | ✅ Completo |
+| `PUT` | `/api/v1/families/{id}` | ✅ `members:write` | Atualizar família | ✅ Completo |
+| `DELETE` | `/api/v1/families/{id}` | ✅ `members:delete` | Remover família (desvincula membros) | ✅ Completo |
+| `POST` | `/api/v1/families/{id}/members` | ✅ `members:write` | Adicionar membro à família | ✅ Completo |
+| `DELETE` | `/api/v1/families/{fid}/members/{mid}` | ✅ `members:write` | Remover membro da família | ✅ Completo |
+
+#### Ministérios (8 endpoints) — ✅ NOVO
+
+| Método | Rota | Auth | Descrição | Status |
+|--------|------|------|-----------|--------|
+| `GET` | `/api/v1/ministries` | ✅ JWT | Listar ministérios (com contagem de membros) | ✅ Completo |
+| `GET` | `/api/v1/ministries/{id}` | ✅ JWT | Detalhes do ministério | ✅ Completo |
+| `POST` | `/api/v1/ministries` | ✅ `members:write` | Criar ministério | ✅ Completo |
+| `PUT` | `/api/v1/ministries/{id}` | ✅ `members:write` | Atualizar ministério | ✅ Completo |
+| `DELETE` | `/api/v1/ministries/{id}` | ✅ `members:delete` | Remover ministério | ✅ Completo |
+| `GET` | `/api/v1/ministries/{id}/members` | ✅ JWT | Listar membros do ministério | ✅ Completo |
+| `POST` | `/api/v1/ministries/{id}/members` | ✅ `members:write` | Adicionar membro ao ministério | ✅ Completo |
+| `DELETE` | `/api/v1/ministries/{mid}/members/{id}` | ✅ `members:write` | Remover membro do ministério | ✅ Completo |
 
 ### 4.4 O que Falta no Backend
 
@@ -254,7 +281,7 @@ backend/src/
 | Módulo Financeiro completo | 5 tabelas prontas, 11 endpoints documentados | Alta |
 | Módulo EBD completo | 5 tabelas prontas, 7 endpoints documentados | Alta |
 | Módulo Patrimônio completo | 7 tabelas prontas, 7 endpoints documentados | Alta |
-| Famílias e Ministérios | Tabelas prontas, endpoints documentados | Média |
+| Famílias e Ministérios | ~~Tabelas prontas, endpoints documentados~~ ✅ **Backend completo** — falta frontend | ~~Média~~ ✅ |
 | Audit Log (escrita) | Tabela existe, falta interceptar ações | Média |
 | Cache Redis | Crate importado, não configurado | Média |
 
@@ -515,9 +542,9 @@ Crates/packages importados mas ainda sem uso no código — preparados para fase
 | 2.2 | Formulário de criação de membro | ✅ Endpoint existe | ✅ Form completo | ~~Alta~~ ✅ |
 | 2.3 | Filtros dinâmicos na listagem | ✅ BindValue enum | ✅ Dropdown wired | ~~Baixa~~ ✅ |
 | 2.4 | Detalhe completo do membro (todos os campos) | ✅ Endpoint existe | ✅ 5 seções + ações | ~~Média~~ ✅ |
-| 2.5 | CRUD de Famílias | Tabela pronta | Nova tela | Média |
-| 2.6 | CRUD de Ministérios | Tabela pronta | Nova tela | Média |
-| 2.7 | Histórico de alterações | Tabela pronta | Nova tela | Média |
+| 2.5 | CRUD de Famílias | ✅ 7 endpoints | Nova tela | ~~Média~~ ✅ |
+| 2.6 | CRUD de Ministérios | ✅ 8 endpoints | Nova tela | ~~Média~~ ✅ |
+| 2.7 | Histórico de alterações | ✅ 2 endpoints | Nova tela | ~~Média~~ ✅ |
 
 ### Fase 3 — Módulo Financeiro (Prioridade: 🟡 Média)
 
