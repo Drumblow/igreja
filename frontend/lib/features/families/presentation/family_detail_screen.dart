@@ -7,6 +7,8 @@ import '../../../core/network/api_client.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../core/widgets/searchable_entity_dropdown.dart';
+import '../../members/data/member_repository.dart';
 import '../data/family_repository.dart';
 import '../data/models/family_models.dart';
 
@@ -101,6 +103,130 @@ class _FamilyDetailScreenState extends State<FamilyDetailScreen> {
     }
   }
 
+  static const _relationshipOptions = [
+    ('chefe', 'Chefe da Família'),
+    ('conjuge', 'Cônjuge'),
+    ('filho', 'Filho(a)'),
+    ('filha', 'Filha'),
+    ('pai', 'Pai'),
+    ('mae', 'Mãe'),
+    ('irmao', 'Irmão'),
+    ('irma', 'Irmã'),
+    ('avo', 'Avô'),
+    ('avoa', 'Avó'),
+    ('neto', 'Neto'),
+    ('neta', 'Neta'),
+    ('sogro', 'Sogro'),
+    ('sogra', 'Sogra'),
+    ('genro', 'Genro'),
+    ('nora', 'Nora'),
+    ('outro', 'Outro'),
+  ];
+
+  Future<void> _showAddMemberDialog() async {
+    final apiClient = RepositoryProvider.of<ApiClient>(context);
+    final memberRepo = MemberRepository(apiClient: apiClient);
+    EntityOption? selectedMember;
+    String selectedRelationship = 'outro';
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: const Text('Vincular Membro à Família'),
+          content: SizedBox(
+            width: 400,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SearchableEntityDropdown(
+                  label: 'Membro *',
+                  hint: 'Busque pelo nome...',
+                  onSelected: (entity) {
+                    setDialogState(() => selectedMember = entity);
+                  },
+                  searchCallback: (query) async {
+                    final result = await memberRepo.getMembers(
+                      search: query,
+                      perPage: 20,
+                      status: 'ativo',
+                    );
+                    return result.members
+                        .map((m) =>
+                            EntityOption(id: m.id, label: m.fullName))
+                        .toList();
+                  },
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                DropdownButtonFormField<String>(
+                  decoration: const InputDecoration(
+                    labelText: 'Parentesco *',
+                    border: OutlineInputBorder(),
+                  ),
+                  value: selectedRelationship,
+                  items: _relationshipOptions
+                      .map((r) => DropdownMenuItem(
+                            value: r.$1,
+                            child: Text(r.$2),
+                          ))
+                      .toList(),
+                  onChanged: (value) {
+                    if (value != null) {
+                      setDialogState(
+                          () => selectedRelationship = value);
+                    }
+                  },
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: selectedMember != null
+                  ? () => Navigator.pop(ctx, true)
+                  : null,
+              child: const Text('Vincular'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (confirmed == true && selectedMember != null && mounted) {
+      try {
+        await _repo.addMember(
+          familyId: widget.familyId,
+          memberId: selectedMember!.id,
+          relationship: selectedRelationship,
+        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Membro vinculado à família'),
+              backgroundColor: AppColors.success,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+          _loadFamily();
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Erro ao vincular membro: $e'),
+              backgroundColor: AppColors.error,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      }
+    }
+  }
+
   Future<void> _removeMember(FamilyMember member) async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -160,6 +286,11 @@ class _FamilyDetailScreenState extends State<FamilyDetailScreen> {
         title: Text(_family?.name ?? 'Família'),
         actions: _family != null
             ? [
+                IconButton(
+                  icon: const Icon(Icons.person_add_outlined),
+                  tooltip: 'Vincular Membro',
+                  onPressed: _showAddMemberDialog,
+                ),
                 IconButton(
                   icon: const Icon(Icons.edit_outlined),
                   tooltip: 'Editar',
@@ -286,7 +417,19 @@ class _FamilyDetailScreenState extends State<FamilyDetailScreen> {
             ],
 
             // ── Members ──
-            _sectionTitle('Membros da Família', Icons.people_outlined),
+            Row(
+              children: [
+                Expanded(
+                  child: _sectionTitle('Membros da Família', Icons.people_outlined),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.person_add_outlined,
+                      color: AppColors.accent),
+                  tooltip: 'Vincular Membro',
+                  onPressed: _showAddMemberDialog,
+                ),
+              ],
+            ),
             const SizedBox(height: AppSpacing.md),
             if (family.members == null || family.members!.isEmpty)
               Card(

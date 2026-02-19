@@ -40,6 +40,16 @@ class _ClassDetailView extends StatelessWidget {
         title: const Text('Detalhes da Turma'),
         actions: [
           IconButton(
+            icon: const Icon(Icons.edit_outlined),
+            tooltip: 'Editar Turma',
+            onPressed: () {
+              final state = context.read<EbdBloc>().state;
+              if (state is EbdClassDetailLoaded) {
+                _showEditClassDialog(context, state.ebdClass);
+              }
+            },
+          ),
+          IconButton(
             icon: const Icon(Icons.person_add_outlined),
             tooltip: 'Matricular Aluno',
             onPressed: () => _showEnrollDialog(context),
@@ -204,6 +214,126 @@ class _ClassDetailView extends StatelessWidget {
                   classId: classId,
                 )),
         ],
+      ),
+    );
+  }
+
+  void _showEditClassDialog(BuildContext context, EbdClass ebdClass) {
+    final nameCtrl = TextEditingController(text: ebdClass.name);
+    final roomCtrl = TextEditingController(text: ebdClass.room ?? '');
+    final capacityCtrl = TextEditingController(
+        text: ebdClass.maxCapacity?.toString() ?? '');
+    final ageStartCtrl = TextEditingController(
+        text: ebdClass.ageRangeStart?.toString() ?? '');
+    final ageEndCtrl = TextEditingController(
+        text: ebdClass.ageRangeEnd?.toString() ?? '');
+    bool isActive = ebdClass.isActive;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: const Text('Editar Turma'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nameCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Nome da Turma *',
+                    hintText: 'Ex: Adultos, Jovens, Crianças',
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: ageStartCtrl,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: 'Idade Mín.',
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(
+                      child: TextField(
+                        controller: ageEndCtrl,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: 'Idade Máx.',
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.md),
+                TextField(
+                  controller: roomCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Sala',
+                    hintText: 'Sala da turma (opcional)',
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                TextField(
+                  controller: capacityCtrl,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Capacidade Máxima',
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                SwitchListTile(
+                  title: const Text('Turma Ativa'),
+                  value: isActive,
+                  onChanged: (v) => setDialogState(() => isActive = v),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: () {
+                if (nameCtrl.text.trim().isEmpty) return;
+                final data = <String, dynamic>{
+                  'name': nameCtrl.text.trim(),
+                  'is_active': isActive,
+                };
+                if (ageStartCtrl.text.isNotEmpty) {
+                  data['age_range_start'] =
+                      int.tryParse(ageStartCtrl.text);
+                }
+                if (ageEndCtrl.text.isNotEmpty) {
+                  data['age_range_end'] =
+                      int.tryParse(ageEndCtrl.text);
+                }
+                if (roomCtrl.text.trim().isNotEmpty) {
+                  data['room'] = roomCtrl.text.trim();
+                }
+                if (capacityCtrl.text.isNotEmpty) {
+                  data['max_capacity'] =
+                      int.tryParse(capacityCtrl.text);
+                }
+                context.read<EbdBloc>().add(
+                      EbdClassUpdateRequested(
+                        classId: classId,
+                        data: data,
+                      ),
+                    );
+                Navigator.pop(ctx);
+              },
+              child: const Text('Salvar'),
+            ),
+          ],
+        ),
       ),
     );
   }

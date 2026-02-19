@@ -275,20 +275,164 @@ class _TermTile extends StatelessWidget {
               ),
           ],
         ),
-        trailing: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-          decoration: BoxDecoration(
-            color: (term.isActive ? AppColors.success : AppColors.textMuted)
-                .withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Text(
-            term.statusLabel,
-            style: AppTypography.bodySmall.copyWith(
-              color: term.isActive ? AppColors.success : AppColors.textMuted,
-              fontWeight: FontWeight.w600,
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(
+                color: (term.isActive ? AppColors.success : AppColors.textMuted)
+                    .withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                term.statusLabel,
+                style: AppTypography.bodySmall.copyWith(
+                  color: term.isActive ? AppColors.success : AppColors.textMuted,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            const SizedBox(width: 4),
+            IconButton(
+              icon: const Icon(Icons.edit_outlined, size: 20),
+              tooltip: 'Editar Trimestre',
+              onPressed: () => _showEditTermDialog(context),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showEditTermDialog(BuildContext context) {
+    final nameCtrl = TextEditingController(text: term.name);
+    final themeCtrl = TextEditingController(text: term.theme ?? '');
+    final magazineCtrl = TextEditingController(text: term.magazineTitle ?? '');
+    DateTime startDate = DateTime.tryParse(term.startDate) ?? DateTime.now();
+    DateTime endDate = DateTime.tryParse(term.endDate) ??
+        DateTime.now().add(const Duration(days: 90));
+    bool isActive = term.isActive;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: const Text('Editar Trimestre'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nameCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Nome *',
+                    hintText: 'Ex: 1º Trimestre 2025',
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                InkWell(
+                  onTap: () async {
+                    final d = await showDatePicker(
+                      context: ctx,
+                      initialDate: startDate,
+                      firstDate: DateTime(2020),
+                      lastDate: DateTime(2030),
+                    );
+                    if (d != null) setDialogState(() => startDate = d);
+                  },
+                  child: InputDecorator(
+                    decoration: const InputDecoration(
+                      labelText: 'Data Início',
+                      suffixIcon: Icon(Icons.calendar_today, size: 18),
+                    ),
+                    child: Text(
+                      '${startDate.day.toString().padLeft(2, '0')}/${startDate.month.toString().padLeft(2, '0')}/${startDate.year}',
+                    ),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                InkWell(
+                  onTap: () async {
+                    final d = await showDatePicker(
+                      context: ctx,
+                      initialDate: endDate,
+                      firstDate: DateTime(2020),
+                      lastDate: DateTime(2030),
+                    );
+                    if (d != null) setDialogState(() => endDate = d);
+                  },
+                  child: InputDecorator(
+                    decoration: const InputDecoration(
+                      labelText: 'Data Fim',
+                      suffixIcon: Icon(Icons.calendar_today, size: 18),
+                    ),
+                    child: Text(
+                      '${endDate.day.toString().padLeft(2, '0')}/${endDate.month.toString().padLeft(2, '0')}/${endDate.year}',
+                    ),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                TextField(
+                  controller: themeCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Tema',
+                    hintText: 'Tema do trimestre (opcional)',
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                TextField(
+                  controller: magazineCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Revista',
+                    hintText: 'Título da revista (opcional)',
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                SwitchListTile(
+                  title: const Text('Trimestre Ativo'),
+                  subtitle: Text(
+                    isActive
+                        ? 'Ativar este trimestre desativará os demais'
+                        : 'Trimestre encerrado',
+                    style: AppTypography.bodySmall
+                        .copyWith(color: AppColors.textSecondary),
+                  ),
+                  value: isActive,
+                  onChanged: (v) => setDialogState(() => isActive = v),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ],
             ),
           ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: () {
+                if (nameCtrl.text.trim().isEmpty) return;
+                context.read<EbdBloc>().add(EbdTermUpdateRequested(
+                      termId: term.id,
+                      data: {
+                        'name': nameCtrl.text.trim(),
+                        'start_date':
+                            '${startDate.year}-${startDate.month.toString().padLeft(2, '0')}-${startDate.day.toString().padLeft(2, '0')}',
+                        'end_date':
+                            '${endDate.year}-${endDate.month.toString().padLeft(2, '0')}-${endDate.day.toString().padLeft(2, '0')}',
+                        'is_active': isActive,
+                        if (themeCtrl.text.trim().isNotEmpty)
+                          'theme': themeCtrl.text.trim(),
+                        if (magazineCtrl.text.trim().isNotEmpty)
+                          'magazine_title': magazineCtrl.text.trim(),
+                      },
+                    ));
+                Navigator.pop(ctx);
+              },
+              child: const Text('Salvar'),
+            ),
+          ],
         ),
       ),
     );
