@@ -5,6 +5,7 @@ use utoipa::ToSchema;
 use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow, ToSchema)]
+#[allow(dead_code)]
 pub struct Church {
     pub id: Uuid,
     pub name: String,

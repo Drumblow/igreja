@@ -101,6 +101,7 @@ pub struct MemberFilter {
     pub gender: Option<String>,
     pub marital_status: Option<String>,
     pub role_position: Option<String>,
+    #[allow(dead_code)]
     pub ministry_id: Option<uuid::Uuid>,
     pub birth_month: Option<i32>,
     pub age_min: Option<i32>,
@@ -111,6 +112,7 @@ pub struct MemberFilter {
 }
 
 #[derive(Debug, Serialize, ToSchema)]
+#[allow(dead_code)]
 pub struct MemberStats {
     pub total_active: i64,
     pub total_inactive: i64,

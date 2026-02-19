@@ -58,7 +58,9 @@ impl<T: Serialize> ApiResponse<T> {
 pub struct PaginationParams {
     pub page: Option<i64>,
     pub per_page: Option<i64>,
+    #[allow(dead_code)]
     pub sort_by: Option<String>,
+    #[allow(dead_code)]
     pub sort_order: Option<String>,
     pub search: Option<String>,
 }

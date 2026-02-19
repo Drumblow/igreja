@@ -1,5 +1,5 @@
 use crate::application::dto::{
-    AddFamilyMemberRequest, CreateFamilyRequest, FamilyMemberInput, UpdateFamilyRequest,
+    AddFamilyMemberRequest, CreateFamilyRequest, UpdateFamilyRequest,
 };
 use crate::domain::entities::{Family, FamilyDetail, FamilyMemberInfo, FamilyRelationship};
 use crate::errors::AppError;

@@ -5,6 +5,7 @@ use utoipa::ToSchema;
 use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow, ToSchema)]
+#[allow(dead_code)]
 pub struct User {
     pub id: Uuid,
     pub church_id: Uuid,
@@ -25,6 +26,7 @@ pub struct User {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow, ToSchema)]
+#[allow(dead_code)]
 pub struct Role {
     pub id: Uuid,
     pub name: String,
@@ -37,6 +39,7 @@ pub struct Role {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+#[allow(dead_code)]
 pub struct RefreshToken {
     pub id: Uuid,
     pub user_id: Uuid,

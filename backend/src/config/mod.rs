@@ -5,11 +5,14 @@ pub struct AppConfig {
     pub host: String,
     pub port: u16,
     pub database_url: String,
+    #[allow(dead_code)]
     pub redis_url: String,
     pub jwt_secret: String,
     pub jwt_access_expiry: i64,
     pub jwt_refresh_expiry: i64,
+    #[allow(dead_code)]
     pub upload_dir: String,
+    #[allow(dead_code)]
     pub max_upload_size_mb: usize,
 }
 

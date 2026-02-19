@@ -14,6 +14,7 @@ struct RefreshTokenRow {
     id: uuid::Uuid,
     user_id: uuid::Uuid,
     token_hash: String,
+    #[allow(dead_code)]
     expires_at: chrono::DateTime<chrono::Utc>,
 }
 

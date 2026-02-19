@@ -1,6 +1,5 @@
 use actix_web::{HttpResponse, ResponseError};
 use serde::Serialize;
-use std::fmt;
 
 #[derive(Debug, Serialize)]
 pub struct ErrorBody {
@@ -57,6 +56,7 @@ impl AppError {
         }
     }
 
+    #[allow(dead_code)]
     pub fn validation_with_details(message: impl Into<String>, details: Vec<FieldError>) -> Self {
         Self::Validation {
             message: message.into(),

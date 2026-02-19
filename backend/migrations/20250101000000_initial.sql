@@ -9,6 +9,11 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 CREATE EXTENSION IF NOT EXISTS "unaccent";
 
+-- Wrapper IMMUTABLE para usar unaccent em índices
+CREATE OR REPLACE FUNCTION immutable_unaccent(text) RETURNS text AS $$
+    SELECT unaccent($1);
+$$ LANGUAGE sql IMMUTABLE PARALLEL SAFE;
+
 -- Função para atualizar updated_at automaticamente
 CREATE OR REPLACE FUNCTION update_updated_at()
 RETURNS TRIGGER AS $$
@@ -185,7 +190,7 @@ CREATE INDEX idx_members_birth ON members(church_id, birth_date);
 CREATE INDEX idx_members_entry_date ON members(church_id, entry_date);
 CREATE INDEX idx_members_role ON members(church_id, role_position);
 CREATE INDEX idx_members_deleted ON members(deleted_at) WHERE deleted_at IS NULL;
-CREATE INDEX idx_members_name_search ON members USING gin(to_tsvector('portuguese', unaccent(full_name)));
+CREATE INDEX idx_members_name_search ON members(church_id, (immutable_unaccent(lower(full_name))));
 
 -- Famílias
 CREATE TABLE families (

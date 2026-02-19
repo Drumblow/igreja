@@ -75,6 +75,7 @@ impl AuthService {
         base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(bytes)
     }
 
+    #[allow(dead_code)]
     pub fn validate_token(token: &str, config: &AppConfig) -> Result<Claims, AppError> {
         let token_data = decode::<Claims>(
             token,
