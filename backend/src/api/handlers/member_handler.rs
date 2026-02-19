@@ -5,7 +5,7 @@ use validator::Validate;
 use crate::api::middleware;
 use crate::api::response::{ApiResponse, PaginationParams};
 use crate::application::dto::{CreateMemberRequest, MemberFilter, UpdateMemberRequest};
-use crate::application::services::MemberService;
+use crate::application::services::{AuditService, MemberService};
 use crate::config::AppConfig;
 use crate::errors::AppError;
 
@@ -109,6 +109,12 @@ pub async fn create_member(
 
     let member = MemberService::create(pool.get_ref(), church_id, &body).await?;
 
+    // Audit log
+    let user_id = middleware::get_user_id(&claims)?;
+    AuditService::log_action(
+        pool.get_ref(), church_id, Some(user_id), "create", "member", member.id,
+    ).await.ok();
+
     Ok(HttpResponse::Created().json(ApiResponse::with_message(member, "Membro cadastrado com sucesso")))
 }
 
@@ -143,6 +149,12 @@ pub async fn update_member(
 
     let member = MemberService::update(pool.get_ref(), church_id, member_id, &body).await?;
 
+    // Audit log
+    let user_id = middleware::get_user_id(&claims)?;
+    AuditService::log_action(
+        pool.get_ref(), church_id, Some(user_id), "update", "member", member_id,
+    ).await.ok();
+
     Ok(HttpResponse::Ok().json(ApiResponse::with_message(member, "Membro atualizado com sucesso")))
 }
 
@@ -170,6 +182,12 @@ pub async fn delete_member(
     let member_id = path.into_inner();
 
     MemberService::delete(pool.get_ref(), church_id, member_id).await?;
+
+    // Audit log
+    let user_id = middleware::get_user_id(&claims)?;
+    AuditService::log_action(
+        pool.get_ref(), church_id, Some(user_id), "delete", "member", member_id,
+    ).await.ok();
 
     Ok(HttpResponse::Ok().json(ApiResponse::ok(serde_json::json!({"message": "Membro removido com sucesso"}))))
 }

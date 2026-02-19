@@ -13,8 +13,9 @@ import '../data/models/financial_models.dart';
 
 class FinancialEntryFormScreen extends StatelessWidget {
   final String? initialType; // "receita" or "despesa"
+  final String? entryId; // if editing an existing entry
 
-  const FinancialEntryFormScreen({super.key, this.initialType});
+  const FinancialEntryFormScreen({super.key, this.initialType, this.entryId});
 
   @override
   Widget build(BuildContext context) {
@@ -22,16 +23,17 @@ class FinancialEntryFormScreen extends StatelessWidget {
     final repo = FinancialRepository(apiClient: apiClient);
     return BlocProvider(
       create: (_) => FinancialBloc(repository: repo),
-      child: _EntryFormView(initialType: initialType, repository: repo),
+      child: _EntryFormView(initialType: initialType, entryId: entryId, repository: repo),
     );
   }
 }
 
 class _EntryFormView extends StatefulWidget {
   final String? initialType;
+  final String? entryId;
   final FinancialRepository repository;
 
-  const _EntryFormView({this.initialType, required this.repository});
+  const _EntryFormView({this.initialType, this.entryId, required this.repository});
 
   @override
   State<_EntryFormView> createState() => _EntryFormViewState();
@@ -59,27 +61,63 @@ class _EntryFormViewState extends State<_EntryFormView> {
   List<BankAccount> _bankAccounts = [];
   List<Campaign> _campaigns = [];
   bool _loadingOptions = true;
+  bool _isEditing = false;
 
   @override
   void initState() {
     super.initState();
     _type = widget.initialType ?? 'receita';
+    _isEditing = widget.entryId != null;
     _loadOptions();
   }
 
   Future<void> _loadOptions() async {
     try {
-      final plans = await widget.repository.getAccountPlans(perPage: 100, type: _type);
+      final plans = await widget.repository.getAccountPlans(perPage: 100, type: _isEditing ? null : _type);
       final accounts = await widget.repository.getBankAccounts(perPage: 100);
       final campaigns = await widget.repository.getCampaigns(perPage: 100);
+
       if (mounted) {
         setState(() {
           _accountPlans = plans.items;
           _bankAccounts = accounts.items;
           _campaigns = campaigns.items.where((c) => c.status == 'ativa').toList();
-          _loadingOptions = false;
         });
       }
+
+      // Load existing entry data for editing
+      if (_isEditing && widget.entryId != null) {
+        final entry = await widget.repository.getEntry(widget.entryId!);
+        if (mounted) {
+          setState(() {
+            _type = entry.type;
+            _descriptionController.text = entry.description;
+            _amountController.text = entry.amount.toStringAsFixed(2);
+            _selectedAccountPlanId = entry.accountPlanId;
+            _selectedBankAccountId = entry.bankAccountId;
+            _selectedCampaignId = entry.campaignId;
+            _selectedPaymentMethod = entry.paymentMethod;
+            _status = entry.status;
+            if (entry.entryDate.isNotEmpty) {
+              _entryDate = DateTime.tryParse(entry.entryDate) ?? DateTime.now();
+            }
+            if (entry.dueDate != null) {
+              _dueDate = DateTime.tryParse(entry.dueDate!);
+            }
+            if (entry.paymentDate != null) {
+              _paymentDate = DateTime.tryParse(entry.paymentDate!);
+            }
+            if (entry.supplierName != null) {
+              _supplierController.text = entry.supplierName!;
+            }
+            if (entry.notes != null) {
+              _notesController.text = entry.notes!;
+            }
+          });
+        }
+      }
+
+      if (mounted) setState(() => _loadingOptions = false);
     } catch (_) {
       if (mounted) setState(() => _loadingOptions = false);
     }
@@ -119,7 +157,11 @@ class _EntryFormViewState extends State<_EntryFormView> {
       if (_notesController.text.isNotEmpty) 'notes': _notesController.text.trim(),
     };
 
-    context.read<FinancialBloc>().add(FinancialEntryCreateRequested(data: data));
+    context.read<FinancialBloc>().add(
+      _isEditing
+          ? FinancialEntryUpdateRequested(entryId: widget.entryId!, data: data)
+          : FinancialEntryCreateRequested(data: data),
+    );
   }
 
   @override
@@ -159,7 +201,9 @@ class _EntryFormViewState extends State<_EntryFormView> {
                           const SizedBox(width: AppSpacing.sm),
                           Expanded(
                             child: Text(
-                              isIncome ? 'Nova Receita' : 'Nova Despesa',
+                              _isEditing
+                                  ? 'Editar Lançamento'
+                                  : (isIncome ? 'Nova Receita' : 'Nova Despesa'),
                               style: AppTypography.headingLarge,
                             ),
                           ),
@@ -274,7 +318,7 @@ class _EntryFormViewState extends State<_EntryFormView> {
                                     ),
                                     child: loading
                                         ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                                        : Text('Salvar Lançamento', style: AppTypography.buttonLarge),
+                                        : Text(_isEditing ? 'Atualizar Lançamento' : 'Salvar Lançamento', style: AppTypography.buttonLarge),
                                   ),
                                 );
                               },

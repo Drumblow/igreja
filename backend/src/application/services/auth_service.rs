@@ -6,6 +6,9 @@ use argon2::password_hash::SaltString;
 use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
 use chrono::{DateTime, Utc};
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
+use lettre::message::header::ContentType;
+use lettre::transport::smtp::authentication::Credentials;
+use lettre::{AsyncSmtpTransport, AsyncTransport, Message, Tokio1Executor};
 use sqlx::{FromRow, PgPool};
 use uuid::Uuid;
 
@@ -73,6 +76,63 @@ impl AuthService {
         let mut bytes = [0u8; 32];
         rand::fill(&mut bytes);
         base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(bytes)
+    }
+
+    /// Generate a 6-character alphanumeric reset token (easy to copy from email)
+    pub fn generate_reset_token() -> String {
+        const CHARSET: &[u8] = b"ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no I/O/0/1 for clarity
+        let mut bytes = [0u8; 6];
+        rand::fill(&mut bytes);
+        bytes
+            .iter()
+            .map(|b| CHARSET[(*b as usize) % CHARSET.len()] as char)
+            .collect()
+    }
+
+    /// Send password reset email using lettre SMTP transport
+    pub async fn send_reset_email(
+        to_email: &str,
+        token: &str,
+        config: &AppConfig,
+    ) -> Result<(), AppError> {
+        let email = Message::builder()
+            .from(
+                config
+                    .smtp_from
+                    .parse()
+                    .map_err(|e| AppError::Internal(format!("Invalid SMTP from address: {e}")))?,
+            )
+            .to(to_email
+                .parse()
+                .map_err(|e| AppError::Internal(format!("Invalid recipient address: {e}")))?)
+            .subject("Igreja Manager — Redefinição de Senha")
+            .header(ContentType::TEXT_HTML)
+            .body(format!(
+                r#"<h2>Redefinição de Senha</h2>
+<p>Você solicitou a redefinição de sua senha no <strong>Igreja Manager</strong>.</p>
+<p>Use o código abaixo para redefinir sua senha:</p>
+<h1 style="letter-spacing:8px;font-family:monospace;text-align:center;color:#D4A843;">{token}</h1>
+<p>Este código expira em <strong>30 minutos</strong>.</p>
+<p>Se você não solicitou esta redefinição, ignore este e-mail.</p>"#
+            ))
+            .map_err(|e| AppError::Internal(format!("Failed to build email: {e}")))?;
+
+        let creds = Credentials::new(
+            config.smtp_username.clone(),
+            config.smtp_password.clone(),
+        );
+
+        let mailer = AsyncSmtpTransport::<Tokio1Executor>::relay(&config.smtp_host)
+            .map_err(|e| AppError::Internal(format!("SMTP relay error: {e}")))?
+            .credentials(creds)
+            .build();
+
+        mailer
+            .send(email)
+            .await
+            .map_err(|e| AppError::Internal(format!("Failed to send email: {e}")))?;
+
+        Ok(())
     }
 
     #[allow(dead_code)]

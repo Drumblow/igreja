@@ -88,6 +88,11 @@ class _FinancialOverviewViewState extends State<_FinancialOverviewView> {
                   label: 'Campanhas',
                   onTap: () => context.go('/financial/campaigns'),
                 ),
+                _QuickAction(
+                  icon: Icons.lock_clock_outlined,
+                  label: 'Fechamento Mensal',
+                  onTap: () => context.go('/financial/monthly-closings'),
+                ),
               ],
             ),
           ),

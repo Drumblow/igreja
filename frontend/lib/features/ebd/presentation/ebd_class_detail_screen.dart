@@ -1,0 +1,349 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+
+import '../../../core/network/api_client.dart';
+import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_spacing.dart';
+import '../../../core/theme/app_typography.dart';
+import '../bloc/ebd_bloc.dart';
+import '../bloc/ebd_event_state.dart';
+import '../data/ebd_repository.dart';
+import '../data/models/ebd_models.dart';
+
+class EbdClassDetailScreen extends StatelessWidget {
+  final String classId;
+  const EbdClassDetailScreen({super.key, required this.classId});
+
+  @override
+  Widget build(BuildContext context) {
+    final apiClient = RepositoryProvider.of<ApiClient>(context);
+    return BlocProvider(
+      create: (_) => EbdBloc(
+        repository: EbdRepository(apiClient: apiClient),
+      )..add(EbdClassDetailLoadRequested(classId: classId)),
+      child: _ClassDetailView(classId: classId),
+    );
+  }
+}
+
+class _ClassDetailView extends StatelessWidget {
+  final String classId;
+  const _ClassDetailView({required this.classId});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      appBar: AppBar(
+        title: const Text('Detalhes da Turma'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.person_add_outlined),
+            tooltip: 'Matricular Aluno',
+            onPressed: () => _showEnrollDialog(context),
+          ),
+        ],
+      ),
+      body: BlocConsumer<EbdBloc, EbdState>(
+        listener: (context, state) {
+          if (state is EbdSaved) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(state.message)),
+            );
+            context
+                .read<EbdBloc>()
+                .add(EbdClassDetailLoadRequested(classId: classId));
+          }
+          if (state is EbdError) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(state.message)),
+            );
+          }
+        },
+        builder: (context, state) {
+          if (state is EbdLoading) {
+            return const Center(
+              child: CircularProgressIndicator(color: AppColors.accent),
+            );
+          }
+          if (state is EbdClassDetailLoaded) {
+            return _buildContent(context, state.ebdClass, state.enrollments);
+          }
+          if (state is EbdError) {
+            return Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.error_outline,
+                      size: 48, color: AppColors.error),
+                  const SizedBox(height: AppSpacing.md),
+                  Text(state.message, style: AppTypography.bodyMedium),
+                  const SizedBox(height: AppSpacing.lg),
+                  OutlinedButton.icon(
+                    onPressed: () => context
+                        .read<EbdBloc>()
+                        .add(EbdClassDetailLoadRequested(classId: classId)),
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('Tentar novamente'),
+                  ),
+                ],
+              ),
+            );
+          }
+          return const SizedBox.shrink();
+        },
+      ),
+    );
+  }
+
+  Widget _buildContent(
+    BuildContext context,
+    EbdClass ebdClass,
+    List<EbdEnrollmentDetail> enrollments,
+  ) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Class info card
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.groups_outlined,
+                        color: AppColors.accent, size: 28),
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(
+                      child: Text(ebdClass.name,
+                          style: AppTypography.headingMedium),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: (ebdClass.isActive
+                                ? AppColors.success
+                                : AppColors.textMuted)
+                            .withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        ebdClass.isActive ? 'Ativa' : 'Inativa',
+                        style: AppTypography.bodySmall.copyWith(
+                          color: ebdClass.isActive
+                              ? AppColors.success
+                              : AppColors.textMuted,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const Divider(height: 24),
+                _InfoRow('Faixa Etária', ebdClass.ageRangeLabel),
+                if (ebdClass.room != null)
+                  _InfoRow('Sala', ebdClass.room!),
+                if (ebdClass.maxCapacity != null)
+                  _InfoRow('Capacidade', '${ebdClass.maxCapacity} alunos'),
+              ],
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xl),
+
+          // Enrollments section
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Alunos Matriculados (${enrollments.length})',
+                  style: AppTypography.headingMedium),
+              IconButton(
+                icon: const Icon(Icons.person_add_outlined),
+                onPressed: () => _showEnrollDialog(context),
+                tooltip: 'Matricular',
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+
+          if (enrollments.isEmpty)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(AppSpacing.xl),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                border: Border.all(color: AppColors.border),
+              ),
+              child: Column(
+                children: [
+                  Icon(Icons.person_off_outlined,
+                      size: 40,
+                      color: AppColors.textMuted.withValues(alpha: 0.4)),
+                  const SizedBox(height: AppSpacing.sm),
+                  Text('Nenhum aluno matriculado',
+                      style: AppTypography.bodyMedium
+                          .copyWith(color: AppColors.textSecondary)),
+                ],
+              ),
+            )
+          else
+            ...enrollments.map((e) => _EnrollmentTile(
+                  enrollment: e,
+                  classId: classId,
+                )),
+        ],
+      ),
+    );
+  }
+
+  void _showEnrollDialog(BuildContext context) {
+    final memberIdCtrl = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Matricular Aluno'),
+        content: TextField(
+          controller: memberIdCtrl,
+          decoration: const InputDecoration(
+            labelText: 'ID do Membro *',
+            hintText: 'UUID do membro',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () {
+              if (memberIdCtrl.text.trim().isEmpty) return;
+              context.read<EbdBloc>().add(EbdEnrollMemberRequested(
+                    classId: classId,
+                    data: {'member_id': memberIdCtrl.text.trim()},
+                  ));
+              Navigator.pop(ctx);
+            },
+            child: const Text('Matricular'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _InfoRow extends StatelessWidget {
+  final String label;
+  final String value;
+  const _InfoRow(this.label, this.value);
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 120,
+            child: Text(label,
+                style: AppTypography.bodySmall
+                    .copyWith(color: AppColors.textSecondary)),
+          ),
+          Expanded(
+            child: Text(value,
+                style: AppTypography.bodyMedium
+                    .copyWith(fontWeight: FontWeight.w500)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _EnrollmentTile extends StatelessWidget {
+  final EbdEnrollmentDetail enrollment;
+  final String classId;
+  const _EnrollmentTile({required this.enrollment, required this.classId});
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      elevation: 0,
+      margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+        side: BorderSide(color: AppColors.border),
+      ),
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundColor: enrollment.isActive
+              ? AppColors.success.withValues(alpha: 0.15)
+              : AppColors.border,
+          child: Icon(
+            Icons.person_outline,
+            color: enrollment.isActive ? AppColors.success : AppColors.textMuted,
+            size: 20,
+          ),
+        ),
+        title: Text(
+          enrollment.memberName ?? 'Membro',
+          style: AppTypography.bodyMedium
+              .copyWith(fontWeight: FontWeight.w500),
+        ),
+        subtitle: Text(
+          'Matrícula: ${enrollment.enrolledAt}${enrollment.isActive ? '' : ' (Inativo)'}',
+          style: AppTypography.bodySmall
+              .copyWith(color: AppColors.textSecondary),
+        ),
+        trailing: enrollment.isActive
+            ? IconButton(
+                icon: const Icon(Icons.person_remove_outlined,
+                    size: 20, color: AppColors.error),
+                tooltip: 'Remover Matrícula',
+                onPressed: () {
+                  showDialog(
+                    context: context,
+                    builder: (ctx) => AlertDialog(
+                      title: const Text('Remover Matrícula'),
+                      content: Text(
+                          'Deseja remover ${enrollment.memberName ?? "este aluno"} da turma?'),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx),
+                          child: const Text('Cancelar'),
+                        ),
+                        FilledButton(
+                          style: FilledButton.styleFrom(
+                            backgroundColor: AppColors.error,
+                          ),
+                          onPressed: () {
+                            context
+                                .read<EbdBloc>()
+                                .add(EbdRemoveEnrollmentRequested(
+                                  classId: classId,
+                                  enrollmentId: enrollment.id,
+                                ));
+                            Navigator.pop(ctx);
+                          },
+                          child: const Text('Remover'),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              )
+            : null,
+      ),
+    );
+  }
+}

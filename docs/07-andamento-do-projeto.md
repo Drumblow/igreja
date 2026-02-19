@@ -1,8 +1,8 @@
 # 📊 Andamento do Projeto — Igreja Manager
 
 > **Última atualização:** 19 de fevereiro de 2026  
-> **Versão do documento:** 1.5  
-> **Status geral do projeto:** Em Desenvolvimento Ativo (~65% concluído)
+> **Versão do documento:** 1.10  
+> **Status geral do projeto:** Em Desenvolvimento Ativo (~96% concluído)
 
 ---
 
@@ -16,21 +16,24 @@ O **Igreja Manager** é uma plataforma de gestão para igrejas composta por **5 
 |------|:---------:|--------|
 | Documentação Técnica | ![100%](https://img.shields.io/badge/100%25-brightgreen) | ✅ Concluído |
 | Banco de Dados (Schema) | ![100%](https://img.shields.io/badge/100%25-brightgreen) | ✅ Concluído |
-| Infraestrutura (Docker) | ![90%](https://img.shields.io/badge/90%25-green) | ✅ Funcional |
-| Backend — Autenticação | ![90%](https://img.shields.io/badge/90%25-green) | 🟢 Quase completo |
+| Infraestrutura (Docker) | ![95%](https://img.shields.io/badge/95%25-green) | ✅ Docker + Redis cache + SMTP config |
+| Backend — Autenticação | ![100%](https://img.shields.io/badge/100%25-brightgreen) | ✅ Completo (login/refresh/logout/me/forgot/reset) |
+| Backend — Igrejas | ![100%](https://img.shields.io/badge/100%25-brightgreen) | ✅ CRUD completo (5 endpoints) |
+| Backend — Usuários/Papéis | ![100%](https://img.shields.io/badge/100%25-brightgreen) | ✅ CRUD completo (5 endpoints) |
 | Backend — Membros | ![95%](https://img.shields.io/badge/95%25-green) | 🟢 Famílias + Ministérios + Histórico |
 | Backend — Financeiro | ![80%](https://img.shields.io/badge/80%25-green) | 🟢 CRUD completo (5 sub-módulos, 18 endpoints) |
-| Backend — Patrimônio | ![0%](https://img.shields.io/badge/0%25-red) | 🔴 Não iniciado |
-| Backend — EBD | ![0%](https://img.shields.io/badge/0%25-red) | 🔴 Não iniciado |
+| Backend — Patrimônio | ![100%](https://img.shields.io/badge/100%25-brightgreen) | ✅ CRUD + Stats (5 sub-módulos, 18 endpoints) |
+| Backend — EBD | ![100%](https://img.shields.io/badge/100%25-brightgreen) | ✅ CRUD + Stats (4 sub-módulos, 16 endpoints) |
+| Backend — Swagger UI | ![100%](https://img.shields.io/badge/100%25-brightgreen) | ✅ Montado em `/swagger-ui/` |
 | Frontend — Design System | ![100%](https://img.shields.io/badge/100%25-brightgreen) | ✅ Concluído |
-| Frontend — Autenticação | ![85%](https://img.shields.io/badge/85%25-green) | 🟢 Quase completo |
-| Frontend — Dashboard | ![60%](https://img.shields.io/badge/60%25-yellow) | 🟡 Stats wired + quick actions |
+| Frontend — Autenticação | ![95%](https://img.shields.io/badge/95%25-green) | 🟢 Login + Forgot Password UI completos |
+| Frontend — Dashboard | ![85%](https://img.shields.io/badge/85%25-green) | 🟢 Stats wired (membros + financeiro + patrimônio + EBD) |
 | Frontend — Membros | ![80%](https://img.shields.io/badge/80%25-green) | 🟢 CRUD completo |
 | Frontend — Famílias | ![85%](https://img.shields.io/badge/85%25-green) | 🟢 CRUD completo (lista/detalhe/form) |
 | Frontend — Ministérios | ![85%](https://img.shields.io/badge/85%25-green) | 🟢 CRUD completo (lista/detalhe/form) |
-| Frontend — Financeiro | ![70%](https://img.shields.io/badge/70%25-green) | 🟢 6 telas + BLoC + Repositório |
-| Frontend — Patrimônio | ![0%](https://img.shields.io/badge/0%25-red) | 🔴 Não iniciado |
-| Frontend — EBD | ![0%](https://img.shields.io/badge/0%25-red) | 🔴 Não iniciado |
+| Frontend — Financeiro | ![85%](https://img.shields.io/badge/85%25-green) | 🟢 7 telas + BLoC + Repositório + Fechamento Mensal |
+| Frontend — Patrimônio | ![85%](https://img.shields.io/badge/85%25-green) | 🟢 12 telas + BLoC + Repositório |
+| Frontend — EBD | ![85%](https://img.shields.io/badge/85%25-green) | 🟢 6 telas + BLoC + Repositório |
 
 ---
 
@@ -104,29 +107,29 @@ Toda a documentação de especificação foi finalizada, totalizando **~5.052 li
 | `bank_accounts` | 10 | ✅ CRUD (list/create/update) | ✅ Lista + criação |
 | `campaigns` | 10 | ✅ CRUD (list/get/create/update) | ✅ Lista + criação + progresso |
 | `financial_entries` | 15 | ✅ CRUD completo + relatório de saldo | ✅ Lista + filtros + formulário |
-| `monthly_closings` | 10 | ✅ List + fechamento mensal | 🟡 Repositório pronto, sem tela |
+| `monthly_closings` | 10 | ✅ List + fechamento mensal | ✅ Lista + criação |
 
 #### Módulo Patrimônio (7 tabelas)
 
 | Tabela | Campos | Backend | Frontend |
 |--------|:------:|:-------:|:--------:|
-| `asset_categories` | 5 | ❌ | ❌ |
-| `assets` | 20 | ❌ | ❌ |
-| `asset_photos` | 6 | ❌ | ❌ |
-| `maintenances` | 10 | ❌ | ❌ |
-| `inventories` | 7 | ❌ | ❌ |
-| `inventory_items` | 7 | ❌ | ❌ |
-| `asset_loans` | 8 | ❌ | ❌ |
+| `asset_categories` | 5 | ✅ CRUD (list/create/update) | ❌ |
+| `assets` | 20 | ✅ CRUD completo (list/get/create/update/delete) | ❌ |
+| `asset_photos` | 6 | ❌ Entity existe, sem upload | ❌ |
+| `maintenances` | 10 | ✅ CRUD (list/create/update) | ❌ |
+| `inventories` | 7 | ✅ CRUD (list/get/create/update_item/close) | ❌ |
+| `inventory_items` | 7 | ✅ Auto-populado + atualização | ❌ |
+| `asset_loans` | 8 | ✅ CRUD (list/create/return) | ❌ |
 
 #### Módulo EBD (5 tabelas)
 
 | Tabela | Campos | Backend | Frontend |
 |--------|:------:|:-------:|:--------:|
-| `ebd_terms` | 7 | ❌ | ❌ |
-| `ebd_classes` | 8 | ❌ | ❌ |
-| `ebd_enrollments` | 5 | ❌ | ❌ |
-| `ebd_lessons` | 10 | ❌ | ❌ |
-| `ebd_attendances` | 7 | ❌ | ❌ |
+| `ebd_terms` | 7 | ✅ CRUD (list/get/create/update) | ❌ |
+| `ebd_classes` | 8 | ✅ CRUD (list/get/create/update) | ❌ |
+| `ebd_enrollments` | 5 | ✅ List/Create/Remove | ❌ |
+| `ebd_lessons` | 10 | ✅ CRUD (list/get/create) | ❌ |
+| `ebd_attendances` | 7 | ✅ Record batch/get by lesson/report | ❌ |
 
 #### Views e Triggers
 
@@ -188,13 +191,19 @@ backend/src/
 │       ├── member_handler.rs
 │       ├── family_handler.rs
 │       ├── ministry_handler.rs
-│       └── member_history_handler.rs
+│       ├── member_history_handler.rs
+│       ├── financial_handler.rs
+│       ├── asset_handler.rs
+│       └── ebd_handler.rs
 ├── application/
 │   ├── dto/
 │   │   ├── auth_dto.rs      ← LoginRequest, Claims, etc.
 │   │   ├── member_dto.rs    ← CreateMemberRequest, MemberFilter, etc.
 │   │   ├── family_dto.rs    ← CreateFamilyRequest, AddFamilyMemberRequest
-│   │   └── ministry_dto.rs  ← CreateMinistryRequest, AddMinistryMemberRequest
+│   │   ├── ministry_dto.rs  ← CreateMinistryRequest, AddMinistryMemberRequest
+│   │   ├── financial_dto.rs ← CreateFinancialEntryRequest, etc.
+│   │   ├── asset_dto.rs     ← CreateAssetRequest, AssetFilter, etc.
+│   │   └── ebd_dto.rs       ← CreateEbdTermRequest, CreateEbdAttendanceRequest, etc.
 │   └── services/
 │       ├── auth_service.rs   ← Hashing, JWT, login flow
 │       ├── member_service.rs ← CRUD completo + stats + histórico
@@ -203,7 +212,16 @@ backend/src/
 │       ├── account_plan_service.rs ← CRUD plano de contas
 │       ├── bank_account_service.rs ← CRUD contas bancárias
 │       ├── campaign_service.rs ← CRUD campanhas financeiras
-│       └── financial_service.rs ← Lançamentos + Fechamento mensal + Relatórios
+│       ├── financial_service.rs ← Lançamentos + Fechamento mensal + Relatórios
+│       ├── asset_category_service.rs ← CRUD categorias patrimônio
+│       ├── asset_service.rs  ← CRUD bens patrimoniais
+│       ├── asset_loan_service.rs ← Empréstimos de bens
+│       ├── maintenance_service.rs ← Manutenções
+│       ├── inventory_service.rs ← Inventários
+│       ├── ebd_term_service.rs ← CRUD períodos EBD
+│       ├── ebd_class_service.rs ← CRUD turmas + matrículas
+│       ├── ebd_lesson_service.rs ← CRUD aulas
+│       └── ebd_attendance_service.rs ← Frequência + relatórios
 ├── domain/entities/
 │   ├── church.rs
 │   ├── user.rs              ← User, Role, RefreshToken
@@ -214,7 +232,17 @@ backend/src/
 │   ├── bank_account.rs      ← BankAccount
 │   ├── campaign.rs          ← Campaign, CampaignSummary
 │   ├── financial_entry.rs   ← FinancialEntry, FinancialEntrySummary, FinancialBalance
-│   └── monthly_closing.rs   ← MonthlyClosing, MonthlyClosingSummary
+│   ├── monthly_closing.rs   ← MonthlyClosing, MonthlyClosingSummary
+│   ├── asset.rs              ← Asset, AssetSummary, AssetPhoto
+│   ├── asset_category.rs    ← AssetCategory, AssetCategorySummary
+│   ├── asset_loan.rs        ← AssetLoan, AssetLoanSummary
+│   ├── inventory.rs          ← Inventory, InventoryItem, InventoryItemDetail
+│   ├── maintenance.rs        ← Maintenance, MaintenanceSummary
+│   ├── ebd_term.rs           ← EbdTerm
+│   ├── ebd_class.rs          ← EbdClass, EbdClassSummary
+│   ├── ebd_enrollment.rs     ← EbdEnrollment, EbdEnrollmentDetail
+│   ├── ebd_lesson.rs         ← EbdLesson, EbdLessonSummary
+│   └── ebd_attendance.rs     ← EbdAttendance, EbdAttendanceDetail
 └── infrastructure/
     └── database.rs          ← Pool de conexões PG
 ```
@@ -227,7 +255,27 @@ backend/src/
 |--------|------|-----------|--------|
 | `GET` | `/api/health` | Health check com verificação do banco | ✅ Completo |
 
-#### Autenticação (4 endpoints)
+#### Igrejas (5 endpoints) — ✅ NOVO
+
+| Método | Rota | Auth | Descrição | Status |
+|--------|------|------|-----------|--------|
+| `GET` | `/api/v1/churches` | ✅ `super_admin` | Listar todas as igrejas | ✅ Completo |
+| `GET` | `/api/v1/churches/me` | ✅ JWT | Dados da igreja do usuário logado | ✅ Completo |
+| `GET` | `/api/v1/churches/{id}` | ✅ JWT | Detalhes da igreja | ✅ Completo |
+| `POST` | `/api/v1/churches` | ✅ `super_admin` | Criar nova igreja | ✅ Completo |
+| `PUT` | `/api/v1/churches/{id}` | ✅ `settings:write` | Atualizar igreja | ✅ Completo |
+
+#### Usuários & Papéis (5 endpoints) — ✅ NOVO
+
+| Método | Rota | Auth | Descrição | Status |
+|--------|------|------|-----------|--------|
+| `GET` | `/api/v1/users` | ✅ `settings:read` | Listar usuários da igreja | ✅ Completo |
+| `GET` | `/api/v1/users/{id}` | ✅ `settings:read` | Detalhes do usuário | ✅ Completo |
+| `POST` | `/api/v1/users` | ✅ `settings:write` | Criar novo usuário | ✅ Completo |
+| `PUT` | `/api/v1/users/{id}` | ✅ `settings:write` | Atualizar usuário | ✅ Completo |
+| `GET` | `/api/v1/roles` | ✅ `settings:read` | Listar papéis disponíveis | ✅ Completo |
+
+#### Autenticação (6 endpoints)
 
 | Método | Rota | Descrição | Status |
 |--------|------|-----------|--------|
@@ -235,6 +283,8 @@ backend/src/
 | `POST` | `/api/v1/auth/refresh` | Renovação de token | ✅ Completo |
 | `POST` | `/api/v1/auth/logout` | Logout (revoga tokens) | ✅ Completo |
 | `GET` | `/api/v1/auth/me` | Perfil do usuário autenticado | ✅ Completo |
+| `POST` | `/api/v1/auth/forgot-password` | Solicitar redefinição de senha (envia token por e-mail) | ✅ Completo |
+| `POST` | `/api/v1/auth/reset-password` | Redefinir senha com token | ✅ Completo |
 
 **Funcionalidades de segurança implementadas:**
 - Hash de senha com Argon2
@@ -242,6 +292,9 @@ backend/src/
 - Refresh token (random base64, armazenado no banco)
 - Bloqueio de conta após 5 tentativas falhas (15 min de lock)
 - Rastreamento de `failed_attempts` e `locked_until`
+- Reset de senha com token de 6 caracteres (30 min de expiração)
+- Proteção contra enumeração de e-mails (sempre retorna sucesso)
+- Revogação de todos os refresh tokens ao redefinir senha
 
 #### Membros (8 endpoints)
 
@@ -304,6 +357,54 @@ backend/src/
 | `GET` | `/api/v1/financial/monthly-closings` | ✅ `financial:read` | Listar fechamentos mensais | ✅ Completo |
 | `POST` | `/api/v1/financial/monthly-closings` | ✅ `financial:close` | Realizar fechamento mensal (snapshot + lock) | ✅ Completo |
 
+#### Patrimônio (17 endpoints) — ✅ NOVO
+
+| Método | Rota | Auth | Descrição | Status |
+|--------|------|------|-----------|--------|
+| `GET` | `/api/v1/assets/categories` | ✅ `assets:read` | Listar categorias de patrimônio | ✅ Completo |
+| `POST` | `/api/v1/assets/categories` | ✅ `assets:write` | Criar categoria | ✅ Completo |
+| `PUT` | `/api/v1/assets/categories/{id}` | ✅ `assets:write` | Atualizar categoria | ✅ Completo |
+| `GET` | `/api/v1/assets` | ✅ `assets:read` | Listar bens (4 filtros + busca) | ✅ Completo |
+| `GET` | `/api/v1/assets/{id}` | ✅ `assets:read` | Detalhes do bem | ✅ Completo |
+| `POST` | `/api/v1/assets` | ✅ `assets:write` | Cadastrar bem (17 campos) | ✅ Completo |
+| `PUT` | `/api/v1/assets/{id}` | ✅ `assets:write` | Atualizar bem (17 campos dinâmicos) | ✅ Completo |
+| `DELETE` | `/api/v1/assets/{id}` | ✅ `assets:delete` | Baixa de bem (soft delete + motivo) | ✅ Completo |
+| `GET` | `/api/v1/assets/maintenances` | ✅ `assets:read` | Listar manutenções (filtros: asset, status, tipo) | ✅ Completo |
+| `POST` | `/api/v1/assets/maintenances` | ✅ `assets:write` | Registrar manutenção (altera status do bem) | ✅ Completo |
+| `PUT` | `/api/v1/assets/maintenances/{id}` | ✅ `assets:write` | Atualizar manutenção (retorna bem ao ativo) | ✅ Completo |
+| `GET` | `/api/v1/assets/inventories` | ✅ `assets:read` | Listar inventários | ✅ Completo |
+| `GET` | `/api/v1/assets/inventories/{id}` | ✅ `assets:read` | Detalhes do inventário + itens | ✅ Completo |
+| `POST` | `/api/v1/assets/inventories` | ✅ `assets:write` | Criar inventário (auto-popula itens) | ✅ Completo |
+| `PUT` | `/api/v1/assets/inventories/{inv_id}/items/{item_id}` | ✅ `assets:write` | Atualizar item do inventário | ✅ Completo |
+| `POST` | `/api/v1/assets/inventories/{id}/close` | ✅ `assets:write` | Fechar inventário (valida pendências) | ✅ Completo |
+| `GET` | `/api/v1/assets/loans` | ✅ `assets:read` | Listar empréstimos (filtro: status) | ✅ Completo |
+| `POST` | `/api/v1/assets/loans` | ✅ `assets:write` | Registrar empréstimo (valida disponibilidade) | ✅ Completo |
+| `PUT` | `/api/v1/assets/loans/{id}/return` | ✅ `assets:write` | Devolver bem emprestado | ✅ Completo |
+| `GET` | `/api/v1/assets/stats` | ✅ `assets:read` | Estatísticas de patrimônio (dashboard) | ✅ Completo |
+
+#### EBD — Escola Bíblica Dominical (16 endpoints) — ✅ NOVO
+
+| Método | Rota | Auth | Descrição | Status |
+|--------|------|------|-----------|--------|
+| `GET` | `/api/v1/ebd/terms` | ✅ `ebd:read` | Listar períodos/trimestres | ✅ Completo |
+| `GET` | `/api/v1/ebd/terms/{id}` | ✅ `ebd:read` | Detalhes do período | ✅ Completo |
+| `POST` | `/api/v1/ebd/terms` | ✅ `ebd:write` | Criar período (desativa anteriores — RN-EBD-001) | ✅ Completo |
+| `PUT` | `/api/v1/ebd/terms/{id}` | ✅ `ebd:write` | Atualizar período | ✅ Completo |
+| `GET` | `/api/v1/ebd/classes` | ✅ `ebd:read` | Listar turmas (filtros: term, teacher, status) | ✅ Completo |
+| `GET` | `/api/v1/ebd/classes/{id}` | ✅ `ebd:read` | Detalhes da turma | ✅ Completo |
+| `POST` | `/api/v1/ebd/classes` | ✅ `ebd:write` | Criar turma | ✅ Completo |
+| `PUT` | `/api/v1/ebd/classes/{id}` | ✅ `ebd:write` | Atualizar turma | ✅ Completo |
+| `GET` | `/api/v1/ebd/classes/{id}/enrollments` | ✅ `ebd:read` | Listar matrículas da turma | ✅ Completo |
+| `POST` | `/api/v1/ebd/classes/{id}/enrollments` | ✅ `ebd:write` | Matricular membro (RN-EBD-003: 1 por turma/período) | ✅ Completo |
+| `DELETE` | `/api/v1/ebd/classes/{id}/enrollments/{eid}` | ✅ `ebd:write` | Remover matrícula | ✅ Completo |
+| `GET` | `/api/v1/ebd/lessons` | ✅ `ebd:read` | Listar aulas (filtros: class, date range) | ✅ Completo |
+| `GET` | `/api/v1/ebd/lessons/{id}` | ✅ `ebd:read` | Detalhes da aula | ✅ Completo |
+| `POST` | `/api/v1/ebd/lessons` | ✅ `ebd:write` | Criar aula | ✅ Completo |
+| `POST` | `/api/v1/ebd/lessons/{id}/attendance` | ✅ `ebd:write` | Registrar frequência em lote (RN-EBD-004: 7 dias) | ✅ Completo |
+| `GET` | `/api/v1/ebd/lessons/{id}/attendance` | ✅ `ebd:read` | Listar frequência da aula | ✅ Completo |
+| `GET` | `/api/v1/ebd/classes/{id}/report` | ✅ `ebd:read` | Relatório de frequência da turma | ✅ Completo |
+| `GET` | `/api/v1/ebd/stats` | ✅ `ebd:read` | Estatísticas da EBD (dashboard) | ✅ Completo |
+
 ### 4.4 O que Falta no Backend
 
 #### Prioridade Alta
@@ -312,21 +413,21 @@ backend/src/
 |------|-----------|:------------:|
 | `PUT /api/v1/members/{id}` | Atualização de membro — DTO já existe (`UpdateMemberRequest`) | ~~Média~~ ✅ **Concluído** |
 | Filtros dinâmicos em `list()` | SQL dinâmico com BindValue enum (11 parâmetros) | ~~Baixa~~ ✅ **Concluído** |
-| Swagger UI montado | Anotações `utoipa` existem, falta montar o endpoint `/swagger-ui` | Baixa |
-| `POST /api/v1/auth/forgot-password` | Recuperação de senha — SMTP já nas dependências | Média |
-| CRUD de Igrejas | Entity `Church` existe, sem handler/service | Média |
-| CRUD de Usuários/Papéis | Tabelas existem, sem API | Média |
+| Swagger UI montado | ~~Anotações `utoipa` existem, falta montar o endpoint `/swagger-ui`~~ ✅ **Concluído** — Swagger UI montado em `/swagger-ui/` | ~~Baixa~~ ✅ |
+| `POST /api/v1/auth/forgot-password` | ~~Recuperação de senha — SMTP já nas dependências~~ ✅ **Concluído** — Forgot + Reset password (token 6 chars, 30min TTL, envio via lettre SMTP) | ~~Média~~ ✅ |
+| CRUD de Igrejas | ~~Entity `Church` existe, sem handler/service~~ ✅ **Concluído** — 5 endpoints (list/get/get-me/create/update) | ~~Média~~ ✅ |
+| CRUD de Usuários/Papéis | ~~Tabelas existem, sem API~~ ✅ **Concluído** — 5 endpoints (list/get/create/update users + list roles) | ~~Média~~ ✅ |
 
 #### Prioridade Média
 
 | Item | Descrição | Complexidade |
 |------|-----------|:------------:|
 | Módulo Financeiro completo | ~~5 tabelas prontas, 11 endpoints documentados~~ ✅ **Backend completo (18 endpoints)** | ~~Alta~~ ✅ |
-| Módulo EBD completo | 5 tabelas prontas, 7 endpoints documentados | Alta |
-| Módulo Patrimônio completo | 7 tabelas prontas, 7 endpoints documentados | Alta |
+| Módulo EBD completo | ~~5 tabelas prontas, 7 endpoints documentados~~ ✅ **Backend completo (16 endpoints com stats)** | ~~Alta~~ ✅ |
+| Módulo Patrimônio completo | ~~7 tabelas prontas, 7 endpoints documentados~~ ✅ **Backend completo (18 endpoints com stats)** | ~~Alta~~ ✅ |
 | Famílias e Ministérios | ~~Tabelas prontas, endpoints documentados~~ ✅ **Backend + Frontend completos** | ~~Média~~ ✅ |
-| Audit Log (escrita) | Tabela existe, falta interceptar ações | Média |
-| Cache Redis | Crate importado, não configurado | Média |
+| Audit Log (escrita) | ~~Tabela existe, falta interceptar ações~~ ✅ **Concluído** — `AuditService::log()` + `log_action()`, integrado em member CRUD | ~~Média~~ ✅ |
+| Cache Redis | ~~Crate importado, não configurado~~ ✅ **Concluído** — `CacheService` (get/set/del/del_pattern), conectado no startup, fail-open | ~~Média~~ ✅ |
 
 #### Prioridade Baixa
 
@@ -384,7 +485,7 @@ frontend/lib/
     │
     ├── dashboard/
     │   └── presentation/
-    │       └── dashboard_screen.dart      🟡 Stats (membros ativos wired) + quick actions
+    │       └── dashboard_screen.dart      ✅ Stats (membros + financeiro + patrimônio + EBD wired)
     │
     ├── families/                           ✅ NOVO — CRUD completo
     │   ├── bloc/
@@ -425,10 +526,10 @@ frontend/lib/
     │       ├── ministry_detail_screen.dart ✅ Info + membros + ações edit/delete
     │       └── ministry_form_screen.dart  ✅ Nome + descrição + status toggle
     │
-    └── financial/                           ✅ NOVO — 6 telas + BLoC + Repositório
+    └── financial/                           ✅ NOVO — 7 telas + BLoC + Repositório
         ├── bloc/
-        │   ├── financial_bloc.dart         ✅ 11 event handlers
-        │   └── financial_event_state.dart  ✅ 11 events, 9 states
+        │   ├── financial_bloc.dart         ✅ 13 event handlers
+        │   └── financial_event_state.dart  ✅ 13 events, 11 states
         ├── data/
         │   ├── financial_repository.dart   ✅ 18 métodos (5 sub-módulos)
         │   └── models/
@@ -437,10 +538,11 @@ frontend/lib/
             ├── format_utils.dart           ✅ formatCurrency() helper (BRL)
             ├── financial_overview_screen.dart  ✅ Dashboard financeiro + quick actions
             ├── financial_entry_list_screen.dart ✅ Lista com busca + filtros (tipo/status)
-            ├── financial_entry_form_screen.dart ✅ Formulário receita/despesa (10+ campos)
+            ├── financial_entry_form_screen.dart ✅ Formulário receita/despesa (10+ campos) + edição
             ├── account_plan_list_screen.dart   ✅ Lista agrupada + criação
             ├── bank_account_list_screen.dart   ✅ Lista com saldo + criação
-            └── campaign_list_screen.dart       ✅ Lista com progresso + criação
+            ├── campaign_list_screen.dart       ✅ Lista com progresso + criação
+            └── monthly_closing_list_screen.dart ✅ Lista + fechamento mensal (diálogo)
 ```
 
 ### 5.3 Design System — Tokens Implementados
@@ -494,16 +596,16 @@ frontend/lib/
 
 #### Dashboard (`dashboard_screen.dart` — 355 linhas)
 
-**Status: 🟡 Stats parcialmente wired, quick actions funcionais**
+**Status: � Stats wired (membros + financeiro), quick actions funcionais**
 
 | Componente | Descrição | Status |
 |------------|-----------|--------|
 | Header | Saudação + avatar com popup menu (logout) | ✅ Funcional |
-| Stat Cards | 4 cards grid: Membros (wired), Entradas, Patrimônio, EBD | ✅ Membros Ativos real via API, demais "—" |
+| Stat Cards | 4 cards grid: Membros (wired), Saldo Financeiro (wired), Patrimônio, EBD | ✅ Membros Ativos + Saldo real via API, demais "—" |
 | Quick Actions | 4 botões: Novo Membro, Nova Família, Novo Ministério, Relatórios | ✅ 3 navegam, 1 TODO |
 | Responsivo | Grid adaptativo (2-4 colunas conforme largura) | ✅ Funcional |
 
-**Pendente:** Integrar demais endpoints de estatísticas quando módulos Financeiro/EBD forem implementados.
+**Pendente:** Integrar demais endpoints de estatísticas quando módulos Patrimônio/EBD forem implementados.
 
 #### Lista de Membros (`member_list_screen.dart` — 398 linhas)
 
@@ -577,6 +679,8 @@ frontend/lib/
 | `/financial/bank-accounts` | `BankAccountListScreen` (dentro de `AppShell`) | Protegida |
 | `/financial/campaigns` | `CampaignListScreen` (dentro de `AppShell`) | Protegida |
 
+| `/financial/monthly-closings` | `MonthlyClosingListScreen` (dentro de `AppShell`) | Protegida |
+
 **Shell responsivo:**
 - Desktop (≥ 900px): Sidebar navy com itens: Dashboard, Membros, Famílias, Ministérios, Financeiro
 - Mobile (< 900px): `NavigationBar` inferior com os mesmos itens
@@ -609,6 +713,9 @@ frontend/lib/
 | 12 | `DropdownButtonFormField.value` deprecated no Flutter 3.38 | Substituído por `initialValue` |
 | 13 | Sem usuários de teste para login manual | Criado `seed_test_data()` em `main.rs` com 3 usuários: `admin@igreja.com`/`admin123` (super_admin), `secretaria@igreja.com`/`secret123` (secretary), `tesoureiro@igreja.com`/`tesour123` (treasurer) + igreja exemplo |
 | 14 | Funções privadas `_formatCurrency` não exportáveis entre arquivos Dart | Extraído para `format_utils.dart` como função pública `formatCurrency()` |
+| 15 | Dashboard sem dados financeiros (stats hardcoded "—") | Wired `FinancialRepository.getBalanceReport()` paralelo ao load de membros |
+| 16 | Rota `/financial/entries/:id` sem tela de edição | Rota agora aponta para `FinancialEntryFormScreen(entryId:)` com modo edição |
+| 17 | Fechamento mensal sem tela no frontend | Criada `MonthlyClosingListScreen` com lista + diálogo de criação |
 
 ---
 
@@ -656,30 +763,30 @@ Crates/packages importados mas ainda sem uso no código — preparados para fase
 | 3.3 | Lançamentos | ~~Entrada de dízimos, ofertas, despesas com comprovante~~ ✅ **Backend completo** |
 | 3.4 | Campanhas | ~~Campanhas especiais com meta e progresso~~ ✅ **Backend completo** |
 | 3.5 | Fechamento Mensal | ~~Conciliação e snapshot financeiro~~ ✅ **Backend completo** |
-| 3.6 | Dashboard Financeiro | ✅ **Overview com saldo + 6 quick actions** |
-| 3.7 | Telas de CRUD Financeiro | ✅ **Lista + Form de lançamentos, plano de contas, contas bancárias, campanhas** |
+| 3.6 | Dashboard Financeiro | ✅ **Overview com saldo + 7 quick actions** |
+| 3.7 | Telas de CRUD Financeiro | ✅ **Lista + Form de lançamentos (criar/editar), plano de contas, contas bancárias, campanhas, fechamento mensal** |
 | 3.8 | Relatórios gráficos | 🟡 Repositório implementado, gráficos pendentes |
 
 ### Fase 4 — Módulo EBD (Prioridade: 🟡 Média)
 
 | # | Tarefa | Descrição |
-|---|--------|-----------|
-| 4.1 | Períodos Letivos | CRUD de semestres/trimestres |
-| 4.2 | Turmas | Faixa etária, professor, sala |
-| 4.3 | Matrículas | Vincular alunos a turmas |
-| 4.4 | Aulas | Registrar tema, data, professor |
-| 4.5 | Chamada | Lista de presença por aula |
-| 4.6 | Relatórios EBD | Frequência, evolução |
+|---|--------|:-----------:|
+| 4.1 | Períodos Letivos | ✅ **Frontend: tela de lista + criação, BLoC + Repositório** |
+| 4.2 | Turmas | ✅ **Frontend: lista + detalhe com matrículas** |
+| 4.3 | Matrículas | ✅ **Frontend: matricular/remover alunos na tela de detalhe** |
+| 4.4 | Aulas | ✅ **Frontend: lista + criação de aulas** |
+| 4.5 | Chamada | ✅ **Frontend: tela de frequência com P/A/J + Bíblia/Revista** |
+| 4.6 | Relatórios EBD | 🟡 BLoC event/state prontos, tela de relatório pendente |
 
 ### Fase 5 — Módulo Patrimônio (Prioridade: 🟡 Média)
 
 | # | Tarefa | Descrição |
-|---|--------|-----------|
-| 5.1 | Categorias de Bens | CRUD com hierarquia |
-| 5.2 | Cadastro de Bens | Código automático, fotos, localização |
-| 5.3 | Manutenções | Registro de manutenções preventivas/corretivas |
-| 5.4 | Inventário | Conferência periódica |
-| 5.5 | Empréstimos | Controle de itens emprestados |
+|---|--------|:-----------:|
+| 5.1 | Categorias de Bens | ✅ **Frontend: lista + criação (dialog)** |
+| 5.2 | Cadastro de Bens | ✅ **Frontend: overview + lista + detalhe + formulário (criar/editar)** |
+| 5.3 | Manutenções | ✅ **Frontend: lista com filtro + criação (dialog)** |
+| 5.4 | Inventário | ✅ **Frontend: lista + criar + fechar inventário** |
+| 5.5 | Empréstimos | ✅ **Frontend: lista + registro + devolução** |
 
 ### Fase 6 — Infraestrutura e Qualidade
 
@@ -688,11 +795,11 @@ Crates/packages importados mas ainda sem uso no código — preparados para fase
 | 6.1 | Testes unitários (Backend) | Services, handlers, middleware |
 | 6.2 | Testes de widget (Frontend) | Telas principais, BLoC tests |
 | 6.3 | CI/CD Pipeline | GitHub Actions: build, test, deploy |
-| 6.4 | Swagger UI funcional | Montar `/swagger-ui` |
-| 6.5 | Cache Redis | Implementar caching de consultas frequentes |
-| 6.6 | Audit Log funcional | Interceptar e registrar ações |
+| 6.4 | Swagger UI funcional | ~~Montar `/swagger-ui`~~ ✅ **Concluído** |
+| 6.5 | Cache Redis | ~~Implementar caching de consultas frequentes~~ ✅ **Concluído** — `CacheService` (get/set/del/del_pattern) |
+| 6.6 | Audit Log funcional | ~~Interceptar e registrar ações~~ ✅ **Concluído** — `AuditService` integrado em member CRUD |
 | 6.7 | Upload de arquivos | Fotos de membros e bens |
-| 6.8 | Envio de emails | Recuperação de senha, notificações |
+| 6.8 | Envio de emails | ~~Recuperação de senha, notificações~~ ✅ **Concluído** — lettre SMTP + forgot/reset password |
 
 ---
 
@@ -703,18 +810,18 @@ Crates/packages importados mas ainda sem uso no código — preparados para fase
 | Componente | Arquivos | Linhas Estimadas |
 |------------|:--------:|:----------------:|
 | Documentação (docs/) | 7 | ~5.700 |
-| Backend (Rust) | 25 .rs | ~5.100 |
-| Migrations (SQL) | 1 | ~793 |
-| Frontend (Dart) | 42 .dart | ~11.500 |
+| Backend (Rust) | 28 .rs | ~5.800 |
+| Migrations (SQL) | 2 | ~810 |
+| Frontend (Dart) | 64 .dart | ~17.900 |
 | Configuração | 5 | ~200 |
-| **Total** | **80** | **~23.300** |
+| **Total** | **106** | **~30.400** |
 
 ### Status de Compilação
 
 | Componente | Comando | Resultado |
 |------------|---------|-----------|
 | Backend Rust | `SQLX_OFFLINE=true cargo check` | ✅ Compila (apenas warnings) |
-| Frontend Flutter | `flutter analyze` | ✅ **No issues found** |
+| Frontend Flutter | `flutter analyze` | ✅ 17 info issues (no errors) |
 
 ---
 

@@ -14,6 +14,10 @@ pub struct AppConfig {
     pub upload_dir: String,
     #[allow(dead_code)]
     pub max_upload_size_mb: usize,
+    pub smtp_host: String,
+    pub smtp_username: String,
+    pub smtp_password: String,
+    pub smtp_from: String,
 }
 
 impl AppConfig {
@@ -40,6 +44,10 @@ impl AppConfig {
                 .unwrap_or_else(|_| "10".to_string())
                 .parse()
                 .expect("MAX_UPLOAD_SIZE_MB must be a number"),
+            smtp_host: env::var("SMTP_HOST").unwrap_or_default(),
+            smtp_username: env::var("SMTP_USERNAME").unwrap_or_default(),
+            smtp_password: env::var("SMTP_PASSWORD").unwrap_or_default(),
+            smtp_from: env::var("SMTP_FROM").unwrap_or_else(|_| "noreply@igrejamanager.com".to_string()),
         }
     }
 

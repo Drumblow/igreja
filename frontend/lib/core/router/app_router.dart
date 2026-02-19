@@ -20,6 +20,21 @@ import '../../features/financial/presentation/financial_entry_form_screen.dart';
 import '../../features/financial/presentation/account_plan_list_screen.dart';
 import '../../features/financial/presentation/bank_account_list_screen.dart';
 import '../../features/financial/presentation/campaign_list_screen.dart';
+import '../../features/financial/presentation/monthly_closing_list_screen.dart';
+import '../../features/assets/presentation/asset_overview_screen.dart';
+import '../../features/assets/presentation/asset_list_screen.dart';
+import '../../features/assets/presentation/asset_detail_screen.dart';
+import '../../features/assets/presentation/asset_form_screen.dart';
+import '../../features/assets/presentation/asset_category_list_screen.dart';
+import '../../features/assets/presentation/maintenance_list_screen.dart';
+import '../../features/assets/presentation/inventory_list_screen.dart';
+import '../../features/assets/presentation/asset_loan_list_screen.dart';
+import '../../features/ebd/presentation/ebd_overview_screen.dart';
+import '../../features/ebd/presentation/ebd_term_list_screen.dart';
+import '../../features/ebd/presentation/ebd_class_list_screen.dart';
+import '../../features/ebd/presentation/ebd_class_detail_screen.dart';
+import '../../features/ebd/presentation/ebd_lesson_list_screen.dart';
+import '../../features/ebd/presentation/ebd_attendance_screen.dart';
 import '../shell/app_shell.dart';
 
 class AppRouter {
@@ -167,8 +182,8 @@ class AppRouter {
                     path: ':id',
                     name: 'financial-entry-detail',
                     builder: (context, state) {
-                      // For now, redirect to entries list (detail screen TBD)
-                      return const FinancialEntryListScreen();
+                      final id = state.pathParameters['id']!;
+                      return FinancialEntryFormScreen(entryId: id);
                     },
                   ),
                 ],
@@ -187,6 +202,112 @@ class AppRouter {
                 path: 'campaigns',
                 name: 'campaigns',
                 builder: (context, state) => const CampaignListScreen(),
+              ),
+              GoRoute(
+                path: 'monthly-closings',
+                name: 'monthly-closings',
+                builder: (context, state) => const MonthlyClosingListScreen(),
+              ),
+            ],
+          ),
+
+          // ── Assets (Patrimônio) ──
+          GoRoute(
+            path: '/assets',
+            name: 'assets',
+            builder: (context, state) => const AssetOverviewScreen(),
+            routes: [
+              GoRoute(
+                path: 'items',
+                name: 'asset-items',
+                builder: (context, state) => const AssetListScreen(),
+                routes: [
+                  GoRoute(
+                    path: 'new',
+                    name: 'asset-create',
+                    builder: (context, state) => const AssetFormScreen(),
+                  ),
+                  GoRoute(
+                    path: ':id',
+                    name: 'asset-detail',
+                    builder: (context, state) {
+                      final id = state.pathParameters['id']!;
+                      return AssetDetailScreen(assetId: id);
+                    },
+                    routes: [
+                      GoRoute(
+                        path: 'edit',
+                        name: 'asset-edit',
+                        builder: (context, state) {
+                          final asset = state.extra as dynamic;
+                          return AssetFormScreen(existingAsset: asset);
+                        },
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              GoRoute(
+                path: 'categories',
+                name: 'asset-categories',
+                builder: (context, state) => const AssetCategoryListScreen(),
+              ),
+              GoRoute(
+                path: 'maintenances',
+                name: 'asset-maintenances',
+                builder: (context, state) => const MaintenanceListScreen(),
+              ),
+              GoRoute(
+                path: 'inventories',
+                name: 'asset-inventories',
+                builder: (context, state) => const InventoryListScreen(),
+              ),
+              GoRoute(
+                path: 'loans',
+                name: 'asset-loans',
+                builder: (context, state) => const AssetLoanListScreen(),
+              ),
+            ],
+          ),
+
+          // ── EBD (Escola Bíblica Dominical) ──
+          GoRoute(
+            path: '/ebd',
+            name: 'ebd',
+            builder: (context, state) => const EbdOverviewScreen(),
+            routes: [
+              GoRoute(
+                path: 'terms',
+                name: 'ebd-terms',
+                builder: (context, state) => const EbdTermListScreen(),
+              ),
+              GoRoute(
+                path: 'classes',
+                name: 'ebd-classes',
+                builder: (context, state) => const EbdClassListScreen(),
+                routes: [
+                  GoRoute(
+                    path: ':id',
+                    name: 'ebd-class-detail',
+                    builder: (context, state) {
+                      final id = state.pathParameters['id']!;
+                      return EbdClassDetailScreen(classId: id);
+                    },
+                  ),
+                ],
+              ),
+              GoRoute(
+                path: 'lessons',
+                name: 'ebd-lessons',
+                builder: (context, state) => const EbdLessonListScreen(),
+              ),
+              GoRoute(
+                path: 'attendance/:lessonId',
+                name: 'ebd-attendance',
+                builder: (context, state) {
+                  final lessonId = state.pathParameters['lessonId']!;
+                  return EbdAttendanceScreen(lessonId: lessonId);
+                },
               ),
             ],
           ),

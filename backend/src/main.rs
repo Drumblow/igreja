@@ -8,11 +8,163 @@ mod infrastructure;
 use actix_cors::Cors;
 use actix_web::{middleware::Logger, web, App, HttpServer};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
+use utoipa::OpenApi;
+use utoipa_swagger_ui::SwaggerUi;
 
-use crate::api::handlers::{auth_handler, family_handler, financial_handler, health_handler, member_handler, member_history_handler, ministry_handler};
+use crate::api::handlers::{asset_handler, auth_handler, church_handler, ebd_handler, family_handler, financial_handler, health_handler, member_handler, member_history_handler, ministry_handler, user_handler};
 use crate::application::services::AuthService;
 use crate::config::AppConfig;
 use crate::infrastructure::database;
+use crate::infrastructure::cache::CacheService;
+
+#[derive(OpenApi)]
+#[openapi(
+    info(title = "Igreja Manager API", version = "1.0.0", description = "API de gestão para igrejas"),
+    paths(
+        // Health
+        health_handler::health_check,
+        // Auth
+        auth_handler::login,
+        auth_handler::refresh_token,
+        auth_handler::logout,
+        auth_handler::me,
+        auth_handler::forgot_password,
+        auth_handler::reset_password,
+        // Churches
+        church_handler::list_churches,
+        church_handler::get_church,
+        church_handler::get_my_church,
+        church_handler::create_church,
+        church_handler::update_church,
+        // Users
+        user_handler::list_users,
+        user_handler::get_user,
+        user_handler::create_user,
+        user_handler::update_user,
+        user_handler::list_roles,
+        // Members
+        member_handler::list_members,
+        member_handler::get_member,
+        member_handler::create_member,
+        member_handler::update_member,
+        member_handler::delete_member,
+        member_handler::member_stats,
+        // Member History
+        member_history_handler::get_member_history,
+        member_history_handler::create_member_history,
+        // Families
+        family_handler::list_families,
+        family_handler::get_family,
+        family_handler::create_family,
+        family_handler::update_family,
+        family_handler::delete_family,
+        family_handler::add_family_member,
+        family_handler::remove_family_member,
+        // Ministries
+        ministry_handler::list_ministries,
+        ministry_handler::get_ministry,
+        ministry_handler::create_ministry,
+        ministry_handler::update_ministry,
+        ministry_handler::delete_ministry,
+        ministry_handler::list_ministry_members,
+        ministry_handler::add_ministry_member,
+        ministry_handler::remove_ministry_member,
+        // Financial
+        financial_handler::list_account_plans,
+        financial_handler::create_account_plan,
+        financial_handler::update_account_plan,
+        financial_handler::list_bank_accounts,
+        financial_handler::create_bank_account,
+        financial_handler::update_bank_account,
+        financial_handler::list_campaigns,
+        financial_handler::get_campaign,
+        financial_handler::create_campaign,
+        financial_handler::update_campaign,
+        financial_handler::list_financial_entries,
+        financial_handler::get_financial_entry,
+        financial_handler::create_financial_entry,
+        financial_handler::update_financial_entry,
+        financial_handler::delete_financial_entry,
+        financial_handler::balance_report,
+        financial_handler::list_monthly_closings,
+        financial_handler::create_monthly_closing,
+        // Assets
+        asset_handler::list_asset_categories,
+        asset_handler::create_asset_category,
+        asset_handler::update_asset_category,
+        asset_handler::list_assets,
+        asset_handler::get_asset,
+        asset_handler::create_asset,
+        asset_handler::update_asset,
+        asset_handler::delete_asset,
+        asset_handler::list_maintenances,
+        asset_handler::create_maintenance,
+        asset_handler::update_maintenance,
+        asset_handler::list_inventories,
+        asset_handler::get_inventory,
+        asset_handler::create_inventory,
+        asset_handler::update_inventory_item,
+        asset_handler::close_inventory,
+        asset_handler::list_asset_loans,
+        asset_handler::create_asset_loan,
+        asset_handler::return_asset_loan,
+        asset_handler::asset_stats,
+        // EBD
+        ebd_handler::list_ebd_terms,
+        ebd_handler::get_ebd_term,
+        ebd_handler::create_ebd_term,
+        ebd_handler::update_ebd_term,
+        ebd_handler::list_ebd_classes,
+        ebd_handler::get_ebd_class,
+        ebd_handler::create_ebd_class,
+        ebd_handler::update_ebd_class,
+        ebd_handler::list_class_enrollments,
+        ebd_handler::enroll_member,
+        ebd_handler::remove_enrollment,
+        ebd_handler::list_ebd_lessons,
+        ebd_handler::get_ebd_lesson,
+        ebd_handler::create_ebd_lesson,
+        ebd_handler::record_attendance,
+        ebd_handler::get_lesson_attendance,
+        ebd_handler::get_class_report,
+        ebd_handler::ebd_stats,
+    ),
+    components(schemas(
+        crate::api::response::ApiResponse<serde_json::Value>,
+        crate::api::response::PaginationMeta,
+    )),
+    tags(
+        (name = "Health", description = "Health check"),
+        (name = "Auth", description = "Autenticação"),
+        (name = "Churches", description = "Gestão de igrejas"),
+        (name = "Users", description = "Gestão de usuários"),
+        (name = "Members", description = "Gestão de membros"),
+        (name = "Families", description = "Gestão de famílias"),
+        (name = "Ministries", description = "Gestão de ministérios"),
+        (name = "Financial", description = "Módulo financeiro"),
+        (name = "Assets", description = "Gestão de patrimônio"),
+        (name = "EBD", description = "Escola Bíblica Dominical"),
+    ),
+    modifiers(&SecurityAddon),
+)]
+struct ApiDoc;
+
+struct SecurityAddon;
+
+impl utoipa::Modify for SecurityAddon {
+    fn modify(&self, openapi: &mut utoipa::openapi::OpenApi) {
+        if let Some(components) = openapi.components.as_mut() {
+            components.add_security_scheme(
+                "bearer_auth",
+                utoipa::openapi::security::SecurityScheme::Http(
+                    utoipa::openapi::security::Http::new(
+                        utoipa::openapi::security::HttpAuthScheme::Bearer,
+                    ),
+                ),
+            );
+        }
+    }
+}
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -47,9 +199,13 @@ async fn main() -> std::io::Result<()> {
     // Seed test data if no users exist
     seed_test_data(&pool).await;
 
+    // Connect to Redis cache (optional — fails gracefully)
+    let cache = CacheService::connect(&config.redis_url).await;
+
     // Shared state
     let pool_data = web::Data::new(pool);
     let config_data = web::Data::new(config);
+    let cache_data = web::Data::new(cache);
 
     HttpServer::new(move || {
         let cors = Cors::default()
@@ -63,14 +219,30 @@ async fn main() -> std::io::Result<()> {
             .wrap(Logger::default())
             .app_data(pool_data.clone())
             .app_data(config_data.clone())
+            .app_data(cache_data.clone())
             .app_data(web::JsonConfig::default().limit(10 * 1024 * 1024)) // 10MB
             // Health
             .service(health_handler::health_check)
+            // Churches
+            .service(church_handler::get_my_church) // before {id} route
+            .service(church_handler::list_churches)
+            .service(church_handler::get_church)
+            .service(church_handler::create_church)
+            .service(church_handler::update_church)
+            // Users
+            .service(user_handler::list_users)
+            .service(user_handler::get_user)
+            .service(user_handler::create_user)
+            .service(user_handler::update_user)
+            // Roles
+            .service(user_handler::list_roles)
             // Auth
             .service(auth_handler::login)
             .service(auth_handler::refresh_token)
             .service(auth_handler::logout)
             .service(auth_handler::me)
+            .service(auth_handler::forgot_password)
+            .service(auth_handler::reset_password)
             // Members
             .service(member_handler::member_stats) // before {id} route
             .service(member_handler::list_members)
@@ -121,6 +293,61 @@ async fn main() -> std::io::Result<()> {
             // Financial — Monthly Closings
             .service(financial_handler::list_monthly_closings)
             .service(financial_handler::create_monthly_closing)
+            // Assets — Categories
+            .service(asset_handler::list_asset_categories)
+            .service(asset_handler::create_asset_category)
+            .service(asset_handler::update_asset_category)
+            // Assets — CRUD
+            .service(asset_handler::list_assets)
+            .service(asset_handler::get_asset)
+            .service(asset_handler::create_asset)
+            .service(asset_handler::update_asset)
+            .service(asset_handler::delete_asset)
+            // Assets — Maintenances
+            .service(asset_handler::list_maintenances)
+            .service(asset_handler::create_maintenance)
+            .service(asset_handler::update_maintenance)
+            // Assets — Inventories
+            .service(asset_handler::list_inventories)
+            .service(asset_handler::get_inventory)
+            .service(asset_handler::create_inventory)
+            .service(asset_handler::update_inventory_item)
+            .service(asset_handler::close_inventory)
+            // Assets — Stats
+            .service(asset_handler::asset_stats)
+            // Assets — Loans
+            .service(asset_handler::list_asset_loans)
+            .service(asset_handler::create_asset_loan)
+            .service(asset_handler::return_asset_loan)
+            // EBD — Stats
+            .service(ebd_handler::ebd_stats)
+            // EBD — Terms
+            .service(ebd_handler::list_ebd_terms)
+            .service(ebd_handler::get_ebd_term)
+            .service(ebd_handler::create_ebd_term)
+            .service(ebd_handler::update_ebd_term)
+            // EBD — Classes
+            .service(ebd_handler::list_ebd_classes)
+            .service(ebd_handler::get_ebd_class)
+            .service(ebd_handler::create_ebd_class)
+            .service(ebd_handler::update_ebd_class)
+            // EBD — Enrollments
+            .service(ebd_handler::list_class_enrollments)
+            .service(ebd_handler::enroll_member)
+            .service(ebd_handler::remove_enrollment)
+            // EBD — Lessons
+            .service(ebd_handler::list_ebd_lessons)
+            .service(ebd_handler::get_ebd_lesson)
+            .service(ebd_handler::create_ebd_lesson)
+            // EBD — Attendance
+            .service(ebd_handler::record_attendance)
+            .service(ebd_handler::get_lesson_attendance)
+            .service(ebd_handler::get_class_report)
+            // Swagger UI
+            .service(
+                SwaggerUi::new("/swagger-ui/{_:.*}")
+                    .url("/api-docs/openapi.json", ApiDoc::openapi()),
+            )
     })    .bind(&server_addr)?
     .run()
     .await

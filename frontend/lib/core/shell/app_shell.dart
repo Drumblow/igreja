@@ -42,6 +42,18 @@ class AppShell extends StatelessWidget {
       label: 'Financeiro',
       path: '/financial',
     ),
+    _NavItem(
+      icon: Icons.inventory_2_outlined,
+      activeIcon: Icons.inventory_2_rounded,
+      label: 'Patrimônio',
+      path: '/assets',
+    ),
+    _NavItem(
+      icon: Icons.school_outlined,
+      activeIcon: Icons.school_rounded,
+      label: 'EBD',
+      path: '/ebd',
+    ),
   ];
 
   @override

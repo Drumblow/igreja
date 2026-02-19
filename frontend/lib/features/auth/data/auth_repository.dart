@@ -47,4 +47,24 @@ class AuthRepository {
   Future<bool> isAuthenticated() async {
     return _apiClient.hasToken();
   }
+
+  Future<void> forgotPassword({required String email}) async {
+    await _apiClient.dio.post(
+      '/v1/auth/forgot-password',
+      data: {'email': email},
+    );
+  }
+
+  Future<void> resetPassword({
+    required String token,
+    required String newPassword,
+  }) async {
+    await _apiClient.dio.post(
+      '/v1/auth/reset-password',
+      data: {
+        'token': token,
+        'new_password': newPassword,
+      },
+    );
+  }
 }

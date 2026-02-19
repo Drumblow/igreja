@@ -19,6 +19,8 @@ class FinancialBloc extends Bloc<FinancialEvent, FinancialState> {
     on<BankAccountCreateRequested>(_onBankAccountCreateRequested);
     on<CampaignsLoadRequested>(_onCampaignsLoadRequested);
     on<CampaignCreateRequested>(_onCampaignCreateRequested);
+    on<MonthlyClosingsLoadRequested>(_onMonthlyClosingsLoadRequested);
+    on<MonthlyClosingCreateRequested>(_onMonthlyClosingCreateRequested);
   }
 
   Future<void> _onEntriesLoadRequested(
@@ -186,6 +188,32 @@ class FinancialBloc extends Bloc<FinancialEvent, FinancialState> {
       emit(const FinancialSaved(message: 'Campanha criada com sucesso'));
     } catch (e) {
       emit(FinancialError(message: 'Erro ao criar campanha: $e'));
+    }
+  }
+
+  Future<void> _onMonthlyClosingsLoadRequested(
+    MonthlyClosingsLoadRequested event,
+    Emitter<FinancialState> emit,
+  ) async {
+    emit(const FinancialLoading());
+    try {
+      final result = await _repository.getMonthlyClosings(page: event.page);
+      emit(MonthlyClosingsLoaded(closings: result.items, totalCount: result.total));
+    } catch (e) {
+      emit(FinancialError(message: e.toString()));
+    }
+  }
+
+  Future<void> _onMonthlyClosingCreateRequested(
+    MonthlyClosingCreateRequested event,
+    Emitter<FinancialState> emit,
+  ) async {
+    emit(const FinancialLoading());
+    try {
+      await _repository.createMonthlyClosing(event.data);
+      emit(const FinancialSaved(message: 'Fechamento mensal realizado com sucesso'));
+    } catch (e) {
+      emit(FinancialError(message: 'Erro ao realizar fechamento: $e'));
     }
   }
 }

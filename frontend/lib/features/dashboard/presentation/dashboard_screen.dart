@@ -8,8 +8,62 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../auth/bloc/auth_bloc.dart';
 import '../../auth/bloc/auth_event_state.dart';
+import '../../financial/data/financial_repository.dart';
+import '../../financial/data/models/financial_models.dart';
+import '../../financial/presentation/format_utils.dart';
 import '../../members/data/member_repository.dart';
 import '../../members/data/models/member_models.dart';
+
+/// Dashboard stats from Assets API
+class AssetStats {
+  final int totalAssets;
+  final int totalActive;
+  final int inMaintenance;
+  final int onLoan;
+  final double totalValue;
+
+  const AssetStats({
+    this.totalAssets = 0,
+    this.totalActive = 0,
+    this.inMaintenance = 0,
+    this.onLoan = 0,
+    this.totalValue = 0,
+  });
+
+  factory AssetStats.fromJson(Map<String, dynamic> json) {
+    return AssetStats(
+      totalAssets: json['total_assets'] as int? ?? 0,
+      totalActive: json['total_active'] as int? ?? 0,
+      inMaintenance: json['in_maintenance'] as int? ?? 0,
+      onLoan: json['on_loan'] as int? ?? 0,
+      totalValue: (json['total_value'] as num?)?.toDouble() ?? 0,
+    );
+  }
+}
+
+/// Dashboard stats from EBD API
+class EbdStats {
+  final int totalClasses;
+  final int totalEnrolled;
+  final int activeTerms;
+  final double avgAttendanceRate;
+
+  const EbdStats({
+    this.totalClasses = 0,
+    this.totalEnrolled = 0,
+    this.activeTerms = 0,
+    this.avgAttendanceRate = 0,
+  });
+
+  factory EbdStats.fromJson(Map<String, dynamic> json) {
+    return EbdStats(
+      totalClasses: json['total_classes'] as int? ?? 0,
+      totalEnrolled: json['total_enrolled'] as int? ?? 0,
+      activeTerms: json['active_terms'] as int? ?? 0,
+      avgAttendanceRate: (json['avg_attendance_rate'] as num?)?.toDouble() ?? 0,
+    );
+  }
+}
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -20,6 +74,9 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   MemberStats? _stats;
+  FinancialBalance? _financialBalance;
+  AssetStats? _assetStats;
+  EbdStats? _ebdStats;
 
   @override
   void initState() {
@@ -30,11 +87,51 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Future<void> _loadStats() async {
     try {
       final apiClient = RepositoryProvider.of<ApiClient>(context);
-      final repo = MemberRepository(apiClient: apiClient);
-      final stats = await repo.getStats();
-      if (mounted) setState(() => _stats = stats);
+      final memberRepo = MemberRepository(apiClient: apiClient);
+      final financialRepo = FinancialRepository(apiClient: apiClient);
+
+      // Load all stats in parallel
+      final results = await Future.wait([
+        memberRepo.getStats(),
+        financialRepo.getBalanceReport().catchError((_) => const FinancialBalance(
+              totalIncome: 0,
+              totalExpense: 0,
+              balance: 0,
+              incomeByCategory: [],
+              expenseByCategory: [],
+            )),
+        _loadAssetStats(apiClient),
+        _loadEbdStats(apiClient),
+      ]);
+
+      if (mounted) {
+        setState(() {
+          _stats = results[0] as MemberStats;
+          _financialBalance = results[1] as FinancialBalance;
+          _assetStats = results[2] as AssetStats?;
+          _ebdStats = results[3] as EbdStats?;
+        });
+      }
     } catch (_) {
       // Silently ignore – dashboard stats are non-critical
+    }
+  }
+
+  Future<AssetStats?> _loadAssetStats(ApiClient apiClient) async {
+    try {
+      final response = await apiClient.dio.get('/v1/assets/stats');
+      return AssetStats.fromJson(response.data['data'] as Map<String, dynamic>);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<EbdStats?> _loadEbdStats(ApiClient apiClient) async {
+    try {
+      final response = await apiClient.dio.get('/v1/ebd/stats');
+      return EbdStats.fromJson(response.data['data'] as Map<String, dynamic>);
+    } catch (_) {
+      return null;
     }
   }
 
@@ -76,19 +173,38 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       : null,
                   color: AppColors.primary,
                 ),
-                const _StatCard(
+                _StatCard(
                   icon: Icons.attach_money_rounded,
-                  label: 'Entradas (Mês)',
-                  value: '—',
-                  trend: null,
+                  label: 'Saldo Financeiro',
+                  value: _financialBalance != null
+                      ? formatCurrency(_financialBalance!.balance)
+                      : '—',
+                  trend: _financialBalance != null && _financialBalance!.totalIncome > 0
+                      ? 'Receitas: ${formatCurrency(_financialBalance!.totalIncome)}'
+                      : null,
                   color: AppColors.success,
                 ),
-                const _StatCard(
+                _StatCard(
                   icon: Icons.inventory_2_outlined,
                   label: 'Patrimônio',
-                  value: '—',
-                  trend: null,
+                  value: _assetStats != null
+                      ? '${_assetStats!.totalActive}'
+                      : '—',
+                  trend: _assetStats != null && _assetStats!.inMaintenance > 0
+                      ? '${_assetStats!.inMaintenance} em manutenção'
+                      : null,
                   color: AppColors.info,
+                ),
+                _StatCard(
+                  icon: Icons.school_outlined,
+                  label: 'Alunos EBD',
+                  value: _ebdStats != null
+                      ? '${_ebdStats!.totalEnrolled}'
+                      : '—',
+                  trend: _ebdStats != null && _ebdStats!.totalClasses > 0
+                      ? '${_ebdStats!.totalClasses} turmas ativas'
+                      : null,
+                  color: AppColors.accent,
                 ),
                 const _StatCard(
                   icon: Icons.school_outlined,

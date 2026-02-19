@@ -114,6 +114,22 @@ class CampaignCreateRequested extends FinancialEvent {
   List<Object?> get props => [data];
 }
 
+/// Load monthly closings
+class MonthlyClosingsLoadRequested extends FinancialEvent {
+  final int page;
+  const MonthlyClosingsLoadRequested({this.page = 1});
+  @override
+  List<Object?> get props => [page];
+}
+
+/// Create monthly closing
+class MonthlyClosingCreateRequested extends FinancialEvent {
+  final Map<String, dynamic> data;
+  const MonthlyClosingCreateRequested({required this.data});
+  @override
+  List<Object?> get props => [data];
+}
+
 // ══════════════════════════════════════════
 // States
 // ══════════════════════════════════════════
@@ -195,6 +211,17 @@ class CampaignsLoaded extends FinancialState {
 
   @override
   List<Object?> get props => [campaigns, totalCount];
+}
+
+/// Monthly closings loaded
+class MonthlyClosingsLoaded extends FinancialState {
+  final List<MonthlyClosing> closings;
+  final int totalCount;
+
+  const MonthlyClosingsLoaded({required this.closings, required this.totalCount});
+
+  @override
+  List<Object?> get props => [closings, totalCount];
 }
 
 /// A resource was saved successfully

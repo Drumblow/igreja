@@ -4,7 +4,7 @@ use validator::Validate;
 
 use crate::api::middleware;
 use crate::api::response::ApiResponse;
-use crate::application::dto::{LoginRequest, RefreshRequest};
+use crate::application::dto::{ForgotPasswordRequest, LoginRequest, RefreshRequest, ResetPasswordRequest};
 use crate::application::services::AuthService;
 use crate::config::AppConfig;
 use crate::errors::AppError;
@@ -226,4 +226,142 @@ pub async fn me(
         "last_login_at": user.last_login_at,
         "created_at": user.created_at
     }))))
+}
+
+/// Forgot password — sends reset token to user email
+#[utoipa::path(
+    post,
+    path = "/api/v1/auth/forgot-password",
+    request_body = ForgotPasswordRequest,
+    responses(
+        (status = 200, description = "Reset instructions sent (always returns success for security)")
+    )
+)]
+#[post("/api/v1/auth/forgot-password")]
+pub async fn forgot_password(
+    pool: web::Data<PgPool>,
+    config: web::Data<AppConfig>,
+    body: web::Json<ForgotPasswordRequest>,
+) -> Result<HttpResponse, AppError> {
+    body.validate()
+        .map_err(|e| AppError::validation(e.to_string()))?;
+
+    // Always return success to prevent email enumeration
+    let message = "Se o e-mail estiver cadastrado, você receberá instruções para redefinir sua senha.";
+
+    // Look up user
+    let user = sqlx::query_as::<_, (uuid::Uuid, String)>(
+        "SELECT id, email FROM users WHERE email = $1 AND is_active = true",
+    )
+    .bind(&body.email)
+    .fetch_optional(pool.get_ref())
+    .await?;
+
+    if let Some((user_id, _email)) = user {
+        // Invalidate any existing reset tokens for this user
+        sqlx::query(
+            "UPDATE password_reset_tokens SET used_at = NOW() WHERE user_id = $1 AND used_at IS NULL",
+        )
+        .bind(user_id)
+        .execute(pool.get_ref())
+        .await?;
+
+        // Generate a secure 6-char alphanumeric token (easy to type from an email)
+        let raw_token = AuthService::generate_reset_token();
+        let token_hash = AuthService::hash_password(&raw_token)?;
+        let expires_at = chrono::Utc::now() + chrono::Duration::minutes(30);
+
+        sqlx::query(
+            "INSERT INTO password_reset_tokens (user_id, token_hash, expires_at) VALUES ($1, $2, $3)",
+        )
+        .bind(user_id)
+        .bind(&token_hash)
+        .bind(expires_at)
+        .execute(pool.get_ref())
+        .await?;
+
+        // In production, send email via lettre/SMTP.
+        // For development, log the token so it can be used for testing.
+        if config.smtp_host.is_empty() {
+            tracing::warn!("SMTP not configured — reset token for {}: {}", &body.email, &raw_token);
+        } else {
+            AuthService::send_reset_email(&body.email, &raw_token, &config).await.ok();
+        }
+    }
+
+    Ok(HttpResponse::Ok().json(ApiResponse::with_message(serde_json::json!({}), message)))
+}
+
+/// Reset password using token
+#[utoipa::path(
+    post,
+    path = "/api/v1/auth/reset-password",
+    request_body = ResetPasswordRequest,
+    responses(
+        (status = 200, description = "Password reset successfully"),
+        (status = 400, description = "Invalid or expired token")
+    )
+)]
+#[post("/api/v1/auth/reset-password")]
+pub async fn reset_password(
+    pool: web::Data<PgPool>,
+    body: web::Json<ResetPasswordRequest>,
+) -> Result<HttpResponse, AppError> {
+    body.validate()
+        .map_err(|e| AppError::validation(e.to_string()))?;
+
+    // Find non-expired, unused reset tokens
+    let tokens = sqlx::query_as::<_, (uuid::Uuid, uuid::Uuid, String)>(
+        r#"
+        SELECT id, user_id, token_hash
+        FROM password_reset_tokens
+        WHERE used_at IS NULL
+          AND expires_at > NOW()
+        ORDER BY created_at DESC
+        LIMIT 20
+        "#,
+    )
+    .fetch_all(pool.get_ref())
+    .await?;
+
+    let mut matched_token_id: Option<uuid::Uuid> = None;
+    let mut matched_user_id: Option<uuid::Uuid> = None;
+
+    for (token_id, user_id, hash) in &tokens {
+        if AuthService::verify_password(&body.token, hash)? {
+            matched_token_id = Some(*token_id);
+            matched_user_id = Some(*user_id);
+            break;
+        }
+    }
+
+    let token_id = matched_token_id
+        .ok_or_else(|| AppError::validation("Token inválido ou expirado"))?;
+    let user_id = matched_user_id.unwrap();
+
+    // Mark token as used
+    sqlx::query("UPDATE password_reset_tokens SET used_at = NOW() WHERE id = $1")
+        .bind(token_id)
+        .execute(pool.get_ref())
+        .await?;
+
+    // Hash new password and update user
+    let new_hash = AuthService::hash_password(&body.new_password)?;
+    sqlx::query(
+        "UPDATE users SET password_hash = $1, failed_attempts = 0, locked_until = NULL WHERE id = $2",
+    )
+    .bind(&new_hash)
+    .bind(user_id)
+    .execute(pool.get_ref())
+    .await?;
+
+    // Revoke all refresh tokens for security
+    sqlx::query(
+        "UPDATE refresh_tokens SET revoked_at = NOW() WHERE user_id = $1 AND revoked_at IS NULL",
+    )
+    .bind(user_id)
+    .execute(pool.get_ref())
+    .await?;
+
+    Ok(HttpResponse::Ok().json(ApiResponse::with_message(serde_json::json!({}), "Senha redefinida com sucesso")))
 }

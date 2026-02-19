@@ -48,3 +48,16 @@ pub struct Claims {
     pub exp: i64,
     pub iat: i64,
 }
+
+#[derive(Debug, Deserialize, Validate, ToSchema)]
+pub struct ForgotPasswordRequest {
+    #[validate(email(message = "E-mail inválido"))]
+    pub email: String,
+}
+
+#[derive(Debug, Deserialize, Validate, ToSchema)]
+pub struct ResetPasswordRequest {
+    pub token: String,
+    #[validate(length(min = 8, message = "Senha deve ter no mínimo 8 caracteres"))]
+    pub new_password: String,
+}
