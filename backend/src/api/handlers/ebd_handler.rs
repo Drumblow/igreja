@@ -17,6 +17,7 @@ use crate::application::services::{
 };
 use crate::config::AppConfig;
 use crate::errors::AppError;
+use crate::infrastructure::cache::CacheService;
 
 // ==========================================
 // EBD Terms (Períodos/Trimestres)
@@ -113,6 +114,7 @@ pub async fn create_ebd_term(
     req: HttpRequest,
     pool: web::Data<PgPool>,
     config: web::Data<AppConfig>,
+    cache: web::Data<CacheService>,
     body: web::Json<CreateEbdTermRequest>,
 ) -> Result<HttpResponse, AppError> {
     let claims = middleware::auth_middleware(req, config).await?;
@@ -122,6 +124,9 @@ pub async fn create_ebd_term(
     body.validate().map_err(|e| AppError::validation(&e.to_string()))?;
 
     let term = EbdTermService::create(pool.get_ref(), church_id, &body).await?;
+
+    // Invalidate EBD cache
+    cache.del_pattern(&format!("ebd:*:{church_id}")).await;
 
     Ok(HttpResponse::Created().json(ApiResponse::with_message(term, "Período EBD criado com sucesso")))
 }
@@ -272,6 +277,7 @@ pub async fn create_ebd_class(
     req: HttpRequest,
     pool: web::Data<PgPool>,
     config: web::Data<AppConfig>,
+    cache: web::Data<CacheService>,
     body: web::Json<CreateEbdClassRequest>,
 ) -> Result<HttpResponse, AppError> {
     let claims = middleware::auth_middleware(req, config).await?;
@@ -281,6 +287,9 @@ pub async fn create_ebd_class(
     body.validate().map_err(|e| AppError::validation(&e.to_string()))?;
 
     let class = EbdClassService::create(pool.get_ref(), church_id, &body).await?;
+
+    // Invalidate EBD cache
+    cache.del_pattern(&format!("ebd:*:{church_id}")).await;
 
     Ok(HttpResponse::Created().json(ApiResponse::with_message(class, "Turma EBD criada com sucesso")))
 }
@@ -371,16 +380,21 @@ pub async fn enroll_member(
     req: HttpRequest,
     pool: web::Data<PgPool>,
     config: web::Data<AppConfig>,
+    cache: web::Data<CacheService>,
     path: web::Path<Uuid>,
     body: web::Json<CreateEbdEnrollmentRequest>,
 ) -> Result<HttpResponse, AppError> {
     let claims = middleware::auth_middleware(req, config).await?;
     middleware::require_permission(&claims, "ebd:write")?;
+    let church_id = middleware::get_church_id(&claims)?;
     let class_id = path.into_inner();
 
     body.validate().map_err(|e| AppError::validation(&e.to_string()))?;
 
     let enrollment = EbdClassService::enroll_member(pool.get_ref(), class_id, &body).await?;
+
+    // Invalidate EBD cache
+    cache.del_pattern(&format!("ebd:*:{church_id}")).await;
 
     Ok(HttpResponse::Created().json(ApiResponse::with_message(enrollment, "Membro matriculado com sucesso")))
 }
@@ -404,13 +418,18 @@ pub async fn remove_enrollment(
     req: HttpRequest,
     pool: web::Data<PgPool>,
     config: web::Data<AppConfig>,
+    cache: web::Data<CacheService>,
     path: web::Path<(Uuid, Uuid)>,
 ) -> Result<HttpResponse, AppError> {
     let claims = middleware::auth_middleware(req, config).await?;
     middleware::require_permission(&claims, "ebd:write")?;
+    let church_id = middleware::get_church_id(&claims)?;
     let (class_id, enrollment_id) = path.into_inner();
 
     EbdClassService::remove_enrollment(pool.get_ref(), class_id, enrollment_id).await?;
+
+    // Invalidate EBD cache
+    cache.del_pattern(&format!("ebd:*:{church_id}")).await;
 
     Ok(HttpResponse::Ok().json(ApiResponse::with_message((), "Matrícula removida")))
 }
@@ -560,11 +579,13 @@ pub async fn record_attendance(
     req: HttpRequest,
     pool: web::Data<PgPool>,
     config: web::Data<AppConfig>,
+    cache: web::Data<CacheService>,
     path: web::Path<Uuid>,
     body: web::Json<CreateEbdAttendanceRequest>,
 ) -> Result<HttpResponse, AppError> {
     let claims = middleware::auth_middleware(req, config).await?;
     middleware::require_permission(&claims, "ebd:write")?;
+    let church_id = middleware::get_church_id(&claims)?;
     let user_id = middleware::get_user_id(&claims)?;
     let lesson_id = path.into_inner();
 
@@ -577,6 +598,9 @@ pub async fn record_attendance(
         &body,
     )
     .await?;
+
+    // Invalidate EBD cache
+    cache.del_pattern(&format!("ebd:*:{church_id}")).await;
 
     Ok(HttpResponse::Created().json(ApiResponse::with_message(
         attendances,
@@ -678,10 +702,17 @@ pub async fn ebd_stats(
     req: HttpRequest,
     pool: web::Data<PgPool>,
     config: web::Data<AppConfig>,
+    cache: web::Data<CacheService>,
 ) -> Result<HttpResponse, AppError> {
     let claims = middleware::auth_middleware(req, config).await?;
     middleware::require_permission(&claims, "ebd:read")?;
     let church_id = middleware::get_church_id(&claims)?;
+
+    // Try cache first
+    let cache_key = format!("ebd:stats:{church_id}");
+    if let Some(cached) = cache.get::<serde_json::Value>(&cache_key).await {
+        return Ok(HttpResponse::Ok().json(ApiResponse::ok(cached)));
+    }
 
     let total_classes = sqlx::query_scalar::<_, i64>(
         "SELECT COUNT(*) FROM ebd_classes WHERE church_id = $1 AND is_active = TRUE"
@@ -720,10 +751,15 @@ pub async fn ebd_stats(
     .fetch_one(pool.get_ref())
     .await?;
 
-    Ok(HttpResponse::Ok().json(ApiResponse::ok(serde_json::json!({
+    let stats = serde_json::json!({
         "total_classes": total_classes,
         "total_enrolled": total_enrolled,
         "active_terms": active_terms,
         "avg_attendance_rate": avg_attendance.unwrap_or(0.0)
-    }))))
+    });
+
+    // Cache for 120 seconds
+    cache.set(&cache_key, &stats, 120).await;
+
+    Ok(HttpResponse::Ok().json(ApiResponse::ok(stats)))
 }

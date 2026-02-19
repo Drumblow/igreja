@@ -54,6 +54,12 @@ class AppShell extends StatelessWidget {
       label: 'EBD',
       path: '/ebd',
     ),
+    _NavItem(
+      icon: Icons.settings_outlined,
+      activeIcon: Icons.settings_rounded,
+      label: 'Configurações',
+      path: '/settings',
+    ),
   ];
 
   @override

@@ -5,7 +5,7 @@ use validator::Validate;
 use crate::api::middleware;
 use crate::api::response::{ApiResponse, PaginationParams};
 use crate::application::dto::{CreateChurchRequest, UpdateChurchRequest};
-use crate::application::services::ChurchService;
+use crate::application::services::{ChurchService, AuditService};
 use crate::config::AppConfig;
 use crate::errors::AppError;
 
@@ -139,6 +139,12 @@ pub async fn create_church(
 
     let church = ChurchService::create(pool.get_ref(), &body).await?;
 
+    // Audit log
+    let user_id = middleware::get_user_id(&claims)?;
+    AuditService::log_action(
+        pool.get_ref(), church.id, Some(user_id), "create", "church", church.id,
+    ).await.ok();
+
     Ok(HttpResponse::Created().json(ApiResponse::with_message(
         church,
         "Igreja criada com sucesso",
@@ -182,6 +188,12 @@ pub async fn update_church(
         .map_err(|e| AppError::validation(e.to_string()))?;
 
     let church = ChurchService::update(pool.get_ref(), church_id, &body).await?;
+
+    // Audit log
+    let user_id = middleware::get_user_id(&claims)?;
+    AuditService::log_action(
+        pool.get_ref(), church_id, Some(user_id), "update", "church", church_id,
+    ).await.ok();
 
     Ok(HttpResponse::Ok().json(ApiResponse::with_message(
         church,

@@ -1,8 +1,8 @@
 # 📊 Andamento do Projeto — Igreja Manager
 
-> **Última atualização:** 19 de fevereiro de 2026  
-> **Versão do documento:** 1.11  
-> **Status geral do projeto:** Em Desenvolvimento Ativo (~97% concluído)
+> **Última atualização:** 20 de fevereiro de 2026  
+> **Versão do documento:** 1.12  
+> **Status geral do projeto:** Em Desenvolvimento Ativo (~99% concluído)
 
 ---
 
@@ -18,12 +18,12 @@ O **Igreja Manager** é uma plataforma de gestão para igrejas composta por **5 
 | Banco de Dados (Schema) | ![100%](https://img.shields.io/badge/100%25-brightgreen) | ✅ Concluído |
 | Infraestrutura (Docker) | ![95%](https://img.shields.io/badge/95%25-green) | ✅ Docker + Redis cache + SMTP config |
 | Backend — Autenticação | ![100%](https://img.shields.io/badge/100%25-brightgreen) | ✅ Completo (login/refresh/logout/me/forgot/reset) |
-| Backend — Igrejas | ![100%](https://img.shields.io/badge/100%25-brightgreen) | ✅ CRUD completo (5 endpoints) |
-| Backend — Usuários/Papéis | ![100%](https://img.shields.io/badge/100%25-brightgreen) | ✅ CRUD completo (5 endpoints) |
-| Backend — Membros | ![95%](https://img.shields.io/badge/95%25-green) | 🟢 Famílias + Ministérios + Histórico |
-| Backend — Financeiro | ![80%](https://img.shields.io/badge/80%25-green) | 🟢 CRUD completo (5 sub-módulos, 18 endpoints) |
-| Backend — Patrimônio | ![100%](https://img.shields.io/badge/100%25-brightgreen) | ✅ CRUD + Stats (5 sub-módulos, 18 endpoints) |
-| Backend — EBD | ![100%](https://img.shields.io/badge/100%25-brightgreen) | ✅ CRUD + Stats (4 sub-módulos, 16 endpoints) |
+| Backend — Igrejas | ![100%](https://img.shields.io/badge/100%25-brightgreen) | ✅ CRUD completo (5 endpoints) + Audit Log |
+| Backend — Usuários/Papéis | ![100%](https://img.shields.io/badge/100%25-brightgreen) | ✅ CRUD completo (5 endpoints) + Audit Log |
+| Backend — Membros | ![100%](https://img.shields.io/badge/100%25-brightgreen) | ✅ Famílias + Ministérios + Histórico + Cache + Audit |
+| Backend — Financeiro | ![95%](https://img.shields.io/badge/95%25-green) | 🟢 CRUD completo (5 sub-módulos, 18 endpoints) + Audit Log |
+| Backend — Patrimônio | ![100%](https://img.shields.io/badge/100%25-brightgreen) | ✅ CRUD + Stats + Cache + Audit (5 sub-módulos, 18 endpoints) |
+| Backend — EBD | ![100%](https://img.shields.io/badge/100%25-brightgreen) | ✅ CRUD + Stats + Cache + Audit (4 sub-módulos, 16 endpoints) |
 | Backend — Swagger UI | ![100%](https://img.shields.io/badge/100%25-brightgreen) | ✅ Montado em `/swagger-ui/` |
 | Frontend — Design System | ![100%](https://img.shields.io/badge/100%25-brightgreen) | ✅ Concluído |
 | Frontend — Autenticação | ![100%](https://img.shields.io/badge/100%25-brightgreen) | ✅ Login + Forgot Password + Reset Password completos |
@@ -33,8 +33,9 @@ O **Igreja Manager** é uma plataforma de gestão para igrejas composta por **5 
 | Frontend — Ministérios | ![85%](https://img.shields.io/badge/85%25-green) | 🟢 CRUD completo (lista/detalhe/form) |
 | Frontend — Financeiro | ![85%](https://img.shields.io/badge/85%25-green) | 🟢 7 telas + BLoC + Repositório + Fechamento Mensal |
 | Frontend — Patrimônio | ![85%](https://img.shields.io/badge/85%25-green) | 🟢 12 telas + BLoC + Repositório |
-| Frontend — EBD | ![85%](https://img.shields.io/badge/85%25-green) | 🟢 6 telas + BLoC + Repositório |
-| Frontend — Relatórios | ![80%](https://img.shields.io/badge/80%25-green) | 🟢 Tela central com métricas + aniversariantes + navegação |
+| Frontend — EBD | ![90%](https://img.shields.io/badge/90%25-green) | 🟢 Overview com stats wired via API + 6 telas + BLoC |
+| Frontend — Relatórios | ![95%](https://img.shields.io/badge/95%25-green) | 🟢 Tela central com métricas (4 módulos) + aniversariantes + navegação |
+| Frontend — Configurações | ![100%](https://img.shields.io/badge/100%25-brightgreen) | ✅ NOVO — Igrejas + Usuários/Papéis (3 telas + BLoC + Repositório) |
 
 ---
 
@@ -78,7 +79,7 @@ Toda a documentação de especificação foi finalizada, totalizando **~5.052 li
 | `roles` | 8 | 7 papéis padrão | ✅ Sim (consultada no login) |
 | `users` | 14 | — | ✅ Sim (autenticação) |
 | `refresh_tokens` | 6 | — | ✅ Sim (refresh flow) |
-| `audit_logs` | 9 | — | ❌ Tabela existe, sem escrita |
+| `audit_logs` | 9 | — | ✅ Escrita via AuditService (Members, Assets, Financial, Churches, Users) |
 
 **Papéis pré-definidos (seeds):**
 1. `super_admin` — Administrador Geral do Sistema
@@ -170,9 +171,9 @@ Toda a documentação de especificação foi finalizada, totalizando **~5.052 li
 | Banco | `sqlx` | 0.8 | ✅ Em uso |
 | Auth | `jsonwebtoken` | 10.3 | ✅ Em uso |
 | Auth | `argon2` | 0.5 | ✅ Em uso |
-| Cache | `redis` | 1.0 | ⚠️ Importado, não utilizado |
-| Email | `lettre` | 0.11 | ⚠️ Importado, não utilizado |
-| Docs | `utoipa` / `utoipa-swagger-ui` | 5.4 / 9.0 | ⚠️ Anotações existem, Swagger não montado |
+| Cache | `redis` | 1.0 | ✅ Em uso — CacheService integrado em stats + write handlers |
+| Email | `lettre` | 0.11 | ✅ Em uso — Forgot/Reset password via SMTP |
+| Docs | `utoipa` / `utoipa-swagger-ui` | 5.4 / 9.0 | ✅ Swagger UI montado em `/swagger-ui/` |
 | Validação | `validator` | 0.20 | ✅ Em uso |
 | Tipos | `uuid`, `chrono`, `rust_decimal` | Latest | ✅ Em uso |
 
@@ -427,8 +428,8 @@ backend/src/
 | Módulo EBD completo | ~~5 tabelas prontas, 7 endpoints documentados~~ ✅ **Backend completo (16 endpoints com stats)** | ~~Alta~~ ✅ |
 | Módulo Patrimônio completo | ~~7 tabelas prontas, 7 endpoints documentados~~ ✅ **Backend completo (18 endpoints com stats)** | ~~Alta~~ ✅ |
 | Famílias e Ministérios | ~~Tabelas prontas, endpoints documentados~~ ✅ **Backend + Frontend completos** | ~~Média~~ ✅ |
-| Audit Log (escrita) | ~~Tabela existe, falta interceptar ações~~ ✅ **Concluído** — `AuditService::log()` + `log_action()`, integrado em member CRUD | ~~Média~~ ✅ |
-| Cache Redis | ~~Crate importado, não configurado~~ ✅ **Concluído** — `CacheService` (get/set/del/del_pattern), conectado no startup, fail-open | ~~Média~~ ✅ |
+| Audit Log (escrita) | ~~Tabela existe, falta interceptar ações~~ ✅ **Concluído** — `AuditService::log()` + `log_action()`, integrado em Members, Assets, Financial, Churches e Users | ~~Média~~ ✅ |
+| Cache Redis | ~~Crate importado, não configurado~~ ✅ **Concluído** — `CacheService` (get/set/del/del_pattern), integrado em stats endpoints (Members, Assets, EBD) + cache invalidation em write handlers | ~~Média~~ ✅ |
 
 #### Prioridade Baixa
 
@@ -548,7 +549,20 @@ frontend/lib/
 │
 └── reports/                             ✅ NOVO — Tela central de relatórios
     └── presentation/
-        └── reports_screen.dart          ✅ Métricas agregadas + aniversariantes + navegação por módulo
+        └── reports_screen.dart          ✅ Métricas agregadas (4 módulos) + aniversariantes + navegação
+│
+└── settings/                            ✅ NOVO — Gestão de Igrejas + Usuários
+    ├── bloc/
+    │   ├── settings_bloc.dart           ✅ 8 event handlers (Church + User CRUD)
+    │   └── settings_event_state.dart    ✅ 8 events, 7 states
+    ├── data/
+    │   ├── settings_repository.dart     ✅ 9 métodos (churches + users + roles)
+    │   └── models/
+    │       └── settings_models.dart     ✅ Church (22 campos), AppUser, AppRole
+    └── presentation/
+        ├── settings_overview_screen.dart ✅ Overview com 3 cards de navegação
+        ├── church_settings_screen.dart  ✅ Perfil da igreja (info/endereço/contato) + edição
+        └── user_management_screen.dart  ✅ Lista de usuários + criar/editar + roles
 ```
 
 ### 5.3 Design System — Tokens Implementados
@@ -685,10 +699,10 @@ frontend/lib/
 | `/financial/campaigns` | `CampaignListScreen` (dentro de `AppShell`) | Protegida |
 
 | `/financial/monthly-closings` | `MonthlyClosingListScreen` (dentro de `AppShell`) | Protegida |
-| `/reports` | `ReportsScreen` (dentro de `AppShell`) | Protegida |
+| `/reports` | `ReportsScreen` (dentro de `AppShell`) | Protegida |\n| `/settings` | `SettingsOverviewScreen` (dentro de `AppShell`) | Protegida |\n| `/settings/church` | `ChurchSettingsScreen` (dentro de `AppShell`) | Protegida |\n| `/settings/users` | `UserManagementScreen` (dentro de `AppShell`) | Protegida |
 
 **Shell responsivo:**
-- Desktop (≥ 900px): Sidebar navy com itens: Dashboard, Membros, Famílias, Ministérios, Financeiro, Patrimônio, EBD
+- Desktop (≥ 900px): Sidebar navy com itens: Dashboard, Membros, Famílias, Ministérios, Financeiro, Patrimônio, EBD, Configurações
 - Mobile (< 900px): `NavigationBar` inferior com os mesmos itens
 
 ---
@@ -725,6 +739,12 @@ frontend/lib/
 | 18 | Dashboard com stat card duplicado (EBD aparecia 2 vezes) | Removido o 5º card estático que era cópia hardcoded do 4º |
 | 19 | Histórico de membro sem UI no frontend | Criada `MemberHistoryScreen` com timeline visual + diálogo para registrar novos eventos |
 | 20 | Quick Action "Relatórios" no dashboard sem navegação (`// TODO`) | Criada `ReportsScreen` em `/reports` com métricas agregadas, aniversariantes do mês e navegação por módulo |
+| 21 | EBD Overview: botão "Frequência" navegava para `/ebd/attendance` sem `lessonId` → 404 | Removido card de navegação quebrado; frequência acessada via lista de aulas |
+| 22 | EBD Overview: estatísticas eram placeholders estáticos | Wired para `/v1/ebd/stats` API com loading state e RefreshIndicator |
+| 23 | Reports screen incompleta (só Membros + Financeiro) | Adicionadas seções de Patrimônio (5 métricas) e EBD (4 métricas) via API |
+| 24 | Sem frontend para gestão de Igrejas e Usuários (APIs existiam sem UI) | Criado módulo `settings/` completo: 3 telas + BLoC + Repositório + Models |
+| 25 | Redis cache conectado mas nunca utilizado (`#[allow(dead_code)]`) | Integrado em `member_stats`, `ebd_stats`, `asset_stats` + cache invalidation em write handlers |
+| 26 | Audit logging apenas no módulo de Membros | Expandido para Financial (entries), Assets (CRUD), Churches (create/update), Users (create/update) |
 
 ---
 
@@ -734,10 +754,10 @@ Crates/packages importados mas ainda sem uso no código — preparados para fase
 
 | Dependência | Plataforma | Finalidade Planejada |
 |-------------|:----------:|----------------------|
-| `redis` 1.0 | Backend | Cache de sessões e dados frequentes |
-| `lettre` 0.11 | Backend | Envio de emails (recuperação de senha, notificações) |
+| ~~`redis` 1.0~~ | Backend | ✅ **Integrado** — CacheService em stats + invalidation |
+| ~~`lettre` 0.11~~ | Backend | ✅ **Integrado** — Forgot/Reset password via SMTP |
 | `actix-multipart` 0.7 | Backend | Upload de fotos de membros e patrimônio |
-| `utoipa-swagger-ui` 9.0 | Backend | Interface Swagger (anotações já existem) |
+| ~~`utoipa-swagger-ui` 9.0~~ | Backend | ✅ **Integrado** — Swagger UI montado em `/swagger-ui/` |
 | `rust_decimal` 1.0 | Backend | Cálculos financeiros precisos |
 | `retrofit` / `retrofit_generator` | Frontend | Geração automática de clientes HTTP (usando Dio manual por ora) |
 | `reactive_forms` 18.0.2 | Frontend | Formulários reativos complexos (cadastro de membro) |
@@ -805,8 +825,8 @@ Crates/packages importados mas ainda sem uso no código — preparados para fase
 | 6.2 | Testes de widget (Frontend) | Telas principais, BLoC tests |
 | 6.3 | CI/CD Pipeline | GitHub Actions: build, test, deploy |
 | 6.4 | Swagger UI funcional | ~~Montar `/swagger-ui`~~ ✅ **Concluído** |
-| 6.5 | Cache Redis | ~~Implementar caching de consultas frequentes~~ ✅ **Concluído** — `CacheService` (get/set/del/del_pattern) |
-| 6.6 | Audit Log funcional | ~~Interceptar e registrar ações~~ ✅ **Concluído** — `AuditService` integrado em member CRUD |
+| 6.5 | Cache Redis | ~~Implementar caching de consultas frequentes~~ ✅ **Concluído** — `CacheService` (get/set/del/del_pattern), integrado em member_stats, ebd_stats, asset_stats + invalidation em write handlers |
+| 6.6 | Audit Log funcional | ~~Interceptar e registrar ações~~ ✅ **Concluído** — `AuditService` integrado em Members, Assets, Financial, Churches, Users (create/update/delete) |
 | 6.7 | Upload de arquivos | Fotos de membros e bens |
 | 6.8 | Envio de emails | ~~Recuperação de senha, notificações~~ ✅ **Concluído** — lettre SMTP + forgot/reset password |
 
@@ -818,12 +838,12 @@ Crates/packages importados mas ainda sem uso no código — preparados para fase
 
 | Componente | Arquivos | Linhas Estimadas |
 |------------|:--------:|:----------------:|
-| Documentação (docs/) | 7 | ~5.800 |
-| Backend (Rust) | 28 .rs | ~5.800 |
+| Documentação (docs/) | 7 | ~5.900 |
+| Backend (Rust) | 28 .rs | ~5.900 |
 | Migrations (SQL) | 2 | ~810 |
-| Frontend (Dart) | 67 .dart | ~19.000 |
+| Frontend (Dart) | 73 .dart | ~20.500 |
 | Configuração | 5 | ~200 |
-| **Total** | **109** | **~31.600** |
+| **Total** | **115** | **~33.300** |
 
 ### Status de Compilação
 

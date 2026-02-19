@@ -8,6 +8,7 @@ use crate::application::dto::{CreateMemberRequest, MemberFilter, UpdateMemberReq
 use crate::application::services::{AuditService, MemberService};
 use crate::config::AppConfig;
 use crate::errors::AppError;
+use crate::infrastructure::cache::CacheService;
 
 /// List members with pagination and filters
 #[utoipa::path(
@@ -98,6 +99,7 @@ pub async fn create_member(
     req: HttpRequest,
     pool: web::Data<PgPool>,
     config: web::Data<AppConfig>,
+    cache: web::Data<CacheService>,
     body: web::Json<CreateMemberRequest>,
 ) -> Result<HttpResponse, AppError> {
     let claims = middleware::auth_middleware(req, config).await?;
@@ -108,6 +110,9 @@ pub async fn create_member(
         .map_err(|e| AppError::validation(e.to_string()))?;
 
     let member = MemberService::create(pool.get_ref(), church_id, &body).await?;
+
+    // Invalidate members cache
+    cache.del_pattern(&format!("members:*:{church_id}")).await;
 
     // Audit log
     let user_id = middleware::get_user_id(&claims)?;
@@ -136,6 +141,7 @@ pub async fn update_member(
     req: HttpRequest,
     pool: web::Data<PgPool>,
     config: web::Data<AppConfig>,
+    cache: web::Data<CacheService>,
     path: web::Path<uuid::Uuid>,
     body: web::Json<UpdateMemberRequest>,
 ) -> Result<HttpResponse, AppError> {
@@ -148,6 +154,9 @@ pub async fn update_member(
         .map_err(|e| AppError::validation(e.to_string()))?;
 
     let member = MemberService::update(pool.get_ref(), church_id, member_id, &body).await?;
+
+    // Invalidate members cache
+    cache.del_pattern(&format!("members:*:{church_id}")).await;
 
     // Audit log
     let user_id = middleware::get_user_id(&claims)?;
@@ -174,6 +183,7 @@ pub async fn delete_member(
     req: HttpRequest,
     pool: web::Data<PgPool>,
     config: web::Data<AppConfig>,
+    cache: web::Data<CacheService>,
     path: web::Path<uuid::Uuid>,
 ) -> Result<HttpResponse, AppError> {
     let claims = middleware::auth_middleware(req, config).await?;
@@ -182,6 +192,9 @@ pub async fn delete_member(
     let member_id = path.into_inner();
 
     MemberService::delete(pool.get_ref(), church_id, member_id).await?;
+
+    // Invalidate members cache
+    cache.del_pattern(&format!("members:*:{church_id}")).await;
 
     // Audit log
     let user_id = middleware::get_user_id(&claims)?;
@@ -207,9 +220,16 @@ pub async fn member_stats(
     req: HttpRequest,
     pool: web::Data<PgPool>,
     config: web::Data<AppConfig>,
+    cache: web::Data<CacheService>,
 ) -> Result<HttpResponse, AppError> {
     let claims = middleware::auth_middleware(req, config).await?;
     let church_id = middleware::get_church_id(&claims)?;
+
+    // Try cache first (TTL 60s for stats)
+    let cache_key = format!("members:stats:{church_id}");
+    if let Some(cached) = cache.get::<serde_json::Value>(&cache_key).await {
+        return Ok(HttpResponse::Ok().json(ApiResponse::ok(cached)));
+    }
 
     let total_active = sqlx::query_scalar::<_, i64>(
         "SELECT COUNT(*) FROM members WHERE church_id = $1 AND status = 'ativo' AND deleted_at IS NULL"
@@ -242,10 +262,15 @@ pub async fn member_stats(
     .fetch_one(pool.get_ref())
     .await?;
 
-    Ok(HttpResponse::Ok().json(ApiResponse::ok(serde_json::json!({
+    let stats = serde_json::json!({
         "total_active": total_active,
         "total_inactive": total_inactive,
         "new_members_this_month": new_this_month,
         "new_members_this_year": new_this_year
-    }))))
+    });
+
+    // Cache for 60 seconds
+    cache.set(&cache_key, &stats, 60).await;
+
+    Ok(HttpResponse::Ok().json(ApiResponse::ok(stats)))
 }

@@ -37,6 +37,9 @@ import '../../features/ebd/presentation/ebd_class_detail_screen.dart';
 import '../../features/ebd/presentation/ebd_lesson_list_screen.dart';
 import '../../features/ebd/presentation/ebd_attendance_screen.dart';
 import '../../features/reports/presentation/reports_screen.dart';
+import '../../features/settings/presentation/settings_overview_screen.dart';
+import '../../features/settings/presentation/church_settings_screen.dart';
+import '../../features/settings/presentation/user_management_screen.dart';
 import '../shell/app_shell.dart';
 
 class AppRouter {
@@ -329,6 +332,25 @@ class AppRouter {
                   final lessonId = state.pathParameters['lessonId']!;
                   return EbdAttendanceScreen(lessonId: lessonId);
                 },
+              ),
+            ],
+          ),
+
+          // ── Settings ──
+          GoRoute(
+            path: '/settings',
+            name: 'settings',
+            builder: (context, state) => const SettingsOverviewScreen(),
+            routes: [
+              GoRoute(
+                path: 'church',
+                name: 'settings-church',
+                builder: (context, state) => const ChurchSettingsScreen(),
+              ),
+              GoRoute(
+                path: 'users',
+                name: 'settings-users',
+                builder: (context, state) => const UserManagementScreen(),
               ),
             ],
           ),

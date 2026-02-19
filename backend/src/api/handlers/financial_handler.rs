@@ -13,7 +13,7 @@ use crate::application::dto::{
 };
 use crate::application::services::{
     AccountPlanService, BankAccountService, CampaignService, FinancialEntryService,
-    MonthlyClosingService,
+    MonthlyClosingService, AuditService,
 };
 use crate::config::AppConfig;
 use crate::errors::AppError;
@@ -534,6 +534,11 @@ pub async fn create_financial_entry(
     let entry =
         FinancialEntryService::create(pool.get_ref(), church_id, user_id, &body).await?;
 
+    // Audit log
+    AuditService::log_action(
+        pool.get_ref(), church_id, Some(user_id), "create", "financial_entry", entry.id,
+    ).await.ok();
+
     Ok(HttpResponse::Created().json(ApiResponse::with_message(
         entry,
         "Lançamento criado com sucesso",
@@ -571,6 +576,12 @@ pub async fn update_financial_entry(
     let entry =
         FinancialEntryService::update(pool.get_ref(), church_id, entry_id, &body).await?;
 
+    // Audit log
+    let user_id = middleware::get_user_id(&claims)?;
+    AuditService::log_action(
+        pool.get_ref(), church_id, Some(user_id), "update", "financial_entry", entry_id,
+    ).await.ok();
+
     Ok(HttpResponse::Ok().json(ApiResponse::with_message(
         entry,
         "Lançamento atualizado com sucesso",
@@ -601,6 +612,12 @@ pub async fn delete_financial_entry(
     let entry_id = path.into_inner();
 
     FinancialEntryService::delete(pool.get_ref(), church_id, entry_id).await?;
+
+    // Audit log
+    let user_id = middleware::get_user_id(&claims)?;
+    AuditService::log_action(
+        pool.get_ref(), church_id, Some(user_id), "delete", "financial_entry", entry_id,
+    ).await.ok();
 
     Ok(HttpResponse::Ok().json(ApiResponse::ok(serde_json::json!({
         "message": "Lançamento removido com sucesso"

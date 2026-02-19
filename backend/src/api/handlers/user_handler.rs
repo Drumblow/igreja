@@ -5,7 +5,7 @@ use validator::Validate;
 use crate::api::middleware;
 use crate::api::response::{ApiResponse, PaginationParams};
 use crate::application::dto::{CreateUserRequest, UpdateUserRequest};
-use crate::application::services::UserService;
+use crate::application::services::{UserService, AuditService};
 use crate::config::AppConfig;
 use crate::errors::AppError;
 
@@ -119,6 +119,12 @@ pub async fn create_user(
 
     let user = UserService::create(pool.get_ref(), church_id, &body).await?;
 
+    // Audit log
+    let actor_id = middleware::get_user_id(&claims)?;
+    AuditService::log_action(
+        pool.get_ref(), church_id, Some(actor_id), "create", "user", user.id,
+    ).await.ok();
+
     Ok(HttpResponse::Created().json(ApiResponse::with_message(
         serde_json::json!({
             "id": user.id,
@@ -161,6 +167,12 @@ pub async fn update_user(
         .map_err(|e| AppError::validation(e.to_string()))?;
 
     let user = UserService::update(pool.get_ref(), church_id, user_id, &body).await?;
+
+    // Audit log
+    let actor_id = middleware::get_user_id(&claims)?;
+    AuditService::log_action(
+        pool.get_ref(), church_id, Some(actor_id), "update", "user", user_id,
+    ).await.ok();
 
     Ok(HttpResponse::Ok().json(ApiResponse::with_message(
         serde_json::json!({

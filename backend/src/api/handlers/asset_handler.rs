@@ -13,9 +13,11 @@ use crate::application::dto::{
 };
 use crate::application::services::{
     AssetCategoryService, AssetLoanService, AssetService, InventoryService, MaintenanceService,
+    AuditService,
 };
 use crate::config::AppConfig;
 use crate::errors::AppError;
+use crate::infrastructure::cache::CacheService;
 
 // ==========================================
 // Asset Categories
@@ -231,6 +233,7 @@ pub async fn create_asset(
     req: HttpRequest,
     pool: web::Data<PgPool>,
     config: web::Data<AppConfig>,
+    cache: web::Data<CacheService>,
     body: web::Json<CreateAssetRequest>,
 ) -> Result<HttpResponse, AppError> {
     let claims = middleware::auth_middleware(req, config).await?;
@@ -241,6 +244,15 @@ pub async fn create_asset(
         .map_err(|e| AppError::validation(e.to_string()))?;
 
     let asset = AssetService::create(pool.get_ref(), church_id, &body).await?;
+
+    // Invalidate assets cache
+    cache.del_pattern(&format!("assets:*:{church_id}")).await;
+
+    // Audit log
+    let user_id = middleware::get_user_id(&claims)?;
+    AuditService::log_action(
+        pool.get_ref(), church_id, Some(user_id), "create", "asset", asset.id,
+    ).await.ok();
 
     Ok(HttpResponse::Created().json(ApiResponse::with_message(
         asset,
@@ -265,6 +277,7 @@ pub async fn update_asset(
     req: HttpRequest,
     pool: web::Data<PgPool>,
     config: web::Data<AppConfig>,
+    cache: web::Data<CacheService>,
     path: web::Path<uuid::Uuid>,
     body: web::Json<UpdateAssetRequest>,
 ) -> Result<HttpResponse, AppError> {
@@ -277,6 +290,15 @@ pub async fn update_asset(
         .map_err(|e| AppError::validation(e.to_string()))?;
 
     let asset = AssetService::update(pool.get_ref(), church_id, asset_id, &body).await?;
+
+    // Invalidate assets cache
+    cache.del_pattern(&format!("assets:*:{church_id}")).await;
+
+    // Audit log
+    let user_id = middleware::get_user_id(&claims)?;
+    AuditService::log_action(
+        pool.get_ref(), church_id, Some(user_id), "update", "asset", asset_id,
+    ).await.ok();
 
     Ok(HttpResponse::Ok().json(ApiResponse::with_message(
         asset,
@@ -308,6 +330,7 @@ pub async fn delete_asset(
     req: HttpRequest,
     pool: web::Data<PgPool>,
     config: web::Data<AppConfig>,
+    cache: web::Data<CacheService>,
     path: web::Path<uuid::Uuid>,
     query: web::Query<DeleteAssetQuery>,
 ) -> Result<HttpResponse, AppError> {
@@ -323,6 +346,15 @@ pub async fn delete_asset(
         query.reason.as_deref(),
     )
     .await?;
+
+    // Invalidate assets cache
+    cache.del_pattern(&format!("assets:*:{church_id}")).await;
+
+    // Audit log
+    let user_id = middleware::get_user_id(&claims)?;
+    AuditService::log_action(
+        pool.get_ref(), church_id, Some(user_id), "delete", "asset", asset_id,
+    ).await.ok();
 
     Ok(HttpResponse::Ok().json(ApiResponse::ok(serde_json::json!({
         "message": "Bem patrimonial baixado com sucesso"
@@ -784,10 +816,17 @@ pub async fn asset_stats(
     req: HttpRequest,
     pool: web::Data<PgPool>,
     config: web::Data<AppConfig>,
+    cache: web::Data<CacheService>,
 ) -> Result<HttpResponse, AppError> {
     let claims = middleware::auth_middleware(req, config).await?;
     middleware::require_permission(&claims, "assets:read")?;
     let church_id = middleware::get_church_id(&claims)?;
+
+    // Try cache first
+    let cache_key = format!("assets:stats:{church_id}");
+    if let Some(cached) = cache.get::<serde_json::Value>(&cache_key).await {
+        return Ok(HttpResponse::Ok().json(ApiResponse::ok(cached)));
+    }
 
     let total_assets = sqlx::query_scalar::<_, i64>(
         "SELECT COUNT(*) FROM assets WHERE church_id = $1 AND deleted_at IS NULL"
@@ -827,11 +866,16 @@ pub async fn asset_stats(
     .fetch_one(pool.get_ref())
     .await?;
 
-    Ok(HttpResponse::Ok().json(ApiResponse::ok(serde_json::json!({
+    let stats = serde_json::json!({
         "total_assets": total_assets,
         "total_active": total_active,
         "in_maintenance": in_maintenance,
         "on_loan": on_loan,
         "total_value": total_value.unwrap_or(0.0)
-    }))))
+    });
+
+    // Cache for 120 seconds
+    cache.set(&cache_key, &stats, 120).await;
+
+    Ok(HttpResponse::Ok().json(ApiResponse::ok(stats)))
 }

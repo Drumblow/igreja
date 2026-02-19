@@ -25,7 +25,6 @@ pub struct CacheService {
     url: String,
 }
 
-#[allow(dead_code)]
 impl CacheService {
     pub async fn connect(redis_url: &str) -> Self {
         let service = Self {
