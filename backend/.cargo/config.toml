@@ -1,0 +1,3 @@
+[target.x86_64-pc-windows-msvc]
+# Usa rust-lld como linker para evitar erro LNK1318 (PDB LIMIT) do link.exe MSVC
+linker = "rust-lld"

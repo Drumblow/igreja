@@ -21,7 +21,7 @@ pub mod inventory;
 pub mod maintenance;
 
 pub use account_plan::{AccountPlan, AccountPlanSummary};
-pub use asset::{Asset, AssetPhoto, AssetSummary};
+pub use asset::{Asset, AssetSummary};
 pub use asset_category::{AssetCategory, AssetCategorySummary};
 pub use asset_loan::{AssetLoan, AssetLoanSummary};
 pub use ebd_attendance::{EbdAttendance, EbdAttendanceDetail};

@@ -75,6 +75,7 @@ impl CacheService {
     }
 
     /// Delete a cached key (e.g. after mutation).
+    #[allow(dead_code)]
     pub async fn del(&self, key: &str) {
         if let Some(client) = self.client.get() {
             if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
@@ -101,6 +102,7 @@ impl CacheService {
     }
 
     /// Check if the cache is connected.
+    #[allow(dead_code)]
     pub fn is_connected(&self) -> bool {
         self.client.get().is_some()
     }

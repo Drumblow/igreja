@@ -51,6 +51,7 @@ pub struct AssetSummary {
     pub created_at: DateTime<Utc>,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow, ToSchema)]
 pub struct AssetPhoto {
     pub id: Uuid,

@@ -67,6 +67,9 @@ anyhow = "1.0"
 rand = "0.9"
 base64 = "0.22"
 
+[profile.dev]
+# debug = true é o padrão; rust-lld (em .cargo/config.toml) evita o erro LNK1318 do link.exe
+
 [dev-dependencies]
 reqwest = { version = "0.12", features = ["json"] }
 fake = { version = "4", features = ["derive"] }

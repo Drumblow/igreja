@@ -46,6 +46,7 @@ pub struct UserSummary {
 // Role DTOs
 // ==========================================
 
+#[allow(dead_code)]
 #[derive(Debug, Deserialize, Validate, ToSchema)]
 pub struct CreateRoleRequest {
     #[validate(length(min = 2, max = 50, message = "Nome deve ter entre 2 e 50 caracteres"))]
@@ -56,6 +57,7 @@ pub struct CreateRoleRequest {
     pub permissions: Vec<String>,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Deserialize, Validate, ToSchema)]
 pub struct UpdateRoleRequest {
     pub display_name: Option<String>,
