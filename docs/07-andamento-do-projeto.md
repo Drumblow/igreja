@@ -1,8 +1,8 @@
 # 📊 Andamento do Projeto — Igreja Manager
 
-> **Última atualização:** 18 de fevereiro de 2026  
-> **Versão do documento:** 1.2  
-> **Status geral do projeto:** Em Desenvolvimento Ativo (~42% concluído)
+> **Última atualização:** 19 de fevereiro de 2026  
+> **Versão do documento:** 1.5  
+> **Status geral do projeto:** Em Desenvolvimento Ativo (~65% concluído)
 
 ---
 
@@ -19,14 +19,16 @@ O **Igreja Manager** é uma plataforma de gestão para igrejas composta por **5 
 | Infraestrutura (Docker) | ![90%](https://img.shields.io/badge/90%25-green) | ✅ Funcional |
 | Backend — Autenticação | ![90%](https://img.shields.io/badge/90%25-green) | 🟢 Quase completo |
 | Backend — Membros | ![95%](https://img.shields.io/badge/95%25-green) | 🟢 Famílias + Ministérios + Histórico |
-| Backend — Financeiro | ![0%](https://img.shields.io/badge/0%25-red) | 🔴 Não iniciado |
+| Backend — Financeiro | ![80%](https://img.shields.io/badge/80%25-green) | 🟢 CRUD completo (5 sub-módulos, 18 endpoints) |
 | Backend — Patrimônio | ![0%](https://img.shields.io/badge/0%25-red) | 🔴 Não iniciado |
 | Backend — EBD | ![0%](https://img.shields.io/badge/0%25-red) | 🔴 Não iniciado |
 | Frontend — Design System | ![100%](https://img.shields.io/badge/100%25-brightgreen) | ✅ Concluído |
 | Frontend — Autenticação | ![85%](https://img.shields.io/badge/85%25-green) | 🟢 Quase completo |
-| Frontend — Dashboard | ![40%](https://img.shields.io/badge/40%25-orange) | 🟠 Quick actions wired |
+| Frontend — Dashboard | ![60%](https://img.shields.io/badge/60%25-yellow) | 🟡 Stats wired + quick actions |
 | Frontend — Membros | ![80%](https://img.shields.io/badge/80%25-green) | 🟢 CRUD completo |
-| Frontend — Financeiro | ![0%](https://img.shields.io/badge/0%25-red) | 🔴 Não iniciado |
+| Frontend — Famílias | ![85%](https://img.shields.io/badge/85%25-green) | 🟢 CRUD completo (lista/detalhe/form) |
+| Frontend — Ministérios | ![85%](https://img.shields.io/badge/85%25-green) | 🟢 CRUD completo (lista/detalhe/form) |
+| Frontend — Financeiro | ![70%](https://img.shields.io/badge/70%25-green) | 🟢 6 telas + BLoC + Repositório |
 | Frontend — Patrimônio | ![0%](https://img.shields.io/badge/0%25-red) | 🔴 Não iniciado |
 | Frontend — EBD | ![0%](https://img.shields.io/badge/0%25-red) | 🔴 Não iniciado |
 
@@ -87,22 +89,22 @@ Toda a documentação de especificação foi finalizada, totalizando **~5.052 li
 
 | Tabela | Campos | Utilizada no Backend? | Utilizada no Frontend? |
 |--------|:------:|:---------------------:|:----------------------:|
-| `members` | 35+ | ✅ CRUD completo | ✅ Lista + Detalhe |
-| `families` | 5 | ✅ CRUD completo | ❌ Sem UI |
-| `family_relationships` | 5 | ✅ Add/Remove | ❌ Sem UI |
-| `ministries` | 7 | ✅ CRUD completo | ❌ Sem UI |
-| `member_ministries` | 5 | ✅ Add/Remove | ❌ Sem UI |
+| `members` | 35+ | ✅ CRUD completo | ✅ Lista + Detalhe + Form |
+| `families` | 5 | ✅ CRUD completo | ✅ Lista + Detalhe + Form |
+| `family_relationships` | 5 | ✅ Add/Remove | ✅ Add/Remove na UI |
+| `ministries` | 7 | ✅ CRUD completo | ✅ Lista + Detalhe + Form |
+| `member_ministries` | 5 | ✅ Add/Remove | ✅ Add/Remove na UI |
 | `member_history` | 6 | ✅ List/Create | ❌ Sem UI |
 
 #### Módulo Financeiro (5 tabelas)
 
 | Tabela | Campos | Backend | Frontend |
 |--------|:------:|:-------:|:--------:|
-| `account_plans` | 8 | ❌ Nenhum código | ❌ Nenhuma tela |
-| `bank_accounts` | 10 | ❌ Nenhum código | ❌ Nenhuma tela |
-| `campaigns` | 10 | ❌ Nenhum código | ❌ Nenhuma tela |
-| `financial_entries` | 15 | ❌ Nenhum código | ❌ Nenhuma tela |
-| `monthly_closings` | 10 | ❌ Nenhum código | ❌ Nenhuma tela |
+| `account_plans` | 8 | ✅ CRUD (list/create/update) | ✅ Lista + criação |
+| `bank_accounts` | 10 | ✅ CRUD (list/create/update) | ✅ Lista + criação |
+| `campaigns` | 10 | ✅ CRUD (list/get/create/update) | ✅ Lista + criação + progresso |
+| `financial_entries` | 15 | ✅ CRUD completo + relatório de saldo | ✅ Lista + filtros + formulário |
+| `monthly_closings` | 10 | ✅ List + fechamento mensal | 🟡 Repositório pronto, sem tela |
 
 #### Módulo Patrimônio (7 tabelas)
 
@@ -183,18 +185,36 @@ backend/src/
 │   └── handlers/
 │       ├── health_handler.rs
 │       ├── auth_handler.rs
-│       └── member_handler.rs
+│       ├── member_handler.rs
+│       ├── family_handler.rs
+│       ├── ministry_handler.rs
+│       └── member_history_handler.rs
 ├── application/
 │   ├── dto/
 │   │   ├── auth_dto.rs      ← LoginRequest, Claims, etc.
-│   │   └── member_dto.rs    ← CreateMemberRequest, MemberFilter, etc.
+│   │   ├── member_dto.rs    ← CreateMemberRequest, MemberFilter, etc.
+│   │   ├── family_dto.rs    ← CreateFamilyRequest, AddFamilyMemberRequest
+│   │   └── ministry_dto.rs  ← CreateMinistryRequest, AddMinistryMemberRequest
 │   └── services/
 │       ├── auth_service.rs   ← Hashing, JWT, login flow
-│       └── member_service.rs ← CRUD básico
+│       ├── member_service.rs ← CRUD completo + stats + histórico
+│       ├── family_service.rs ← CRUD famílias + membros
+│       ├── ministry_service.rs ← CRUD ministérios + membros
+│       ├── account_plan_service.rs ← CRUD plano de contas
+│       ├── bank_account_service.rs ← CRUD contas bancárias
+│       ├── campaign_service.rs ← CRUD campanhas financeiras
+│       └── financial_service.rs ← Lançamentos + Fechamento mensal + Relatórios
 ├── domain/entities/
 │   ├── church.rs
 │   ├── user.rs              ← User, Role, RefreshToken
-│   └── member.rs            ← Member (62 campos), MemberSummary
+│   ├── member.rs            ← Member (62 campos), MemberSummary
+│   ├── family.rs            ← Family, FamilyDetail, FamilyMemberInfo
+│   ├── ministry.rs          ← Ministry, MinistrySummary, MinistryMemberInfo
+│   ├── account_plan.rs      ← AccountPlan, AccountPlanSummary
+│   ├── bank_account.rs      ← BankAccount
+│   ├── campaign.rs          ← Campaign, CampaignSummary
+│   ├── financial_entry.rs   ← FinancialEntry, FinancialEntrySummary, FinancialBalance
+│   └── monthly_closing.rs   ← MonthlyClosing, MonthlyClosingSummary
 └── infrastructure/
     └── database.rs          ← Pool de conexões PG
 ```
@@ -261,6 +281,29 @@ backend/src/
 | `POST` | `/api/v1/ministries/{id}/members` | ✅ `members:write` | Adicionar membro ao ministério | ✅ Completo |
 | `DELETE` | `/api/v1/ministries/{mid}/members/{id}` | ✅ `members:write` | Remover membro do ministério | ✅ Completo |
 
+#### Financeiro (18 endpoints) — ✅ NOVO
+
+| Método | Rota | Auth | Descrição | Status |
+|--------|------|------|-----------|--------|
+| `GET` | `/api/v1/financial/account-plans` | ✅ `financial:read` | Listar plano de contas | ✅ Completo |
+| `POST` | `/api/v1/financial/account-plans` | ✅ `financial:write` | Criar categoria | ✅ Completo |
+| `PUT` | `/api/v1/financial/account-plans/{id}` | ✅ `financial:write` | Atualizar categoria | ✅ Completo |
+| `GET` | `/api/v1/financial/bank-accounts` | ✅ `financial:read` | Listar contas bancárias | ✅ Completo |
+| `POST` | `/api/v1/financial/bank-accounts` | ✅ `financial:write` | Criar conta bancária | ✅ Completo |
+| `PUT` | `/api/v1/financial/bank-accounts/{id}` | ✅ `financial:write` | Atualizar conta bancária | ✅ Completo |
+| `GET` | `/api/v1/financial/campaigns` | ✅ `financial:read` | Listar campanhas | ✅ Completo |
+| `GET` | `/api/v1/financial/campaigns/{id}` | ✅ `financial:read` | Detalhes da campanha | ✅ Completo |
+| `POST` | `/api/v1/financial/campaigns` | ✅ `financial:write` | Criar campanha | ✅ Completo |
+| `PUT` | `/api/v1/financial/campaigns/{id}` | ✅ `financial:write` | Atualizar campanha | ✅ Completo |
+| `GET` | `/api/v1/financial/entries` | ✅ `financial:read` | Listar lançamentos (9 filtros) | ✅ Completo |
+| `GET` | `/api/v1/financial/entries/{id}` | ✅ `financial:read` | Detalhes do lançamento | ✅ Completo |
+| `POST` | `/api/v1/financial/entries` | ✅ `financial:write` | Criar lançamento (atualiza saldo) | ✅ Completo |
+| `PUT` | `/api/v1/financial/entries/{id}` | ✅ `financial:write` | Atualizar lançamento (controle de fechamento) | ✅ Completo |
+| `DELETE` | `/api/v1/financial/entries/{id}` | ✅ `financial:write` | Cancelar lançamento (soft delete + estorno) | ✅ Completo |
+| `GET` | `/api/v1/financial/reports/balance` | ✅ `financial:read` | Balancete por período (receitas/despesas por categoria) | ✅ Completo |
+| `GET` | `/api/v1/financial/monthly-closings` | ✅ `financial:read` | Listar fechamentos mensais | ✅ Completo |
+| `POST` | `/api/v1/financial/monthly-closings` | ✅ `financial:close` | Realizar fechamento mensal (snapshot + lock) | ✅ Completo |
+
 ### 4.4 O que Falta no Backend
 
 #### Prioridade Alta
@@ -278,10 +321,10 @@ backend/src/
 
 | Item | Descrição | Complexidade |
 |------|-----------|:------------:|
-| Módulo Financeiro completo | 5 tabelas prontas, 11 endpoints documentados | Alta |
+| Módulo Financeiro completo | ~~5 tabelas prontas, 11 endpoints documentados~~ ✅ **Backend completo (18 endpoints)** | ~~Alta~~ ✅ |
 | Módulo EBD completo | 5 tabelas prontas, 7 endpoints documentados | Alta |
 | Módulo Patrimônio completo | 7 tabelas prontas, 7 endpoints documentados | Alta |
-| Famílias e Ministérios | ~~Tabelas prontas, endpoints documentados~~ ✅ **Backend completo** — falta frontend | ~~Média~~ ✅ |
+| Famílias e Ministérios | ~~Tabelas prontas, endpoints documentados~~ ✅ **Backend + Frontend completos** | ~~Média~~ ✅ |
 | Audit Log (escrita) | Tabela existe, falta interceptar ações | Média |
 | Cache Redis | Crate importado, não configurado | Média |
 
@@ -318,9 +361,9 @@ frontend/lib/
 │   ├── network/
 │   │   └── api_client.dart                ✅ Dio + JWT interceptor + auto-refresh
 │   ├── router/
-│   │   └── app_router.dart                ✅ GoRouter com auth guard
+│   │   └── app_router.dart                ✅ GoRouter com auth guard + rotas famílias/ministérios/financeiro
 │   ├── shell/
-│   │   └── app_shell.dart                 ✅ Sidebar (desktop) + BottomNav (mobile)
+│   │   └── app_shell.dart                 ✅ Sidebar (5 itens) + BottomNav (mobile)
 │   └── theme/
 │       ├── app_colors.dart                ✅ Paleta completa (navy + gold + parchment)
 │       ├── app_typography.dart            ✅ 17 estilos (3 fontes: DM Serif, Source Sans 3, JetBrains Mono)
@@ -341,20 +384,63 @@ frontend/lib/
     │
     ├── dashboard/
     │   └── presentation/
-    │       └── dashboard_screen.dart      🟡 Shell com stats placeholder
+    │       └── dashboard_screen.dart      🟡 Stats (membros ativos wired) + quick actions
     │
-    └── members/
+    ├── families/                           ✅ NOVO — CRUD completo
+    │   ├── bloc/
+    │   │   ├── family_bloc.dart           ✅ 6 event handlers
+    │   │   └── family_event_state.dart    ✅ 6 events, 6 states
+    │   ├── data/
+    │   │   ├── family_repository.dart     ✅ 7 métodos (CRUD + add/remove member)
+    │   │   └── models/
+    │   │       └── family_models.dart     ✅ Family (15+ campos) + FamilyMember
+    │   └── presentation/
+    │       ├── family_list_screen.dart    ✅ Busca, lista, FAB, empty/error state
+    │       ├── family_detail_screen.dart  ✅ Info + endereço + membros + ações
+    │       └── family_form_screen.dart    ✅ Nome + endereço + notas, responsivo
+    │
+    ├── members/
+    │   ├── bloc/
+    │   │   ├── member_bloc.dart           ✅ Load + Delete + Create + Update handlers
+    │   │   └── member_event_state.dart    ✅ 5 events, 6 states
+    │   ├── data/
+    │   │   ├── member_repository.dart     ✅ 6 métodos (list, get, create, update, delete, stats)
+    │   │   └── models/
+    │   │       └── member_models.dart     ✅ Member (35+ campos), MemberStats (4 campos)
+    │   └── presentation/
+    │       ├── member_list_screen.dart    ✅ Busca, filtro, lista paginada, FAB → criar
+    │       ├── member_detail_screen.dart  ✅ Perfil completo (5 seções, edit/delete)
+    │       └── member_form_screen.dart    ✅ Formulário criar/editar (5 seções, 35+ campos)
+    │
+    ├── ministries/                         ✅ CRUD completo
+    │   ├── bloc/
+    │   │   ├── ministry_bloc.dart         ✅ 6 event handlers
+    │   │   └── ministry_event_state.dart  ✅ 6 events, 6 states
+    │   ├── data/
+    │   │   ├── ministry_repository.dart   ✅ 7 métodos (CRUD + members + add/remove)
+    │   │   └── models/
+    │   │       └── ministry_models.dart   ✅ Ministry + MinistryMember
+    │   └── presentation/
+    │       ├── ministry_list_screen.dart  ✅ Busca, lista, FAB, status badges
+    │       ├── ministry_detail_screen.dart ✅ Info + membros + ações edit/delete
+    │       └── ministry_form_screen.dart  ✅ Nome + descrição + status toggle
+    │
+    └── financial/                           ✅ NOVO — 6 telas + BLoC + Repositório
         ├── bloc/
-        ├── member_bloc.dart           ✅ Load + Delete + Create + Update handlers
-        │   └── member_event_state.dart    ✅ 5 events, 6 states
+        │   ├── financial_bloc.dart         ✅ 11 event handlers
+        │   └── financial_event_state.dart  ✅ 11 events, 9 states
         ├── data/
-        │   ├── member_repository.dart     ✅ 6 métodos (list, get, create, update, delete, stats)
+        │   ├── financial_repository.dart   ✅ 18 métodos (5 sub-módulos)
         │   └── models/
-        │       └── member_models.dart     ✅ Member (35+ campos), MemberStats (4 campos)
+        │       └── financial_models.dart   ✅ 7 models (AccountPlan, BankAccount, Campaign, Entry, Balance, etc.)
         └── presentation/
-            ├── member_list_screen.dart    ✅ Busca, filtro, lista paginada, FAB → criar
-            ├── member_detail_screen.dart  ✅ Perfil completo (5 seções, edit/delete)
-            └── member_form_screen.dart    ✅ Formulário criar/editar (5 seções, 35+ campos)
+            ├── format_utils.dart           ✅ formatCurrency() helper (BRL)
+            ├── financial_overview_screen.dart  ✅ Dashboard financeiro + quick actions
+            ├── financial_entry_list_screen.dart ✅ Lista com busca + filtros (tipo/status)
+            ├── financial_entry_form_screen.dart ✅ Formulário receita/despesa (10+ campos)
+            ├── account_plan_list_screen.dart   ✅ Lista agrupada + criação
+            ├── bank_account_list_screen.dart   ✅ Lista com saldo + criação
+            └── campaign_list_screen.dart       ✅ Lista com progresso + criação
 ```
 
 ### 5.3 Design System — Tokens Implementados
@@ -408,16 +494,16 @@ frontend/lib/
 
 #### Dashboard (`dashboard_screen.dart` — 355 linhas)
 
-**Status: 🟡 Shell criado, dados placeholder**
+**Status: 🟡 Stats parcialmente wired, quick actions funcionais**
 
 | Componente | Descrição | Status |
 |------------|-----------|--------|
 | Header | Saudação + avatar com popup menu (logout) | ✅ Funcional |
-| Stat Cards | 4 cards grid: Membros, Entradas, Patrimônio, EBD | ⚠️ Todos mostram "—" |
-| Quick Actions | 4 botões: Novo Membro, Lançamento, Chamada EBD, Relatórios | ⚠️ Todos com TODO |
+| Stat Cards | 4 cards grid: Membros (wired), Entradas, Patrimônio, EBD | ✅ Membros Ativos real via API, demais "—" |
+| Quick Actions | 4 botões: Novo Membro, Nova Família, Novo Ministério, Relatórios | ✅ 3 navegam, 1 TODO |
 | Responsivo | Grid adaptativo (2-4 colunas conforme largura) | ✅ Funcional |
 
-**Pendente:** Integrar com endpoints de estatísticas reais. Wiring de navegação nos quick actions.
+**Pendente:** Integrar demais endpoints de estatísticas quando módulos Financeiro/EBD forem implementados.
 
 #### Lista de Membros (`member_list_screen.dart` — 398 linhas)
 
@@ -475,9 +561,24 @@ frontend/lib/
 | `/members/new` | `MemberFormScreen` (dentro de `AppShell`) | Protegida |
 | `/members/:id` | `MemberDetailScreen` (dentro de `AppShell`) | Protegida |
 | `/members/:id/edit` | `MemberFormScreen` (dentro de `AppShell`) | Protegida |
+| `/families` | `FamilyListScreen` (dentro de `AppShell`) | Protegida |
+| `/families/new` | `FamilyFormScreen` (dentro de `AppShell`) | Protegida |
+| `/families/:id` | `FamilyDetailScreen` (dentro de `AppShell`) | Protegida |
+| `/families/:id/edit` | `FamilyFormScreen` (dentro de `AppShell`) | Protegida |
+| `/ministries` | `MinistryListScreen` (dentro de `AppShell`) | Protegida |
+| `/ministries/new` | `MinistryFormScreen` (dentro de `AppShell`) | Protegida |
+| `/ministries/:id` | `MinistryDetailScreen` (dentro de `AppShell`) | Protegida |
+| `/ministries/:id/edit` | `MinistryFormScreen` (dentro de `AppShell`) | Protegida |
+| `/financial` | `FinancialOverviewScreen` (dentro de `AppShell`) | Protegida |
+| `/financial/entries` | `FinancialEntryListScreen` (dentro de `AppShell`) | Protegida |
+| `/financial/entries/new` | `FinancialEntryFormScreen` (dentro de `AppShell`) | Protegida |
+| `/financial/entries/:id` | `FinancialEntryFormScreen` (dentro de `AppShell`) | Protegida |
+| `/financial/account-plans` | `AccountPlanListScreen` (dentro de `AppShell`) | Protegida |
+| `/financial/bank-accounts` | `BankAccountListScreen` (dentro de `AppShell`) | Protegida |
+| `/financial/campaigns` | `CampaignListScreen` (dentro de `AppShell`) | Protegida |
 
 **Shell responsivo:**
-- Desktop (≥ 900px): Sidebar navy com itens: Dashboard, Membros
+- Desktop (≥ 900px): Sidebar navy com itens: Dashboard, Membros, Famílias, Ministérios, Financeiro
 - Mobile (< 900px): `NavigationBar` inferior com os mesmos itens
 
 ---
@@ -487,8 +588,6 @@ frontend/lib/
 | Arquivo | Linha | TODO |
 |---------|:-----:|------|
 | `login_screen.dart` | ~348 | `// TODO: Forgot password flow` |
-| `dashboard_screen.dart` | ~110 | `// TODO: Navigate to financial entry` |
-| `dashboard_screen.dart` | ~117 | `// TODO: Navigate to EBD attendance` |
 | `dashboard_screen.dart` | ~124 | `// TODO: Navigate to reports` |
 
 ---
@@ -508,6 +607,8 @@ frontend/lib/
 | 10 | Generic trait methods tornam traits non-dyn-compatible (`Box<dyn DynBind>`) | Substituído por `enum BindValue { Text, Int, Date }` + `build_arguments()` |
 | 11 | `Arguments::add()` retorna `Result<(), Box<dyn Error>>`, não `()` | Adicionado `.unwrap()` nas chamadas |
 | 12 | `DropdownButtonFormField.value` deprecated no Flutter 3.38 | Substituído por `initialValue` |
+| 13 | Sem usuários de teste para login manual | Criado `seed_test_data()` em `main.rs` com 3 usuários: `admin@igreja.com`/`admin123` (super_admin), `secretaria@igreja.com`/`secret123` (secretary), `tesoureiro@igreja.com`/`tesour123` (treasurer) + igreja exemplo |
+| 14 | Funções privadas `_formatCurrency` não exportáveis entre arquivos Dart | Extraído para `format_utils.dart` como função pública `formatCurrency()` |
 
 ---
 
@@ -542,20 +643,22 @@ Crates/packages importados mas ainda sem uso no código — preparados para fase
 | 2.2 | Formulário de criação de membro | ✅ Endpoint existe | ✅ Form completo | ~~Alta~~ ✅ |
 | 2.3 | Filtros dinâmicos na listagem | ✅ BindValue enum | ✅ Dropdown wired | ~~Baixa~~ ✅ |
 | 2.4 | Detalhe completo do membro (todos os campos) | ✅ Endpoint existe | ✅ 5 seções + ações | ~~Média~~ ✅ |
-| 2.5 | CRUD de Famílias | ✅ 7 endpoints | Nova tela | ~~Média~~ ✅ |
-| 2.6 | CRUD de Ministérios | ✅ 8 endpoints | Nova tela | ~~Média~~ ✅ |
+| 2.5 | CRUD de Famílias | ✅ 7 endpoints | ✅ Lista + Detalhe + Form | ~~Média~~ ✅ |
+| 2.6 | CRUD de Ministérios | ✅ 8 endpoints | ✅ Lista + Detalhe + Form | ~~Média~~ ✅ |
 | 2.7 | Histórico de alterações | ✅ 2 endpoints | Nova tela | ~~Média~~ ✅ |
 
 ### Fase 3 — Módulo Financeiro (Prioridade: 🟡 Média)
 
 | # | Tarefa | Descrição |
 |---|--------|-----------|
-| 3.1 | Plano de Contas | CRUD de categorias de receita/despesa |
-| 3.2 | Contas Bancárias | Cadastro com saldo inicial |
-| 3.3 | Lançamentos | Entrada de dízimos, ofertas, despesas com comprovante |
-| 3.4 | Campanhas | Campanhas especiais com meta e progresso |
-| 3.5 | Fechamento Mensal | Conciliação e snapshot financeiro |
-| 3.6 | Dashboard Financeiro | Gráficos, saldos, comparativos |
+| 3.1 | Plano de Contas | ~~CRUD de categorias de receita/despesa~~ ✅ **Backend completo** |
+| 3.2 | Contas Bancárias | ~~Cadastro com saldo inicial~~ ✅ **Backend completo** |
+| 3.3 | Lançamentos | ~~Entrada de dízimos, ofertas, despesas com comprovante~~ ✅ **Backend completo** |
+| 3.4 | Campanhas | ~~Campanhas especiais com meta e progresso~~ ✅ **Backend completo** |
+| 3.5 | Fechamento Mensal | ~~Conciliação e snapshot financeiro~~ ✅ **Backend completo** |
+| 3.6 | Dashboard Financeiro | ✅ **Overview com saldo + 6 quick actions** |
+| 3.7 | Telas de CRUD Financeiro | ✅ **Lista + Form de lançamentos, plano de contas, contas bancárias, campanhas** |
+| 3.8 | Relatórios gráficos | 🟡 Repositório implementado, gráficos pendentes |
 
 ### Fase 4 — Módulo EBD (Prioridade: 🟡 Média)
 
@@ -599,12 +702,12 @@ Crates/packages importados mas ainda sem uso no código — preparados para fase
 
 | Componente | Arquivos | Linhas Estimadas |
 |------------|:--------:|:----------------:|
-| Documentação (docs/) | 7 | ~5.600 |
-| Backend (Rust) | 16 .rs | ~3.000 |
+| Documentação (docs/) | 7 | ~5.700 |
+| Backend (Rust) | 25 .rs | ~5.100 |
 | Migrations (SQL) | 1 | ~793 |
-| Frontend (Dart) | 17 .dart | ~5.200 |
+| Frontend (Dart) | 42 .dart | ~11.500 |
 | Configuração | 5 | ~200 |
-| **Total** | **46** | **~14.793** |
+| **Total** | **80** | **~23.300** |
 
 ### Status de Compilação
 

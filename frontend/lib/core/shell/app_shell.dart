@@ -24,6 +24,24 @@ class AppShell extends StatelessWidget {
       label: 'Membros',
       path: '/members',
     ),
+    _NavItem(
+      icon: Icons.family_restroom_outlined,
+      activeIcon: Icons.family_restroom_rounded,
+      label: 'Famílias',
+      path: '/families',
+    ),
+    _NavItem(
+      icon: Icons.groups_outlined,
+      activeIcon: Icons.groups_rounded,
+      label: 'Ministérios',
+      path: '/ministries',
+    ),
+    _NavItem(
+      icon: Icons.attach_money_outlined,
+      activeIcon: Icons.attach_money_rounded,
+      label: 'Financeiro',
+      path: '/financial',
+    ),
   ];
 
   @override

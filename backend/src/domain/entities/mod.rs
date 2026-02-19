@@ -1,13 +1,23 @@
+pub mod account_plan;
+pub mod bank_account;
+pub mod campaign;
 pub mod church;
 pub mod family;
+pub mod financial_entry;
 pub mod member;
 pub mod member_history;
 pub mod ministry;
+pub mod monthly_closing;
 pub mod user;
 
+pub use account_plan::{AccountPlan, AccountPlanSummary};
+pub use bank_account::BankAccount;
+pub use campaign::{Campaign, CampaignSummary};
 pub use church::Church;
 pub use family::{Family, FamilyDetail, FamilyMemberInfo, FamilyRelationship};
+pub use financial_entry::{CategoryAmount, FinancialBalance, FinancialEntry, FinancialEntrySummary};
 pub use member::{Member, MemberSummary};
 pub use member_history::MemberHistory;
 pub use ministry::{MemberMinistry, Ministry, MinistryMemberInfo, MinistrySummary};
+pub use monthly_closing::{MonthlyClosing, MonthlyClosingSummary};
 pub use user::{RefreshToken, Role, User};

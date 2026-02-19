@@ -2,14 +2,41 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/network/api_client.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../auth/bloc/auth_bloc.dart';
 import '../../auth/bloc/auth_event_state.dart';
+import '../../members/data/member_repository.dart';
+import '../../members/data/models/member_models.dart';
 
-class DashboardScreen extends StatelessWidget {
+class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
+
+  @override
+  State<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends State<DashboardScreen> {
+  MemberStats? _stats;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadStats();
+  }
+
+  Future<void> _loadStats() async {
+    try {
+      final apiClient = RepositoryProvider.of<ApiClient>(context);
+      final repo = MemberRepository(apiClient: apiClient);
+      final stats = await repo.getStats();
+      if (mounted) setState(() => _stats = stats);
+    } catch (_) {
+      // Silently ignore – dashboard stats are non-critical
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -37,29 +64,33 @@ class DashboardScreen extends StatelessWidget {
               mainAxisSpacing: AppSpacing.md,
               crossAxisSpacing: AppSpacing.md,
               childAspectRatio: 1.65,
-              children: const [
+              children: [
                 _StatCard(
                   icon: Icons.people_rounded,
                   label: 'Membros Ativos',
-                  value: '—',
-                  trend: null,
+                  value: _stats != null
+                      ? '${_stats!.totalActive}'
+                      : '—',
+                  trend: _stats != null && _stats!.newMembersThisMonth > 0
+                      ? '+${_stats!.newMembersThisMonth} este mês'
+                      : null,
                   color: AppColors.primary,
                 ),
-                _StatCard(
+                const _StatCard(
                   icon: Icons.attach_money_rounded,
                   label: 'Entradas (Mês)',
                   value: '—',
                   trend: null,
                   color: AppColors.success,
                 ),
-                _StatCard(
+                const _StatCard(
                   icon: Icons.inventory_2_outlined,
                   label: 'Patrimônio',
                   value: '—',
                   trend: null,
                   color: AppColors.info,
                 ),
-                _StatCard(
+                const _StatCard(
                   icon: Icons.school_outlined,
                   label: 'Alunos EBD',
                   value: '—',
@@ -103,18 +134,14 @@ class DashboardScreen extends StatelessWidget {
                   onTap: () => context.go('/members/new'),
                 ),
                 _QuickAction(
-                  icon: Icons.receipt_long_outlined,
-                  label: 'Lançamento',
-                  onTap: () {
-                    // TODO: Navigate to financial entry
-                  },
+                  icon: Icons.family_restroom_outlined,
+                  label: 'Nova Família',
+                  onTap: () => context.go('/families/new'),
                 ),
                 _QuickAction(
-                  icon: Icons.fact_check_outlined,
-                  label: 'Chamada EBD',
-                  onTap: () {
-                    // TODO: Navigate to EBD attendance
-                  },
+                  icon: Icons.groups_outlined,
+                  label: 'Novo Ministério',
+                  onTap: () => context.go('/ministries/new'),
                 ),
                 _QuickAction(
                   icon: Icons.bar_chart_rounded,
