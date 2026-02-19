@@ -126,7 +126,9 @@ class _LessonListView extends StatelessWidget {
     // Load classes for the dropdown
     final apiClient = RepositoryProvider.of<ApiClient>(context);
     final repo = EbdRepository(apiClient: apiClient);
+    final bloc = context.read<EbdBloc>();
     String? selectedClassId;
+    final outerContext = context;
 
     showDialog(
       context: context,
@@ -161,12 +163,10 @@ class _LessonListView extends StatelessWidget {
                             OutlinedButton.icon(
                               onPressed: () {
                                 Navigator.pop(ctx);
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Crie uma turma na tela de Turmas EBD.')),
-                                );
+                                _showCreateClassInlineDialog(outerContext, repo, bloc);
                               },
-                              icon: const Icon(Icons.groups_outlined, size: 18),
-                              label: const Text('Ir para Turmas'),
+                              icon: const Icon(Icons.add, size: 18),
+                              label: const Text('Criar Turma'),
                             ),
                           ],
                         )
@@ -179,12 +179,10 @@ class _LessonListView extends StatelessWidget {
                             child: Text(c.name),
                           )).toList(),
                           onChanged: (v) => setDialogState(() => selectedClassId = v),
-                          createTooltip: 'Ir para criar turma',
+                          createTooltip: 'Criar nova turma',
                           onCreatePressed: () {
                             Navigator.pop(ctx);
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Crie uma turma na tela de Turmas EBD.')),
-                            );
+                            _showCreateClassInlineDialog(outerContext, repo, bloc);
                           },
                         ),
                       const SizedBox(height: AppSpacing.md),
@@ -267,12 +265,118 @@ class _LessonListView extends StatelessWidget {
                       if (bibleTextCtrl.text.trim().isNotEmpty) {
                         data['bible_text'] = bibleTextCtrl.text.trim();
                       }
-                      context.read<EbdBloc>().add(
+                      bloc.add(
                             EbdLessonCreateRequested(data: data),
                           );
                       Navigator.pop(ctx);
                     },
                     child: const Text('Criar'),
+                  ),
+                ],
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+
+  void _showCreateClassInlineDialog(BuildContext context, EbdRepository repo, EbdBloc bloc) {
+    final nameCtrl = TextEditingController();
+    final roomCtrl = TextEditingController();
+    String? selectedTermId;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) {
+          return FutureBuilder<List<EbdTerm>>(
+            future: repo.getTerms(),
+            builder: (_, snapshot) {
+              final terms = snapshot.data ?? [];
+              final isLoadingTerms =
+                  snapshot.connectionState == ConnectionState.waiting;
+
+              return AlertDialog(
+                title: const Text('Nova Turma'),
+                content: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (isLoadingTerms)
+                        const Padding(
+                          padding: EdgeInsets.all(AppSpacing.sm),
+                          child: LinearProgressIndicator(),
+                        )
+                      else if (terms.isEmpty)
+                        const Text(
+                          'Nenhum trimestre cadastrado. Crie um trimestre primeiro na tela de Trimestres EBD.',
+                          style: TextStyle(color: AppColors.error),
+                        )
+                      else
+                        DropdownButtonFormField<String>(
+                          value: selectedTermId,
+                          decoration: const InputDecoration(
+                            labelText: 'Trimestre *',
+                          ),
+                          items: terms
+                              .map((t) => DropdownMenuItem(
+                                    value: t.id,
+                                    child: Text(t.name),
+                                  ))
+                              .toList(),
+                          onChanged: (v) =>
+                              setDialogState(() => selectedTermId = v),
+                        ),
+                      const SizedBox(height: AppSpacing.md),
+                      TextField(
+                        controller: nameCtrl,
+                        decoration: const InputDecoration(
+                          labelText: 'Nome da Turma *',
+                          hintText: 'Ex: Adultos, Jovens, Crianças',
+                        ),
+                        autofocus: true,
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      TextField(
+                        controller: roomCtrl,
+                        decoration: const InputDecoration(
+                          labelText: 'Sala (opcional)',
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: const Text('Cancelar'),
+                  ),
+                  FilledButton(
+                    onPressed: () {
+                      if (nameCtrl.text.trim().isEmpty ||
+                          selectedTermId == null) {
+                        return;
+                      }
+                      final data = <String, dynamic>{
+                        'term_id': selectedTermId,
+                        'name': nameCtrl.text.trim(),
+                      };
+                      if (roomCtrl.text.trim().isNotEmpty) {
+                        data['room'] = roomCtrl.text.trim();
+                      }
+                      bloc.add(
+                            EbdClassCreateRequested(data: data),
+                          );
+                      Navigator.pop(ctx);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                              'Turma criada! Abra o dialog de Nova Aula novamente.'),
+                        ),
+                      );
+                    },
+                    child: const Text('Criar Turma'),
                   ),
                 ],
               );

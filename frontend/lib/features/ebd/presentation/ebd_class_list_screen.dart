@@ -127,7 +127,9 @@ class _ClassListView extends StatelessWidget {
     // Load terms for the dropdown
     final apiClient = RepositoryProvider.of<ApiClient>(context);
     final repo = EbdRepository(apiClient: apiClient);
+    final bloc = context.read<EbdBloc>();
     String? selectedTermId;
+    final outerContext = context;
 
     showDialog(
       context: context,
@@ -162,7 +164,7 @@ class _ClassListView extends StatelessWidget {
                             OutlinedButton.icon(
                               onPressed: () {
                                 Navigator.pop(ctx);
-                                _showCreateTermInlineDialog(context, repo);
+                                _showCreateTermInlineDialog(outerContext, repo, bloc);
                               },
                               icon: const Icon(Icons.add, size: 18),
                               label: const Text('Criar Trimestre'),
@@ -181,7 +183,7 @@ class _ClassListView extends StatelessWidget {
                           createTooltip: 'Criar trimestre',
                           onCreatePressed: () {
                             Navigator.pop(ctx);
-                            _showCreateTermInlineDialog(context, repo);
+                            _showCreateTermInlineDialog(outerContext, repo, bloc);
                           },
                         ),
                       const SizedBox(height: AppSpacing.md),
@@ -260,7 +262,7 @@ class _ClassListView extends StatelessWidget {
                       if (capacityCtrl.text.isNotEmpty) {
                         data['max_capacity'] = int.tryParse(capacityCtrl.text);
                       }
-                      context.read<EbdBloc>().add(
+                      bloc.add(
                             EbdClassCreateRequested(data: data),
                           );
                       Navigator.pop(ctx);
@@ -276,7 +278,7 @@ class _ClassListView extends StatelessWidget {
     );
   }
 
-  void _showCreateTermInlineDialog(BuildContext context, EbdRepository repo) {
+  void _showCreateTermInlineDialog(BuildContext context, EbdRepository repo, EbdBloc bloc) {
     final nameCtrl = TextEditingController();
     DateTime startDate = DateTime.now();
     DateTime endDate = DateTime.now().add(const Duration(days: 90));
@@ -351,7 +353,7 @@ class _ClassListView extends StatelessWidget {
             FilledButton(
               onPressed: () {
                 if (nameCtrl.text.trim().isEmpty) return;
-                context.read<EbdBloc>().add(EbdTermCreateRequested(
+                bloc.add(EbdTermCreateRequested(
                       data: {
                         'name': nameCtrl.text.trim(),
                         'start_date':
@@ -361,7 +363,6 @@ class _ClassListView extends StatelessWidget {
                       },
                     ));
                 Navigator.pop(ctx);
-                // After creating, re-open the class dialog so user can select the new term
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Trimestre criado! Abra o dialog de Nova Turma novamente.')),
                 );
