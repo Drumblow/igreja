@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/network/api_client.dart';
 import '../../../core/theme/app_colors.dart';
@@ -400,7 +401,10 @@ class _LessonTile extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
         side: BorderSide(color: AppColors.border),
       ),
-      child: Padding(
+      child: InkWell(
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+        onTap: () => context.go('/ebd/lessons/${lesson.id}'),
+        child: Padding(
         padding: const EdgeInsets.all(AppSpacing.md),
         child: Row(
           children: [
@@ -477,6 +481,7 @@ class _LessonTile extends StatelessWidget {
             ),
           ],
         ),
+      ),
       ),
     );
   }

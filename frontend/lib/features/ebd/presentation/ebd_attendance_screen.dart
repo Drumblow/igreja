@@ -84,6 +84,7 @@ class _AttendanceViewState extends State<_AttendanceView> {
                   status: a.status,
                   broughtBible: a.broughtBible ?? false,
                   broughtMagazine: a.broughtMagazine ?? false,
+                  offeringAmount: a.offeringAmount,
                   isVisitor: a.isVisitor,
                   visitorName: a.visitorName,
                 ));
@@ -159,7 +160,7 @@ class _AttendanceViewState extends State<_AttendanceView> {
               _StatChip(
                   'Presentes',
                   _entries
-                      .where((e) => e.status == 'present')
+                      .where((e) => e.status == 'presente')
                       .length
                       .toString(),
                   AppColors.success),
@@ -167,7 +168,7 @@ class _AttendanceViewState extends State<_AttendanceView> {
               _StatChip(
                   'Ausentes',
                   _entries
-                      .where((e) => e.status == 'absent')
+                      .where((e) => e.status == 'ausente')
                       .length
                       .toString(),
                   AppColors.error),
@@ -214,6 +215,12 @@ class _AttendanceViewState extends State<_AttendanceView> {
                     },
                     onMagazineChanged: (v) {
                       setState(() => _entries[i].broughtMagazine = v);
+                    },
+                    onOfferingChanged: (v) {
+                      _entries[i].offeringAmount = v;
+                    },
+                    onNotesChanged: (v) {
+                      _entries[i].notes = v;
                     },
                   ),
                 ),
@@ -287,7 +294,7 @@ class _AttendanceViewState extends State<_AttendanceView> {
                     memberName: isVisitor
                         ? nameCtrl.text.trim()
                         : selectedMember!.label,
-                    status: 'present',
+                    status: 'presente',
                     isVisitor: isVisitor,
                     visitorName: isVisitor ? nameCtrl.text.trim() : null,
                   ));
@@ -310,6 +317,12 @@ class _AttendanceViewState extends State<_AttendanceView> {
         'brought_bible': e.broughtBible,
         'brought_magazine': e.broughtMagazine,
       };
+      if (e.offeringAmount > 0) {
+        record['offering_amount'] = e.offeringAmount;
+      }
+      if (e.notes != null && e.notes!.isNotEmpty) {
+        record['notes'] = e.notes;
+      }
       if (e.isVisitor) {
         record['is_visitor'] = true;
         record['visitor_name'] = e.visitorName ?? e.memberName;
@@ -331,15 +344,19 @@ class _AttendanceEntry {
   String status;
   bool broughtBible;
   bool broughtMagazine;
+  double offeringAmount;
+  String? notes;
   final bool isVisitor;
   final String? visitorName;
 
   _AttendanceEntry({
     required this.memberId,
     required this.memberName,
-    this.status = 'present',
+    this.status = 'presente',
     this.broughtBible = false,
     this.broughtMagazine = false,
+    this.offeringAmount = 0,
+    this.notes,
     this.isVisitor = false,
     this.visitorName,
   });
@@ -350,21 +367,25 @@ class _AttendanceTile extends StatelessWidget {
   final ValueChanged<String> onStatusChanged;
   final ValueChanged<bool> onBibleChanged;
   final ValueChanged<bool> onMagazineChanged;
+  final ValueChanged<double> onOfferingChanged;
+  final ValueChanged<String?> onNotesChanged;
 
   const _AttendanceTile({
     required this.entry,
     required this.onStatusChanged,
     required this.onBibleChanged,
     required this.onMagazineChanged,
+    required this.onOfferingChanged,
+    required this.onNotesChanged,
   });
 
   Color _statusColor() {
     switch (entry.status) {
-      case 'present':
+      case 'presente':
         return AppColors.success;
-      case 'absent':
+      case 'ausente':
         return AppColors.error;
-      case 'justified':
+      case 'justificado':
         return AppColors.warning;
       default:
         return AppColors.textMuted;
@@ -418,9 +439,9 @@ class _AttendanceTile extends StatelessWidget {
                 // Status selector
                 SegmentedButton<String>(
                   segments: const [
-                    ButtonSegment(value: 'present', label: Text('P')),
-                    ButtonSegment(value: 'absent', label: Text('A')),
-                    ButtonSegment(value: 'justified', label: Text('J')),
+                    ButtonSegment(value: 'presente', label: Text('P')),
+                    ButtonSegment(value: 'ausente', label: Text('A')),
+                    ButtonSegment(value: 'justificado', label: Text('J')),
                   ],
                   selected: {entry.status},
                   onSelectionChanged: (s) => onStatusChanged(s.first),
@@ -447,7 +468,36 @@ class _AttendanceTile extends StatelessWidget {
                   value: entry.broughtMagazine,
                   onChanged: onMagazineChanged,
                 ),
+                const SizedBox(width: AppSpacing.sm),
+                SizedBox(
+                  width: 100,
+                  child: TextFormField(
+                    initialValue: entry.offeringAmount > 0
+                        ? entry.offeringAmount.toStringAsFixed(2)
+                        : '',
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    decoration: const InputDecoration(
+                      labelText: 'Oferta',
+                      prefixText: 'R\$ ',
+                      isDense: true,
+                      contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                    ),
+                    style: AppTypography.bodySmall,
+                    onChanged: (v) => onOfferingChanged(double.tryParse(v) ?? 0),
+                  ),
+                ),
               ],
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            TextFormField(
+              initialValue: entry.notes,
+              decoration: const InputDecoration(
+                hintText: 'Observações (opcional)',
+                isDense: true,
+                contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+              ),
+              style: AppTypography.bodySmall,
+              onChanged: onNotesChanged,
             ),
           ],
         ),

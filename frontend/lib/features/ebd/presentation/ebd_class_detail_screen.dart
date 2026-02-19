@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/network/api_client.dart';
 import '../../../core/theme/app_colors.dart';
@@ -53,6 +54,11 @@ class _ClassDetailView extends StatelessWidget {
             icon: const Icon(Icons.person_add_outlined),
             tooltip: 'Matricular Aluno',
             onPressed: () => _showEnrollDialog(context),
+          ),
+          IconButton(
+            icon: const Icon(Icons.bar_chart_outlined),
+            tooltip: 'Relatório da Turma',
+            onPressed: () => context.go('/ebd/classes/$classId/report'),
           ),
         ],
       ),

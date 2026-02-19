@@ -172,7 +172,7 @@ class _EbdOverviewScreenState extends State<EbdOverviewScreen> {
               const SizedBox(height: AppSpacing.md),
               LayoutBuilder(
                 builder: (context, constraints) {
-                  final crossAxisCount = constraints.maxWidth > 600 ? 3 : 2;
+                  final crossAxisCount = constraints.maxWidth > 600 ? 4 : 2;
                   return GridView.count(
                     crossAxisCount: crossAxisCount,
                     mainAxisSpacing: AppSpacing.md,
@@ -198,6 +198,12 @@ class _EbdOverviewScreenState extends State<EbdOverviewScreen> {
                         title: 'Aulas',
                         subtitle: 'Registro de lições',
                         onTap: () => context.go('/ebd/lessons'),
+                      ),
+                      _QuickActionCard(
+                        icon: Icons.school_outlined,
+                        title: 'Alunos',
+                        subtitle: 'Perfil e frequência',
+                        onTap: () => context.go('/ebd/students'),
                       ),
                     ],
                   );

@@ -1,6 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../data/ebd_repository.dart';
+import '../data/models/ebd_models.dart';
 import 'ebd_event_state.dart';
 
 class EbdBloc extends Bloc<EbdEvent, EbdState> {
@@ -24,6 +25,23 @@ class EbdBloc extends Bloc<EbdEvent, EbdState> {
     on<EbdLessonsLoadRequested>(_onLessonsLoad);
     on<EbdLessonDetailLoadRequested>(_onLessonDetailLoad);
     on<EbdLessonCreateRequested>(_onLessonCreate);
+    on<EbdLessonUpdateRequested>(_onLessonUpdate);
+    on<EbdLessonDeleteRequested>(_onLessonDelete);
+    // Lesson Contents (E1)
+    on<EbdLessonContentsLoadRequested>(_onLessonContentsLoad);
+    on<EbdLessonContentCreateRequested>(_onLessonContentCreate);
+    on<EbdLessonContentUpdateRequested>(_onLessonContentUpdate);
+    on<EbdLessonContentDeleteRequested>(_onLessonContentDelete);
+    // Lesson Activities (E2)
+    on<EbdLessonActivitiesLoadRequested>(_onLessonActivitiesLoad);
+    on<EbdLessonActivityCreateRequested>(_onLessonActivityCreate);
+    on<EbdLessonActivityDeleteRequested>(_onLessonActivityDelete);
+    // Students (E3)
+    on<EbdStudentsLoadRequested>(_onStudentsLoad);
+    on<EbdStudentProfileLoadRequested>(_onStudentProfileLoad);
+    // Student Notes (E5)
+    on<EbdStudentNoteCreateRequested>(_onStudentNoteCreate);
+    on<EbdStudentNoteDeleteRequested>(_onStudentNoteDelete);
     // Attendance
     on<EbdAttendanceLoadRequested>(_onAttendanceLoad);
     on<EbdAttendanceRecordRequested>(_onAttendanceRecord);
@@ -188,6 +206,186 @@ class EbdBloc extends Bloc<EbdEvent, EbdState> {
       emit(const EbdSaved(message: 'Aula registrada com sucesso'));
     } catch (e) {
       emit(EbdError(message: 'Erro ao registrar aula: $e'));
+    }
+  }
+
+  Future<void> _onLessonUpdate(EbdLessonUpdateRequested event, Emitter<EbdState> emit) async {
+    emit(const EbdLoading());
+    try {
+      await repository.updateLesson(event.lessonId, event.data);
+      emit(const EbdSaved(message: 'Aula atualizada com sucesso'));
+    } catch (e) {
+      emit(EbdError(message: 'Erro ao atualizar aula: $e'));
+    }
+  }
+
+  Future<void> _onLessonDelete(EbdLessonDeleteRequested event, Emitter<EbdState> emit) async {
+    emit(const EbdLoading());
+    try {
+      await repository.deleteLesson(event.lessonId, force: event.force);
+      emit(const EbdSaved(message: 'Aula excluída com sucesso'));
+    } catch (e) {
+      emit(EbdError(message: 'Erro ao excluir aula: $e'));
+    }
+  }
+
+  // ==========================================
+  // Lesson Contents (E1)
+  // ==========================================
+
+  Future<void> _onLessonContentsLoad(
+      EbdLessonContentsLoadRequested event, Emitter<EbdState> emit) async {
+    emit(const EbdLoading());
+    try {
+      final lesson = await repository.getLesson(event.lessonId);
+      final contents = await repository.getLessonContents(event.lessonId);
+      final activities = await repository.getLessonActivities(event.lessonId);
+      final materials = await repository.getLessonMaterials(event.lessonId);
+      final attendance = await repository.getLessonAttendance(event.lessonId);
+      emit(EbdLessonFullLoaded(
+        lesson: lesson,
+        contents: contents,
+        activities: activities,
+        materials: materials,
+        attendance: attendance,
+      ));
+    } catch (e) {
+      emit(EbdError(message: 'Erro ao carregar conteúdo da aula: $e'));
+    }
+  }
+
+  Future<void> _onLessonContentCreate(
+      EbdLessonContentCreateRequested event, Emitter<EbdState> emit) async {
+    emit(const EbdLoading());
+    try {
+      await repository.createLessonContent(event.lessonId, event.data);
+      emit(const EbdSaved(message: 'Conteúdo adicionado com sucesso'));
+    } catch (e) {
+      emit(EbdError(message: 'Erro ao adicionar conteúdo: $e'));
+    }
+  }
+
+  Future<void> _onLessonContentUpdate(
+      EbdLessonContentUpdateRequested event, Emitter<EbdState> emit) async {
+    emit(const EbdLoading());
+    try {
+      await repository.updateLessonContent(event.lessonId, event.contentId, event.data);
+      emit(const EbdSaved(message: 'Conteúdo atualizado com sucesso'));
+    } catch (e) {
+      emit(EbdError(message: 'Erro ao atualizar conteúdo: $e'));
+    }
+  }
+
+  Future<void> _onLessonContentDelete(
+      EbdLessonContentDeleteRequested event, Emitter<EbdState> emit) async {
+    emit(const EbdLoading());
+    try {
+      await repository.deleteLessonContent(event.lessonId, event.contentId);
+      emit(const EbdSaved(message: 'Conteúdo removido com sucesso'));
+    } catch (e) {
+      emit(EbdError(message: 'Erro ao remover conteúdo: $e'));
+    }
+  }
+
+  // ==========================================
+  // Lesson Activities (E2)
+  // ==========================================
+
+  Future<void> _onLessonActivitiesLoad(
+      EbdLessonActivitiesLoadRequested event, Emitter<EbdState> emit) async {
+    emit(const EbdLoading());
+    try {
+      await repository.getLessonActivities(event.lessonId);
+      emit(EbdLessonsLoaded(lessons: const [])); // placeholder - use specific state
+    } catch (e) {
+      emit(EbdError(message: 'Erro ao carregar atividades: $e'));
+    }
+  }
+
+  Future<void> _onLessonActivityCreate(
+      EbdLessonActivityCreateRequested event, Emitter<EbdState> emit) async {
+    emit(const EbdLoading());
+    try {
+      await repository.createLessonActivity(event.lessonId, event.data);
+      emit(const EbdSaved(message: 'Atividade criada com sucesso'));
+    } catch (e) {
+      emit(EbdError(message: 'Erro ao criar atividade: $e'));
+    }
+  }
+
+  Future<void> _onLessonActivityDelete(
+      EbdLessonActivityDeleteRequested event, Emitter<EbdState> emit) async {
+    emit(const EbdLoading());
+    try {
+      await repository.deleteLessonActivity(event.lessonId, event.activityId);
+      emit(const EbdSaved(message: 'Atividade removida com sucesso'));
+    } catch (e) {
+      emit(EbdError(message: 'Erro ao remover atividade: $e'));
+    }
+  }
+
+  // ==========================================
+  // Students (E3)
+  // ==========================================
+
+  Future<void> _onStudentsLoad(EbdStudentsLoadRequested event, Emitter<EbdState> emit) async {
+    emit(const EbdLoading());
+    try {
+      final students = await repository.getEbdStudents(
+        termId: event.termId,
+        classId: event.classId,
+        search: event.search,
+      );
+      emit(EbdStudentsLoaded(students: students));
+    } catch (e) {
+      emit(EbdError(message: 'Erro ao carregar alunos: $e'));
+    }
+  }
+
+  Future<void> _onStudentProfileLoad(
+      EbdStudentProfileLoadRequested event, Emitter<EbdState> emit) async {
+    emit(const EbdLoading());
+    try {
+      final students = await repository.getEbdStudents();
+      final summary = students.firstWhere(
+        (s) => s.memberId == event.memberId,
+        orElse: () => EbdStudentSummary(memberId: event.memberId, fullName: 'Aluno'),
+      );
+      final history = await repository.getStudentHistory(event.memberId);
+      final notes = await repository.getStudentNotes(event.memberId);
+      emit(EbdStudentProfileLoaded(
+        summary: summary,
+        history: history,
+        notes: notes,
+      ));
+    } catch (e) {
+      emit(EbdError(message: 'Erro ao carregar perfil do aluno: $e'));
+    }
+  }
+
+  // ==========================================
+  // Student Notes (E5)
+  // ==========================================
+
+  Future<void> _onStudentNoteCreate(
+      EbdStudentNoteCreateRequested event, Emitter<EbdState> emit) async {
+    emit(const EbdLoading());
+    try {
+      await repository.createStudentNote(event.memberId, event.data);
+      emit(const EbdSaved(message: 'Anotação criada com sucesso'));
+    } catch (e) {
+      emit(EbdError(message: 'Erro ao criar anotação: $e'));
+    }
+  }
+
+  Future<void> _onStudentNoteDelete(
+      EbdStudentNoteDeleteRequested event, Emitter<EbdState> emit) async {
+    emit(const EbdLoading());
+    try {
+      await repository.deleteStudentNote(event.memberId, event.noteId);
+      emit(const EbdSaved(message: 'Anotação removida com sucesso'));
+    } catch (e) {
+      emit(EbdError(message: 'Erro ao remover anotação: $e'));
     }
   }
 

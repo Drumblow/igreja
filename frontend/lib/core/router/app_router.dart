@@ -34,8 +34,12 @@ import '../../features/ebd/presentation/ebd_overview_screen.dart';
 import '../../features/ebd/presentation/ebd_term_list_screen.dart';
 import '../../features/ebd/presentation/ebd_class_list_screen.dart';
 import '../../features/ebd/presentation/ebd_class_detail_screen.dart';
+import '../../features/ebd/presentation/ebd_class_report_screen.dart';
 import '../../features/ebd/presentation/ebd_lesson_list_screen.dart';
+import '../../features/ebd/presentation/ebd_lesson_detail_screen.dart';
 import '../../features/ebd/presentation/ebd_attendance_screen.dart';
+import '../../features/ebd/presentation/ebd_student_list_screen.dart';
+import '../../features/ebd/presentation/ebd_student_profile_screen.dart';
 import '../../features/reports/presentation/reports_screen.dart';
 import '../../features/settings/presentation/settings_overview_screen.dart';
 import '../../features/settings/presentation/church_settings_screen.dart';
@@ -317,6 +321,16 @@ class AppRouter {
                       final id = state.pathParameters['id']!;
                       return EbdClassDetailScreen(classId: id);
                     },
+                    routes: [
+                      GoRoute(
+                        path: 'report',
+                        name: 'ebd-class-report',
+                        builder: (context, state) {
+                          final id = state.pathParameters['id']!;
+                          return EbdClassReportScreen(classId: id);
+                        },
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -324,6 +338,16 @@ class AppRouter {
                 path: 'lessons',
                 name: 'ebd-lessons',
                 builder: (context, state) => const EbdLessonListScreen(),
+                routes: [
+                  GoRoute(
+                    path: ':lessonId',
+                    name: 'ebd-lesson-detail',
+                    builder: (context, state) {
+                      final lessonId = state.pathParameters['lessonId']!;
+                      return EbdLessonDetailScreen(lessonId: lessonId);
+                    },
+                  ),
+                ],
               ),
               GoRoute(
                 path: 'attendance/:lessonId',
@@ -332,6 +356,21 @@ class AppRouter {
                   final lessonId = state.pathParameters['lessonId']!;
                   return EbdAttendanceScreen(lessonId: lessonId);
                 },
+              ),
+              GoRoute(
+                path: 'students',
+                name: 'ebd-students',
+                builder: (context, state) => const EbdStudentListScreen(),
+                routes: [
+                  GoRoute(
+                    path: ':memberId',
+                    name: 'ebd-student-profile',
+                    builder: (context, state) {
+                      final memberId = state.pathParameters['memberId']!;
+                      return EbdStudentProfileScreen(memberId: memberId);
+                    },
+                  ),
+                ],
               ),
             ],
           ),
