@@ -11,6 +11,7 @@ import '../../features/families/presentation/family_form_screen.dart';
 import '../../features/members/presentation/member_list_screen.dart';
 import '../../features/members/presentation/member_detail_screen.dart';
 import '../../features/members/presentation/member_form_screen.dart';
+import '../../features/members/presentation/member_history_screen.dart';
 import '../../features/ministries/presentation/ministry_list_screen.dart';
 import '../../features/ministries/presentation/ministry_detail_screen.dart';
 import '../../features/ministries/presentation/ministry_form_screen.dart';
@@ -35,6 +36,7 @@ import '../../features/ebd/presentation/ebd_class_list_screen.dart';
 import '../../features/ebd/presentation/ebd_class_detail_screen.dart';
 import '../../features/ebd/presentation/ebd_lesson_list_screen.dart';
 import '../../features/ebd/presentation/ebd_attendance_screen.dart';
+import '../../features/reports/presentation/reports_screen.dart';
 import '../shell/app_shell.dart';
 
 class AppRouter {
@@ -88,6 +90,18 @@ class AppRouter {
                     builder: (context, state) {
                       final member = state.extra as dynamic;
                       return MemberFormScreen(existingMember: member);
+                    },
+                  ),
+                  GoRoute(
+                    path: 'history',
+                    name: 'member-history',
+                    builder: (context, state) {
+                      final id = state.pathParameters['id']!;
+                      final name = state.uri.queryParameters['name'] ?? '';
+                      return MemberHistoryScreen(
+                        memberId: id,
+                        memberName: name,
+                      );
                     },
                   ),
                 ],
@@ -157,6 +171,13 @@ class AppRouter {
                 ],
               ),
             ],
+          ),
+
+          // ── Reports ──
+          GoRoute(
+            path: '/reports',
+            name: 'reports',
+            builder: (context, state) => const ReportsScreen(),
           ),
 
           // ── Financial ──

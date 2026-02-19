@@ -69,4 +69,38 @@ class MemberRepository {
       response.data['data'] as Map<String, dynamic>,
     );
   }
+
+  /// Fetch the full history timeline for a member.
+  Future<List<MemberHistory>> getMemberHistory(String memberId) async {
+    final response = await _apiClient.dio.get('/v1/members/$memberId/history');
+    final data = response.data['data'] as List;
+    return data
+        .map((json) => MemberHistory.fromJson(json as Map<String, dynamic>))
+        .toList();
+  }
+
+  /// Create a new history event for a member.
+  Future<MemberHistory> createMemberHistory(
+    String memberId, {
+    required String eventType,
+    required DateTime eventDate,
+    required String description,
+    String? previousValue,
+    String? newValue,
+  }) async {
+    final response = await _apiClient.dio.post(
+      '/v1/members/$memberId/history',
+      data: {
+        'event_type': eventType,
+        'event_date':
+            '${eventDate.year.toString().padLeft(4, '0')}-${eventDate.month.toString().padLeft(2, '0')}-${eventDate.day.toString().padLeft(2, '0')}',
+        'description': description,
+        if (previousValue != null) 'previous_value': previousValue,
+        if (newValue != null) 'new_value': newValue,
+      },
+    );
+    return MemberHistory.fromJson(
+      response.data['data'] as Map<String, dynamic>,
+    );
+  }
 }

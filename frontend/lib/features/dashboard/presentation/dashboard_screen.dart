@@ -206,13 +206,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       : null,
                   color: AppColors.accent,
                 ),
-                const _StatCard(
-                  icon: Icons.school_outlined,
-                  label: 'Alunos EBD',
-                  value: '—',
-                  trend: null,
-                  color: AppColors.accent,
-                ),
               ],
             ),
           ),
@@ -262,9 +255,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 _QuickAction(
                   icon: Icons.bar_chart_rounded,
                   label: 'Relatórios',
-                  onTap: () {
-                    // TODO: Navigate to reports
-                  },
+                  onTap: () => context.go('/reports'),
                 ),
               ],
             ),

@@ -1,8 +1,8 @@
 # 📊 Andamento do Projeto — Igreja Manager
 
 > **Última atualização:** 19 de fevereiro de 2026  
-> **Versão do documento:** 1.10  
-> **Status geral do projeto:** Em Desenvolvimento Ativo (~96% concluído)
+> **Versão do documento:** 1.11  
+> **Status geral do projeto:** Em Desenvolvimento Ativo (~97% concluído)
 
 ---
 
@@ -26,14 +26,15 @@ O **Igreja Manager** é uma plataforma de gestão para igrejas composta por **5 
 | Backend — EBD | ![100%](https://img.shields.io/badge/100%25-brightgreen) | ✅ CRUD + Stats (4 sub-módulos, 16 endpoints) |
 | Backend — Swagger UI | ![100%](https://img.shields.io/badge/100%25-brightgreen) | ✅ Montado em `/swagger-ui/` |
 | Frontend — Design System | ![100%](https://img.shields.io/badge/100%25-brightgreen) | ✅ Concluído |
-| Frontend — Autenticação | ![95%](https://img.shields.io/badge/95%25-green) | 🟢 Login + Forgot Password UI completos |
-| Frontend — Dashboard | ![85%](https://img.shields.io/badge/85%25-green) | 🟢 Stats wired (membros + financeiro + patrimônio + EBD) |
-| Frontend — Membros | ![80%](https://img.shields.io/badge/80%25-green) | 🟢 CRUD completo |
+| Frontend — Autenticação | ![100%](https://img.shields.io/badge/100%25-brightgreen) | ✅ Login + Forgot Password + Reset Password completos |
+| Frontend — Dashboard | ![95%](https://img.shields.io/badge/95%25-green) | 🟢 Stats wired (4 módulos) + Quick Actions + Relatórios |
+| Frontend — Membros | ![90%](https://img.shields.io/badge/90%25-green) | 🟢 CRUD completo + Histórico com timeline |
 | Frontend — Famílias | ![85%](https://img.shields.io/badge/85%25-green) | 🟢 CRUD completo (lista/detalhe/form) |
 | Frontend — Ministérios | ![85%](https://img.shields.io/badge/85%25-green) | 🟢 CRUD completo (lista/detalhe/form) |
 | Frontend — Financeiro | ![85%](https://img.shields.io/badge/85%25-green) | 🟢 7 telas + BLoC + Repositório + Fechamento Mensal |
 | Frontend — Patrimônio | ![85%](https://img.shields.io/badge/85%25-green) | 🟢 12 telas + BLoC + Repositório |
 | Frontend — EBD | ![85%](https://img.shields.io/badge/85%25-green) | 🟢 6 telas + BLoC + Repositório |
+| Frontend — Relatórios | ![80%](https://img.shields.io/badge/80%25-green) | 🟢 Tela central com métricas + aniversariantes + navegação |
 
 ---
 
@@ -97,7 +98,7 @@ Toda a documentação de especificação foi finalizada, totalizando **~5.052 li
 | `family_relationships` | 5 | ✅ Add/Remove | ✅ Add/Remove na UI |
 | `ministries` | 7 | ✅ CRUD completo | ✅ Lista + Detalhe + Form |
 | `member_ministries` | 5 | ✅ Add/Remove | ✅ Add/Remove na UI |
-| `member_history` | 6 | ✅ List/Create | ❌ Sem UI |
+| `member_history` | 6 | ✅ List/Create | ✅ Timeline + Criar evento |
 
 #### Módulo Financeiro (5 tabelas)
 
@@ -113,23 +114,23 @@ Toda a documentação de especificação foi finalizada, totalizando **~5.052 li
 
 | Tabela | Campos | Backend | Frontend |
 |--------|:------:|:-------:|:--------:|
-| `asset_categories` | 5 | ✅ CRUD (list/create/update) | ❌ |
-| `assets` | 20 | ✅ CRUD completo (list/get/create/update/delete) | ❌ |
+| `asset_categories` | 5 | ✅ CRUD (list/create/update) | ✅ Lista + criação |
+| `assets` | 20 | ✅ CRUD completo (list/get/create/update/delete) | ✅ Overview + Lista + Detalhe + Form |
 | `asset_photos` | 6 | ❌ Entity existe, sem upload | ❌ |
-| `maintenances` | 10 | ✅ CRUD (list/create/update) | ❌ |
-| `inventories` | 7 | ✅ CRUD (list/get/create/update_item/close) | ❌ |
-| `inventory_items` | 7 | ✅ Auto-populado + atualização | ❌ |
-| `asset_loans` | 8 | ✅ CRUD (list/create/return) | ❌ |
+| `maintenances` | 10 | ✅ CRUD (list/create/update) | ✅ Lista + filtros + criação |
+| `inventories` | 7 | ✅ CRUD (list/get/create/update_item/close) | ✅ Lista + criar + fechar |
+| `inventory_items` | 7 | ✅ Auto-populado + atualização | ✅ (via inventário) |
+| `asset_loans` | 8 | ✅ CRUD (list/create/return) | ✅ Lista + registro + devolução |
 
 #### Módulo EBD (5 tabelas)
 
 | Tabela | Campos | Backend | Frontend |
 |--------|:------:|:-------:|:--------:|
-| `ebd_terms` | 7 | ✅ CRUD (list/get/create/update) | ❌ |
-| `ebd_classes` | 8 | ✅ CRUD (list/get/create/update) | ❌ |
-| `ebd_enrollments` | 5 | ✅ List/Create/Remove | ❌ |
-| `ebd_lessons` | 10 | ✅ CRUD (list/get/create) | ❌ |
-| `ebd_attendances` | 7 | ✅ Record batch/get by lesson/report | ❌ |
+| `ebd_terms` | 7 | ✅ CRUD (list/get/create/update) | ✅ Lista + criação |
+| `ebd_classes` | 8 | ✅ CRUD (list/get/create/update) | ✅ Lista + Detalhe + matrículas |
+| `ebd_enrollments` | 5 | ✅ List/Create/Remove | ✅ Matricular/Remover na UI |
+| `ebd_lessons` | 10 | ✅ CRUD (list/get/create) | ✅ Lista + criação |
+| `ebd_attendances` | 7 | ✅ Record batch/get by lesson/report | ✅ Tela de frequência (P/A/J) |
 
 #### Views e Triggers
 
@@ -505,13 +506,14 @@ frontend/lib/
     │   │   ├── member_bloc.dart           ✅ Load + Delete + Create + Update handlers
     │   │   └── member_event_state.dart    ✅ 5 events, 6 states
     │   ├── data/
-    │   │   ├── member_repository.dart     ✅ 6 métodos (list, get, create, update, delete, stats)
+    │   │   ├── member_repository.dart     ✅ 8 métodos (list, get, create, update, delete, stats, getHistory, createHistory)
     │   │   └── models/
-    │   │       └── member_models.dart     ✅ Member (35+ campos), MemberStats (4 campos)
+    │   │       └── member_models.dart     ✅ Member (35+ campos), MemberStats (4 campos), MemberHistory (10 campos)
     │   └── presentation/
     │       ├── member_list_screen.dart    ✅ Busca, filtro, lista paginada, FAB → criar
-    │       ├── member_detail_screen.dart  ✅ Perfil completo (5 seções, edit/delete)
-    │       └── member_form_screen.dart    ✅ Formulário criar/editar (5 seções, 35+ campos)
+    │       ├── member_detail_screen.dart  ✅ Perfil completo (5 seções, histórico/edit/delete)
+    │       ├── member_form_screen.dart    ✅ Formulário criar/editar (5 seções, 35+ campos)
+    │       └── member_history_screen.dart ✅ NOVO — Timeline + dialog para criar eventos
     │
     ├── ministries/                         ✅ CRUD completo
     │   ├── bloc/
@@ -543,6 +545,10 @@ frontend/lib/
             ├── bank_account_list_screen.dart   ✅ Lista com saldo + criação
             ├── campaign_list_screen.dart       ✅ Lista com progresso + criação
             └── monthly_closing_list_screen.dart ✅ Lista + fechamento mensal (diálogo)
+│
+└── reports/                             ✅ NOVO — Tela central de relatórios
+    └── presentation/
+        └── reports_screen.dart          ✅ Métricas agregadas + aniversariantes + navegação por módulo
 ```
 
 ### 5.3 Design System — Tokens Implementados
@@ -592,20 +598,18 @@ frontend/lib/
 | Erro | SnackBar flutuante com mensagem do backend |
 | Responsivo | Hero oculto em telas < 800px; logo "IM" aparece no mobile |
 
-**Pendente:** Botão "Esqueceu a senha?" existe mas com `// TODO`.
+**Pendente:** ~~Botão "Esqueceu a senha?" existe mas com `// TODO`.~~ ✅ **Concluído** — Navega para `ForgotPasswordScreen` com fluxo completo (enviar e-mail + token + nova senha).
 
-#### Dashboard (`dashboard_screen.dart` — 355 linhas)
+#### Dashboard (`dashboard_screen.dart`)
 
-**Status: � Stats wired (membros + financeiro), quick actions funcionais**
+**Status: ✅ Stats wired (4 módulos) + Quick Actions completos**
 
 | Componente | Descrição | Status |
 |------------|-----------|--------|
 | Header | Saudação + avatar com popup menu (logout) | ✅ Funcional |
-| Stat Cards | 4 cards grid: Membros (wired), Saldo Financeiro (wired), Patrimônio, EBD | ✅ Membros Ativos + Saldo real via API, demais "—" |
-| Quick Actions | 4 botões: Novo Membro, Nova Família, Novo Ministério, Relatórios | ✅ 3 navegam, 1 TODO |
-| Responsivo | Grid adaptativo (2-4 colunas conforme largura) | ✅ Funcional |
-
-**Pendente:** Integrar demais endpoints de estatísticas quando módulos Patrimônio/EBD forem implementados.
+| Stat Cards | 4 cards grid: Membros, Saldo Financeiro, Patrimônio, EBD | ✅ Todos wired via API |
+| Quick Actions | 4 botões: Novo Membro, Nova Família, Novo Ministério, Relatórios | ✅ Todos navegam |
+| Responsivo | Grid adaptativo (2–4 colunas conforme largura) | ✅ Funcional |
 
 #### Lista de Membros (`member_list_screen.dart` — 398 linhas)
 
@@ -637,7 +641,7 @@ frontend/lib/
 | Observações | Texto livre |
 | Metadata | Datas de criação e atualização |
 
-**Ações:** Editar (→ `/members/:id/edit`), Excluir (com confirmação)
+**Ações:** Histórico (→ `/members/:id/history`), Editar (→ `/members/:id/edit`), Excluir (com confirmação)
 
 #### Formulário de Membro (`member_form_screen.dart` — 808 linhas)
 
@@ -663,6 +667,7 @@ frontend/lib/
 | `/members/new` | `MemberFormScreen` (dentro de `AppShell`) | Protegida |
 | `/members/:id` | `MemberDetailScreen` (dentro de `AppShell`) | Protegida |
 | `/members/:id/edit` | `MemberFormScreen` (dentro de `AppShell`) | Protegida |
+| `/members/:id/history` | `MemberHistoryScreen` (dentro de `AppShell`) | Protegida |
 | `/families` | `FamilyListScreen` (dentro de `AppShell`) | Protegida |
 | `/families/new` | `FamilyFormScreen` (dentro de `AppShell`) | Protegida |
 | `/families/:id` | `FamilyDetailScreen` (dentro de `AppShell`) | Protegida |
@@ -680,9 +685,10 @@ frontend/lib/
 | `/financial/campaigns` | `CampaignListScreen` (dentro de `AppShell`) | Protegida |
 
 | `/financial/monthly-closings` | `MonthlyClosingListScreen` (dentro de `AppShell`) | Protegida |
+| `/reports` | `ReportsScreen` (dentro de `AppShell`) | Protegida |
 
 **Shell responsivo:**
-- Desktop (≥ 900px): Sidebar navy com itens: Dashboard, Membros, Famílias, Ministérios, Financeiro
+- Desktop (≥ 900px): Sidebar navy com itens: Dashboard, Membros, Famílias, Ministérios, Financeiro, Patrimônio, EBD
 - Mobile (< 900px): `NavigationBar` inferior com os mesmos itens
 
 ---
@@ -691,8 +697,8 @@ frontend/lib/
 
 | Arquivo | Linha | TODO |
 |---------|:-----:|------|
-| `login_screen.dart` | ~348 | `// TODO: Forgot password flow` |
-| `dashboard_screen.dart` | ~124 | `// TODO: Navigate to reports` |
+| ~~`login_screen.dart`~~ | ~~348~~ | ~~`// TODO: Forgot password flow`~~ ✅ Resolvido — Navega para `ForgotPasswordScreen` |
+| ~~`dashboard_screen.dart`~~ | ~~124~~ | ~~`// TODO: Navigate to reports`~~ ✅ Resolvido — Navega para `/reports` |
 
 ---
 
@@ -716,6 +722,9 @@ frontend/lib/
 | 15 | Dashboard sem dados financeiros (stats hardcoded "—") | Wired `FinancialRepository.getBalanceReport()` paralelo ao load de membros |
 | 16 | Rota `/financial/entries/:id` sem tela de edição | Rota agora aponta para `FinancialEntryFormScreen(entryId:)` com modo edição |
 | 17 | Fechamento mensal sem tela no frontend | Criada `MonthlyClosingListScreen` com lista + diálogo de criação |
+| 18 | Dashboard com stat card duplicado (EBD aparecia 2 vezes) | Removido o 5º card estático que era cópia hardcoded do 4º |
+| 19 | Histórico de membro sem UI no frontend | Criada `MemberHistoryScreen` com timeline visual + diálogo para registrar novos eventos |
+| 20 | Quick Action "Relatórios" no dashboard sem navegação (`// TODO`) | Criada `ReportsScreen` em `/reports` com métricas agregadas, aniversariantes do mês e navegação por módulo |
 
 ---
 
@@ -809,19 +818,19 @@ Crates/packages importados mas ainda sem uso no código — preparados para fase
 
 | Componente | Arquivos | Linhas Estimadas |
 |------------|:--------:|:----------------:|
-| Documentação (docs/) | 7 | ~5.700 |
+| Documentação (docs/) | 7 | ~5.800 |
 | Backend (Rust) | 28 .rs | ~5.800 |
 | Migrations (SQL) | 2 | ~810 |
-| Frontend (Dart) | 64 .dart | ~17.900 |
+| Frontend (Dart) | 67 .dart | ~19.000 |
 | Configuração | 5 | ~200 |
-| **Total** | **106** | **~30.400** |
+| **Total** | **109** | **~31.600** |
 
 ### Status de Compilação
 
 | Componente | Comando | Resultado |
 |------------|---------|-----------|
 | Backend Rust | `SQLX_OFFLINE=true cargo check` | ✅ Compila (apenas warnings) |
-| Frontend Flutter | `flutter analyze` | ✅ 17 info issues (no errors) |
+| Frontend Flutter | `flutter analyze` | ✅ 20 info issues (zero errors) |
 
 ---
 

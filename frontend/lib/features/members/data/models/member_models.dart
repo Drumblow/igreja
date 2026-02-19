@@ -230,3 +230,86 @@ class MemberStats extends Equatable {
   @override
   List<Object?> get props => [totalActive, totalInactive, newMembersThisMonth, newMembersThisYear];
 }
+
+/// A single event in the member's history timeline.
+class MemberHistory extends Equatable {
+  final String id;
+  final String churchId;
+  final String memberId;
+  final String eventType;
+  final DateTime eventDate;
+  final String description;
+  final String? previousValue;
+  final String? newValue;
+  final String? registeredBy;
+  final DateTime? createdAt;
+
+  const MemberHistory({
+    required this.id,
+    required this.churchId,
+    required this.memberId,
+    required this.eventType,
+    required this.eventDate,
+    required this.description,
+    this.previousValue,
+    this.newValue,
+    this.registeredBy,
+    this.createdAt,
+  });
+
+  factory MemberHistory.fromJson(Map<String, dynamic> json) {
+    return MemberHistory(
+      id: json['id'] as String,
+      churchId: json['church_id'] as String? ?? '',
+      memberId: json['member_id'] as String? ?? '',
+      eventType: json['event_type'] as String,
+      eventDate: DateTime.parse(json['event_date'] as String),
+      description: json['description'] as String,
+      previousValue: json['previous_value'] as String?,
+      newValue: json['new_value'] as String?,
+      registeredBy: json['registered_by'] as String?,
+      createdAt: json['created_at'] != null
+          ? DateTime.tryParse(json['created_at'] as String)
+          : null,
+    );
+  }
+
+  /// Display-friendly label for the event type.
+  String get eventTypeLabel => switch (eventType) {
+        'mudanca_cargo' => 'Mudança de Cargo',
+        'entrada_ministerio' => 'Entrada em Ministério',
+        'saida_ministerio' => 'Saída de Ministério',
+        'transferencia_entrada' => 'Transferência (Entrada)',
+        'transferencia_saida' => 'Transferência (Saída)',
+        'disciplina' => 'Disciplina Eclesiástica',
+        'reconciliacao' => 'Reconciliação',
+        'batismo_aguas' => 'Batismo nas Águas',
+        'batismo_espirito' => 'Batismo no Espírito Santo',
+        'casamento' => 'Casamento',
+        'falecimento' => 'Falecimento',
+        'mudanca_status' => 'Mudança de Status',
+        'observacao' => 'Observação',
+        _ => eventType,
+      };
+
+  /// Icon for timeline display.
+  static String iconForType(String eventType) => switch (eventType) {
+        'mudanca_cargo' => 'badge',
+        'entrada_ministerio' => 'group_add',
+        'saida_ministerio' => 'group_remove',
+        'transferencia_entrada' => 'login',
+        'transferencia_saida' => 'logout',
+        'disciplina' => 'gavel',
+        'reconciliacao' => 'handshake',
+        'batismo_aguas' => 'water_drop',
+        'batismo_espirito' => 'local_fire_department',
+        'casamento' => 'favorite',
+        'falecimento' => 'sentiment_very_dissatisfied',
+        'mudanca_status' => 'swap_horiz',
+        'observacao' => 'note',
+        _ => 'event',
+      };
+
+  @override
+  List<Object?> get props => [id];
+}

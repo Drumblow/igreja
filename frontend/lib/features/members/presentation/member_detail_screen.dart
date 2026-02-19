@@ -109,6 +109,16 @@ class _MemberDetailScreenState extends State<MemberDetailScreen> {
         actions: _member != null
             ? [
                 IconButton(
+                  icon: const Icon(Icons.history_outlined),
+                  tooltip: 'Histórico',
+                  onPressed: () => context.go(
+                    Uri(
+                      path: '/members/${widget.memberId}/history',
+                      queryParameters: {'name': _member!.fullName},
+                    ).toString(),
+                  ),
+                ),
+                IconButton(
                   icon: const Icon(Icons.edit_outlined),
                   tooltip: 'Editar',
                   onPressed: () => context.go('/members/${widget.memberId}/edit'),
