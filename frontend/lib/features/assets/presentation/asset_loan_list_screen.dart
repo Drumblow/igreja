@@ -5,6 +5,8 @@ import '../../../core/network/api_client.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../core/widgets/searchable_entity_dropdown.dart';
+import '../../members/data/member_repository.dart';
 import '../bloc/asset_bloc.dart';
 import '../bloc/asset_event_state.dart';
 import '../data/asset_repository.dart';
@@ -161,8 +163,12 @@ class _LoanListViewState extends State<_LoanListView> {
   }
 
   void _showCreateDialog(BuildContext context) {
-    final assetIdCtrl = TextEditingController();
-    final borrowerIdCtrl = TextEditingController();
+    final apiClient = RepositoryProvider.of<ApiClient>(context);
+    final assetRepo = AssetRepository(apiClient: apiClient);
+    final memberRepo = MemberRepository(apiClient: apiClient);
+
+    EntityOption? selectedAsset;
+    EntityOption? selectedMember;
     String conditionOut = 'bom';
     DateTime expectedReturn = DateTime.now().add(const Duration(days: 7));
 
@@ -171,66 +177,88 @@ class _LoanListViewState extends State<_LoanListView> {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
           title: const Text('Novo Empréstimo'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: assetIdCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'ID do Bem *',
-                    hintText: 'UUID do bem',
+          content: SizedBox(
+            width: 400,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SearchableEntityDropdown(
+                    label: 'Bem *',
+                    hint: 'Busque pelo código ou descrição...',
+                    onSelected: (entity) => selectedAsset = entity,
+                    searchCallback: (query) async {
+                      final result = await assetRepo.getAssets(
+                        search: query,
+                        perPage: 20,
+                        status: 'ativo',
+                      );
+                      return result.items
+                          .map((a) => EntityOption(
+                                id: a.id,
+                                label: '${a.assetCode} - ${a.description}',
+                              ))
+                          .toList();
+                    },
                   ),
-                ),
-                const SizedBox(height: AppSpacing.md),
-                TextField(
-                  controller: borrowerIdCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'ID do Membro *',
-                    hintText: 'UUID do membro',
+                  const SizedBox(height: AppSpacing.md),
+                  SearchableEntityDropdown(
+                    label: 'Membro *',
+                    hint: 'Busque pelo nome...',
+                    onSelected: (entity) => selectedMember = entity,
+                    searchCallback: (query) async {
+                      final result = await memberRepo.getMembers(
+                        search: query,
+                        perPage: 20,
+                        status: 'ativo',
+                      );
+                      return result.members
+                          .map((m) => EntityOption(id: m.id, label: m.fullName))
+                          .toList();
+                    },
                   ),
-                ),
-                const SizedBox(height: AppSpacing.md),
-                DropdownButtonFormField<String>(
-                  value: conditionOut,
-                  decoration:
-                      const InputDecoration(labelText: 'Condição de Saída'),
-                  items: const [
-                    DropdownMenuItem(value: 'novo', child: Text('Novo')),
-                    DropdownMenuItem(value: 'bom', child: Text('Bom')),
-                    DropdownMenuItem(
-                        value: 'regular', child: Text('Regular')),
-                    DropdownMenuItem(value: 'ruim', child: Text('Ruim')),
-                  ],
-                  onChanged: (v) {
-                    if (v != null) setDialogState(() => conditionOut = v);
-                  },
-                ),
-                const SizedBox(height: AppSpacing.md),
-                InkWell(
-                  onTap: () async {
-                    final d = await showDatePicker(
-                      context: ctx,
-                      initialDate: expectedReturn,
-                      firstDate: DateTime.now(),
-                      lastDate:
-                          DateTime.now().add(const Duration(days: 365)),
-                    );
-                    if (d != null) {
-                      setDialogState(() => expectedReturn = d);
-                    }
-                  },
-                  child: InputDecorator(
-                    decoration: const InputDecoration(
-                      labelText: 'Devolução Prevista',
-                      suffixIcon: Icon(Icons.calendar_today, size: 18),
+                  const SizedBox(height: AppSpacing.md),
+                  DropdownButtonFormField<String>(
+                    value: conditionOut,
+                    decoration:
+                        const InputDecoration(labelText: 'Condição de Saída'),
+                    items: const [
+                      DropdownMenuItem(value: 'novo', child: Text('Novo')),
+                      DropdownMenuItem(value: 'bom', child: Text('Bom')),
+                      DropdownMenuItem(
+                          value: 'regular', child: Text('Regular')),
+                      DropdownMenuItem(value: 'ruim', child: Text('Ruim')),
+                    ],
+                    onChanged: (v) {
+                      if (v != null) setDialogState(() => conditionOut = v);
+                    },
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  InkWell(
+                    onTap: () async {
+                      final d = await showDatePicker(
+                        context: ctx,
+                        initialDate: expectedReturn,
+                        firstDate: DateTime.now(),
+                        lastDate:
+                            DateTime.now().add(const Duration(days: 365)),
+                      );
+                      if (d != null) {
+                        setDialogState(() => expectedReturn = d);
+                      }
+                    },
+                    child: InputDecorator(
+                      decoration: const InputDecoration(
+                        labelText: 'Devolução Prevista',
+                        suffixIcon: Icon(Icons.calendar_today, size: 18),
+                      ),
+                      child: Text(
+                        '${expectedReturn.day.toString().padLeft(2, '0')}/${expectedReturn.month.toString().padLeft(2, '0')}/${expectedReturn.year}',
+                      ),
                     ),
-                    child: Text(
-                      '${expectedReturn.day.toString().padLeft(2, '0')}/${expectedReturn.month.toString().padLeft(2, '0')}/${expectedReturn.year}',
-                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
           actions: [
@@ -240,13 +268,12 @@ class _LoanListViewState extends State<_LoanListView> {
             ),
             FilledButton(
               onPressed: () {
-                if (assetIdCtrl.text.trim().isEmpty ||
-                    borrowerIdCtrl.text.trim().isEmpty) return;
+                if (selectedAsset == null || selectedMember == null) return;
                 final now = DateTime.now();
                 context.read<AssetBloc>().add(AssetLoanCreateRequested(
                       data: {
-                        'asset_id': assetIdCtrl.text.trim(),
-                        'borrower_member_id': borrowerIdCtrl.text.trim(),
+                        'asset_id': selectedAsset!.id,
+                        'borrower_member_id': selectedMember!.id,
                         'loan_date':
                             '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}',
                         'expected_return_date':

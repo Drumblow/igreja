@@ -6,6 +6,7 @@ import '../../../core/network/api_client.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../core/widgets/inline_create_dropdown.dart';
 import '../bloc/financial_bloc.dart';
 import '../bloc/financial_event_state.dart';
 import '../data/financial_repository.dart';
@@ -396,22 +397,26 @@ class _EntryFormViewState extends State<_EntryFormView> {
   }
 
   Widget _buildAccountPlanDropdown() {
-    return DropdownButtonFormField<String>(
-      initialValue: _selectedAccountPlanId,
-      decoration: const InputDecoration(labelText: 'Plano de Contas *'),
+    return InlineCreateDropdown<String>(
+      labelText: 'Plano de Contas *',
+      value: _selectedAccountPlanId,
       items: _accountPlans.map((p) => DropdownMenuItem(value: p.id, child: Text('${p.code} - ${p.name}'))).toList(),
       onChanged: (v) => setState(() => _selectedAccountPlanId = v),
       validator: (v) => v == null ? 'Selecione uma categoria' : null,
+      createTooltip: 'Criar plano de contas',
+      onCreatePressed: () => _showCreateAccountPlanDialog(),
     );
   }
 
   Widget _buildBankAccountDropdown() {
-    return DropdownButtonFormField<String>(
-      initialValue: _selectedBankAccountId,
-      decoration: const InputDecoration(labelText: 'Conta Bancária *'),
+    return InlineCreateDropdown<String>(
+      labelText: 'Conta Bancária *',
+      value: _selectedBankAccountId,
       items: _bankAccounts.where((a) => a.isActive).map((a) => DropdownMenuItem(value: a.id, child: Text(a.name))).toList(),
       onChanged: (v) => setState(() => _selectedBankAccountId = v),
       validator: (v) => v == null ? 'Selecione uma conta' : null,
+      createTooltip: 'Criar conta bancária',
+      onCreatePressed: () => _showCreateBankAccountDialog(),
     );
   }
 
@@ -434,14 +439,16 @@ class _EntryFormViewState extends State<_EntryFormView> {
   }
 
   Widget _buildCampaignDropdown() {
-    return DropdownButtonFormField<String>(
-      initialValue: _selectedCampaignId,
-      decoration: const InputDecoration(labelText: 'Campanha (opcional)'),
+    return InlineCreateDropdown<String>(
+      labelText: 'Campanha (opcional)',
+      value: _selectedCampaignId,
       items: [
         const DropdownMenuItem(value: null, child: Text('— Nenhuma —')),
         ..._campaigns.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name))),
       ],
       onChanged: (v) => setState(() => _selectedCampaignId = v),
+      createTooltip: 'Criar campanha',
+      onCreatePressed: () => _showCreateCampaignDialog(),
     );
   }
 
@@ -477,6 +484,213 @@ class _EntryFormViewState extends State<_EntryFormView> {
       ),
       maxLines: 3,
       textInputAction: TextInputAction.done,
+    );
+  }
+
+  // ──────────── Inline Create Dialogs ────────────
+
+  void _showCreateAccountPlanDialog() {
+    final codeCtrl = TextEditingController();
+    final nameCtrl = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Novo Plano de Contas'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: codeCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Código *',
+                hintText: 'Ex: 1.1.01',
+              ),
+              autofocus: true,
+            ),
+            const SizedBox(height: AppSpacing.md),
+            TextField(
+              controller: nameCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Nome *',
+                hintText: 'Ex: Dízimos',
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              if (codeCtrl.text.trim().isEmpty || nameCtrl.text.trim().isEmpty) return;
+              Navigator.pop(ctx);
+              try {
+                final created = await widget.repository.createAccountPlan({
+                  'code': codeCtrl.text.trim(),
+                  'name': nameCtrl.text.trim(),
+                  'type': _type,
+                });
+                await _loadOptions();
+                if (mounted) {
+                  setState(() => _selectedAccountPlanId = created.id);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Plano "${created.name}" criado!')),
+                  );
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Erro ao criar plano: $e')),
+                  );
+                }
+              }
+            },
+            child: const Text('Criar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showCreateBankAccountDialog() {
+    final nameCtrl = TextEditingController();
+    String accountType = 'conta_corrente';
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: const Text('Nova Conta Bancária'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Nome *',
+                  hintText: 'Ex: Conta Principal',
+                ),
+                autofocus: true,
+              ),
+              const SizedBox(height: AppSpacing.md),
+              DropdownButtonFormField<String>(
+                value: accountType,
+                decoration: const InputDecoration(labelText: 'Tipo'),
+                items: const [
+                  DropdownMenuItem(value: 'caixa', child: Text('Caixa')),
+                  DropdownMenuItem(value: 'conta_corrente', child: Text('Conta Corrente')),
+                  DropdownMenuItem(value: 'poupanca', child: Text('Poupança')),
+                  DropdownMenuItem(value: 'digital', child: Text('Digital')),
+                ],
+                onChanged: (v) {
+                  if (v != null) setDialogState(() => accountType = v);
+                },
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: () async {
+                if (nameCtrl.text.trim().isEmpty) return;
+                Navigator.pop(ctx);
+                try {
+                  final created = await widget.repository.createBankAccount({
+                    'name': nameCtrl.text.trim(),
+                    'type': accountType,
+                    'initial_balance': 0,
+                  });
+                  await _loadOptions();
+                  if (mounted) {
+                    setState(() => _selectedBankAccountId = created.id);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Conta "${created.name}" criada!')),
+                    );
+                  }
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Erro ao criar conta: $e')),
+                    );
+                  }
+                }
+              },
+              child: const Text('Criar'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showCreateCampaignDialog() {
+    final nameCtrl = TextEditingController();
+    final descCtrl = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Nova Campanha'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: nameCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Nome *',
+                hintText: 'Ex: Campanha Missionária 2025',
+              ),
+              autofocus: true,
+            ),
+            const SizedBox(height: AppSpacing.md),
+            TextField(
+              controller: descCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Descrição',
+                hintText: 'Breve descrição (opcional)',
+              ),
+              maxLines: 2,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              if (nameCtrl.text.trim().isEmpty) return;
+              Navigator.pop(ctx);
+              try {
+                final now = DateTime.now();
+                final created = await widget.repository.createCampaign({
+                  'name': nameCtrl.text.trim(),
+                  if (descCtrl.text.trim().isNotEmpty) 'description': descCtrl.text.trim(),
+                  'start_date': '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}',
+                });
+                await _loadOptions();
+                if (mounted) {
+                  setState(() => _selectedCampaignId = created.id);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Campanha "${created.name}" criada!')),
+                  );
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Erro ao criar campanha: $e')),
+                  );
+                }
+              }
+            },
+            child: const Text('Criar'),
+          ),
+        ],
+      ),
     );
   }
 

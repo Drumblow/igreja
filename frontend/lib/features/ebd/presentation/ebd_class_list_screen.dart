@@ -6,6 +6,7 @@ import '../../../core/network/api_client.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../core/widgets/inline_create_dropdown.dart';
 import '../bloc/ebd_bloc.dart';
 import '../bloc/ebd_event_state.dart';
 import '../data/ebd_repository.dart';
@@ -118,111 +119,257 @@ class _ClassListView extends StatelessWidget {
 
   void _showCreateDialog(BuildContext context) {
     final nameCtrl = TextEditingController();
-    final termIdCtrl = TextEditingController();
     final roomCtrl = TextEditingController();
     final capacityCtrl = TextEditingController();
     final ageStartCtrl = TextEditingController();
     final ageEndCtrl = TextEditingController();
 
+    // Load terms for the dropdown
+    final apiClient = RepositoryProvider.of<ApiClient>(context);
+    final repo = EbdRepository(apiClient: apiClient);
+    String? selectedTermId;
+
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Nova Turma'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: termIdCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'ID do Trimestre *',
-                  hintText: 'UUID do trimestre',
-                ),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              TextField(
-                controller: nameCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'Nome da Turma *',
-                  hintText: 'Ex: Adultos, Jovens, Crianças',
-                ),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: ageStartCtrl,
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                        labelText: 'Idade Mín.',
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) {
+          return FutureBuilder<List<EbdTerm>>(
+            future: repo.getTerms(),
+            builder: (context, snapshot) {
+              final terms = snapshot.data ?? [];
+              final isLoadingTerms = snapshot.connectionState == ConnectionState.waiting;
+
+              return AlertDialog(
+                title: const Text('Nova Turma'),
+                content: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (isLoadingTerms)
+                        const Padding(
+                          padding: EdgeInsets.all(AppSpacing.sm),
+                          child: LinearProgressIndicator(),
+                        )
+                      else if (terms.isEmpty)
+                        Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Text(
+                              'Nenhum trimestre cadastrado.',
+                              style: TextStyle(color: AppColors.error),
+                            ),
+                            const SizedBox(height: AppSpacing.sm),
+                            OutlinedButton.icon(
+                              onPressed: () {
+                                Navigator.pop(ctx);
+                                _showCreateTermInlineDialog(context, repo);
+                              },
+                              icon: const Icon(Icons.add, size: 18),
+                              label: const Text('Criar Trimestre'),
+                            ),
+                          ],
+                        )
+                      else
+                        InlineCreateDropdown<String>(
+                          labelText: 'Trimestre *',
+                          value: selectedTermId,
+                          items: terms.map((t) => DropdownMenuItem(
+                            value: t.id,
+                            child: Text(t.name),
+                          )).toList(),
+                          onChanged: (v) => setDialogState(() => selectedTermId = v),
+                          createTooltip: 'Criar trimestre',
+                          onCreatePressed: () {
+                            Navigator.pop(ctx);
+                            _showCreateTermInlineDialog(context, repo);
+                          },
+                        ),
+                      const SizedBox(height: AppSpacing.md),
+                      TextField(
+                        controller: nameCtrl,
+                        decoration: const InputDecoration(
+                          labelText: 'Nome da Turma *',
+                          hintText: 'Ex: Adultos, Jovens, Crianças',
+                        ),
                       ),
-                    ),
+                      const SizedBox(height: AppSpacing.md),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: ageStartCtrl,
+                              keyboardType: TextInputType.number,
+                              decoration: const InputDecoration(
+                                labelText: 'Idade Mín.',
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: AppSpacing.sm),
+                          Expanded(
+                            child: TextField(
+                              controller: ageEndCtrl,
+                              keyboardType: TextInputType.number,
+                              decoration: const InputDecoration(
+                                labelText: 'Idade Máx.',
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      TextField(
+                        controller: roomCtrl,
+                        decoration: const InputDecoration(
+                          labelText: 'Sala',
+                          hintText: 'Sala da turma (opcional)',
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      TextField(
+                        controller: capacityCtrl,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: 'Capacidade Máxima',
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: AppSpacing.sm),
-                  Expanded(
-                    child: TextField(
-                      controller: ageEndCtrl,
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                        labelText: 'Idade Máx.',
-                      ),
-                    ),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: const Text('Cancelar'),
+                  ),
+                  FilledButton(
+                    onPressed: () {
+                      if (nameCtrl.text.trim().isEmpty ||
+                          selectedTermId == null) return;
+                      final data = <String, dynamic>{
+                        'term_id': selectedTermId,
+                        'name': nameCtrl.text.trim(),
+                      };
+                      if (ageStartCtrl.text.isNotEmpty) {
+                        data['age_range_start'] = int.tryParse(ageStartCtrl.text);
+                      }
+                      if (ageEndCtrl.text.isNotEmpty) {
+                        data['age_range_end'] = int.tryParse(ageEndCtrl.text);
+                      }
+                      if (roomCtrl.text.trim().isNotEmpty) {
+                        data['room'] = roomCtrl.text.trim();
+                      }
+                      if (capacityCtrl.text.isNotEmpty) {
+                        data['max_capacity'] = int.tryParse(capacityCtrl.text);
+                      }
+                      context.read<EbdBloc>().add(
+                            EbdClassCreateRequested(data: data),
+                          );
+                      Navigator.pop(ctx);
+                    },
+                    child: const Text('Criar'),
                   ),
                 ],
-              ),
-              const SizedBox(height: AppSpacing.md),
-              TextField(
-                controller: roomCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'Sala',
-                  hintText: 'Sala da turma (opcional)',
-                ),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              TextField(
-                controller: capacityCtrl,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  labelText: 'Capacidade Máxima',
-                ),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancelar'),
-          ),
-          FilledButton(
-            onPressed: () {
-              if (nameCtrl.text.trim().isEmpty ||
-                  termIdCtrl.text.trim().isEmpty) return;
-              final data = <String, dynamic>{
-                'term_id': termIdCtrl.text.trim(),
-                'name': nameCtrl.text.trim(),
-              };
-              if (ageStartCtrl.text.isNotEmpty) {
-                data['age_range_start'] = int.tryParse(ageStartCtrl.text);
-              }
-              if (ageEndCtrl.text.isNotEmpty) {
-                data['age_range_end'] = int.tryParse(ageEndCtrl.text);
-              }
-              if (roomCtrl.text.trim().isNotEmpty) {
-                data['room'] = roomCtrl.text.trim();
-              }
-              if (capacityCtrl.text.isNotEmpty) {
-                data['max_capacity'] = int.tryParse(capacityCtrl.text);
-              }
-              context.read<EbdBloc>().add(
-                    EbdClassCreateRequested(data: data),
-                  );
-              Navigator.pop(ctx);
+              );
             },
-            child: const Text('Criar'),
+          );
+        },
+      ),
+    );
+  }
+
+  void _showCreateTermInlineDialog(BuildContext context, EbdRepository repo) {
+    final nameCtrl = TextEditingController();
+    DateTime startDate = DateTime.now();
+    DateTime endDate = DateTime.now().add(const Duration(days: 90));
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: const Text('Novo Trimestre'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nameCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Nome *',
+                    hintText: 'Ex: 1º Trimestre 2025',
+                  ),
+                  autofocus: true,
+                ),
+                const SizedBox(height: AppSpacing.md),
+                InkWell(
+                  onTap: () async {
+                    final d = await showDatePicker(
+                      context: ctx,
+                      initialDate: startDate,
+                      firstDate: DateTime(2020),
+                      lastDate: DateTime(2030),
+                    );
+                    if (d != null) setDialogState(() => startDate = d);
+                  },
+                  child: InputDecorator(
+                    decoration: const InputDecoration(
+                      labelText: 'Data Início',
+                      suffixIcon: Icon(Icons.calendar_today, size: 18),
+                    ),
+                    child: Text(
+                      '${startDate.day.toString().padLeft(2, '0')}/${startDate.month.toString().padLeft(2, '0')}/${startDate.year}',
+                    ),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                InkWell(
+                  onTap: () async {
+                    final d = await showDatePicker(
+                      context: ctx,
+                      initialDate: endDate,
+                      firstDate: DateTime(2020),
+                      lastDate: DateTime(2030),
+                    );
+                    if (d != null) setDialogState(() => endDate = d);
+                  },
+                  child: InputDecorator(
+                    decoration: const InputDecoration(
+                      labelText: 'Data Fim',
+                      suffixIcon: Icon(Icons.calendar_today, size: 18),
+                    ),
+                    child: Text(
+                      '${endDate.day.toString().padLeft(2, '0')}/${endDate.month.toString().padLeft(2, '0')}/${endDate.year}',
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
-        ],
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: () {
+                if (nameCtrl.text.trim().isEmpty) return;
+                context.read<EbdBloc>().add(EbdTermCreateRequested(
+                      data: {
+                        'name': nameCtrl.text.trim(),
+                        'start_date':
+                            '${startDate.year}-${startDate.month.toString().padLeft(2, '0')}-${startDate.day.toString().padLeft(2, '0')}',
+                        'end_date':
+                            '${endDate.year}-${endDate.month.toString().padLeft(2, '0')}-${endDate.day.toString().padLeft(2, '0')}',
+                      },
+                    ));
+                Navigator.pop(ctx);
+                // After creating, re-open the class dialog so user can select the new term
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Trimestre criado! Abra o dialog de Nova Turma novamente.')),
+                );
+              },
+              child: const Text('Criar Trimestre'),
+            ),
+          ],
+        ),
       ),
     );
   }

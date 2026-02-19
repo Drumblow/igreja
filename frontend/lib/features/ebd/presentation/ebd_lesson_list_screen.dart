@@ -5,6 +5,7 @@ import '../../../core/network/api_client.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../core/widgets/inline_create_dropdown.dart';
 import '../bloc/ebd_bloc.dart';
 import '../bloc/ebd_event_state.dart';
 import '../data/ebd_repository.dart';
@@ -116,118 +117,168 @@ class _LessonListView extends StatelessWidget {
   }
 
   void _showCreateDialog(BuildContext context) {
-    final classIdCtrl = TextEditingController();
     final titleCtrl = TextEditingController();
     final lessonNumCtrl = TextEditingController();
     final themeCtrl = TextEditingController();
     final bibleTextCtrl = TextEditingController();
     DateTime lessonDate = DateTime.now();
 
+    // Load classes for the dropdown
+    final apiClient = RepositoryProvider.of<ApiClient>(context);
+    final repo = EbdRepository(apiClient: apiClient);
+    String? selectedClassId;
+
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
-          title: const Text('Nova Aula'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: classIdCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'ID da Turma *',
-                    hintText: 'UUID da turma',
+        builder: (ctx, setDialogState) {
+          return FutureBuilder<List<EbdClassSummary>>(
+            future: repo.getClasses(),
+            builder: (context, snapshot) {
+              final classes = snapshot.data ?? [];
+              final isLoadingClasses = snapshot.connectionState == ConnectionState.waiting;
+
+              return AlertDialog(
+                title: const Text('Nova Aula'),
+                content: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (isLoadingClasses)
+                        const Padding(
+                          padding: EdgeInsets.all(AppSpacing.sm),
+                          child: LinearProgressIndicator(),
+                        )
+                      else if (classes.isEmpty)
+                        Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Text(
+                              'Nenhuma turma cadastrada.',
+                              style: TextStyle(color: AppColors.error),
+                            ),
+                            const SizedBox(height: AppSpacing.sm),
+                            OutlinedButton.icon(
+                              onPressed: () {
+                                Navigator.pop(ctx);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Crie uma turma na tela de Turmas EBD.')),
+                                );
+                              },
+                              icon: const Icon(Icons.groups_outlined, size: 18),
+                              label: const Text('Ir para Turmas'),
+                            ),
+                          ],
+                        )
+                      else
+                        InlineCreateDropdown<String>(
+                          labelText: 'Turma *',
+                          value: selectedClassId,
+                          items: classes.map((c) => DropdownMenuItem(
+                            value: c.id,
+                            child: Text(c.name),
+                          )).toList(),
+                          onChanged: (v) => setDialogState(() => selectedClassId = v),
+                          createTooltip: 'Ir para criar turma',
+                          onCreatePressed: () {
+                            Navigator.pop(ctx);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Crie uma turma na tela de Turmas EBD.')),
+                            );
+                          },
+                        ),
+                      const SizedBox(height: AppSpacing.md),
+                      InkWell(
+                        onTap: () async {
+                          final d = await showDatePicker(
+                            context: ctx,
+                            initialDate: lessonDate,
+                            firstDate: DateTime(2020),
+                            lastDate: DateTime(2030),
+                          );
+                          if (d != null) setDialogState(() => lessonDate = d);
+                        },
+                        child: InputDecorator(
+                          decoration: const InputDecoration(
+                            labelText: 'Data da Aula',
+                            suffixIcon: Icon(Icons.calendar_today, size: 18),
+                          ),
+                          child: Text(
+                            '${lessonDate.day.toString().padLeft(2, '0')}/${lessonDate.month.toString().padLeft(2, '0')}/${lessonDate.year}',
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      TextField(
+                        controller: lessonNumCtrl,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: 'Número da Lição',
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      TextField(
+                        controller: titleCtrl,
+                        decoration: const InputDecoration(
+                          labelText: 'Título',
+                          hintText: 'Título da lição (opcional)',
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      TextField(
+                        controller: themeCtrl,
+                        decoration: const InputDecoration(
+                          labelText: 'Tema',
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      TextField(
+                        controller: bibleTextCtrl,
+                        decoration: const InputDecoration(
+                          labelText: 'Texto Bíblico',
+                          hintText: 'Ex: João 3:16',
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: AppSpacing.md),
-                InkWell(
-                  onTap: () async {
-                    final d = await showDatePicker(
-                      context: ctx,
-                      initialDate: lessonDate,
-                      firstDate: DateTime(2020),
-                      lastDate: DateTime(2030),
-                    );
-                    if (d != null) setDialogState(() => lessonDate = d);
-                  },
-                  child: InputDecorator(
-                    decoration: const InputDecoration(
-                      labelText: 'Data da Aula',
-                      suffixIcon: Icon(Icons.calendar_today, size: 18),
-                    ),
-                    child: Text(
-                      '${lessonDate.day.toString().padLeft(2, '0')}/${lessonDate.month.toString().padLeft(2, '0')}/${lessonDate.year}',
-                    ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: const Text('Cancelar'),
                   ),
-                ),
-                const SizedBox(height: AppSpacing.md),
-                TextField(
-                  controller: lessonNumCtrl,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    labelText: 'Número da Lição',
+                  FilledButton(
+                    onPressed: () {
+                      if (selectedClassId == null) return;
+                      final data = <String, dynamic>{
+                        'class_id': selectedClassId,
+                        'lesson_date':
+                            '${lessonDate.year}-${lessonDate.month.toString().padLeft(2, '0')}-${lessonDate.day.toString().padLeft(2, '0')}',
+                      };
+                      if (lessonNumCtrl.text.isNotEmpty) {
+                        data['lesson_number'] = int.tryParse(lessonNumCtrl.text);
+                      }
+                      if (titleCtrl.text.trim().isNotEmpty) {
+                        data['title'] = titleCtrl.text.trim();
+                      }
+                      if (themeCtrl.text.trim().isNotEmpty) {
+                        data['theme'] = themeCtrl.text.trim();
+                      }
+                      if (bibleTextCtrl.text.trim().isNotEmpty) {
+                        data['bible_text'] = bibleTextCtrl.text.trim();
+                      }
+                      context.read<EbdBloc>().add(
+                            EbdLessonCreateRequested(data: data),
+                          );
+                      Navigator.pop(ctx);
+                    },
+                    child: const Text('Criar'),
                   ),
-                ),
-                const SizedBox(height: AppSpacing.md),
-                TextField(
-                  controller: titleCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Título',
-                    hintText: 'Título da lição (opcional)',
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.md),
-                TextField(
-                  controller: themeCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Tema',
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.md),
-                TextField(
-                  controller: bibleTextCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Texto Bíblico',
-                    hintText: 'Ex: João 3:16',
-                  ),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancelar'),
-            ),
-            FilledButton(
-              onPressed: () {
-                if (classIdCtrl.text.trim().isEmpty) return;
-                final data = <String, dynamic>{
-                  'class_id': classIdCtrl.text.trim(),
-                  'lesson_date':
-                      '${lessonDate.year}-${lessonDate.month.toString().padLeft(2, '0')}-${lessonDate.day.toString().padLeft(2, '0')}',
-                };
-                if (lessonNumCtrl.text.isNotEmpty) {
-                  data['lesson_number'] = int.tryParse(lessonNumCtrl.text);
-                }
-                if (titleCtrl.text.trim().isNotEmpty) {
-                  data['title'] = titleCtrl.text.trim();
-                }
-                if (themeCtrl.text.trim().isNotEmpty) {
-                  data['theme'] = themeCtrl.text.trim();
-                }
-                if (bibleTextCtrl.text.trim().isNotEmpty) {
-                  data['bible_text'] = bibleTextCtrl.text.trim();
-                }
-                context.read<EbdBloc>().add(
-                      EbdLessonCreateRequested(data: data),
-                    );
-                Navigator.pop(ctx);
-              },
-              child: const Text('Criar'),
-            ),
-          ],
-        ),
+                ],
+              );
+            },
+          );
+        },
       ),
     );
   }

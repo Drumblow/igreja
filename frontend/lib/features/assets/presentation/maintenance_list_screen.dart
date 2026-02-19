@@ -5,6 +5,7 @@ import '../../../core/network/api_client.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../core/widgets/searchable_entity_dropdown.dart';
 import '../../financial/presentation/format_utils.dart';
 import '../bloc/asset_bloc.dart';
 import '../bloc/asset_event_state.dart';
@@ -159,46 +160,62 @@ class _MaintenanceListViewState extends State<_MaintenanceListView> {
   }
 
   void _showCreateDialog(BuildContext context) {
+    final apiClient = RepositoryProvider.of<ApiClient>(context);
+    final assetRepo = AssetRepository(apiClient: apiClient);
+
     final descCtrl = TextEditingController();
-    final assetIdCtrl = TextEditingController();
+    EntityOption? selectedAsset;
     String type = 'preventiva';
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
           title: const Text('Nova Manutenção'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: assetIdCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'ID do Bem *',
-                    hintText: 'UUID do bem',
+          content: SizedBox(
+            width: 400,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SearchableEntityDropdown(
+                    label: 'Bem *',
+                    hint: 'Busque pelo código ou descrição...',
+                    onSelected: (entity) => selectedAsset = entity,
+                    searchCallback: (query) async {
+                      final result = await assetRepo.getAssets(
+                        search: query,
+                        perPage: 20,
+                      );
+                      return result.items
+                          .map((a) => EntityOption(
+                                id: a.id,
+                                label: '${a.assetCode} - ${a.description}',
+                              ))
+                          .toList();
+                    },
                   ),
-                ),
-                const SizedBox(height: AppSpacing.md),
-                DropdownButtonFormField<String>(
-                  value: type,
-                  decoration: const InputDecoration(labelText: 'Tipo'),
-                  items: const [
-                    DropdownMenuItem(
-                        value: 'preventiva', child: Text('Preventiva')),
-                    DropdownMenuItem(
-                        value: 'corretiva', child: Text('Corretiva')),
-                  ],
-                  onChanged: (v) {
-                    if (v != null) setDialogState(() => type = v);
-                  },
-                ),
-                const SizedBox(height: AppSpacing.md),
-                TextField(
-                  controller: descCtrl,
-                  decoration: const InputDecoration(labelText: 'Descrição *'),
-                  maxLines: 2,
-                ),
-              ],
+                  const SizedBox(height: AppSpacing.md),
+                  DropdownButtonFormField<String>(
+                    value: type,
+                    decoration: const InputDecoration(labelText: 'Tipo'),
+                    items: const [
+                      DropdownMenuItem(
+                          value: 'preventiva', child: Text('Preventiva')),
+                      DropdownMenuItem(
+                          value: 'corretiva', child: Text('Corretiva')),
+                    ],
+                    onChanged: (v) {
+                      if (v != null) setDialogState(() => type = v);
+                    },
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  TextField(
+                    controller: descCtrl,
+                    decoration: const InputDecoration(labelText: 'Descrição *'),
+                    maxLines: 2,
+                  ),
+                ],
+              ),
             ),
           ),
           actions: [
@@ -208,11 +225,11 @@ class _MaintenanceListViewState extends State<_MaintenanceListView> {
             ),
             FilledButton(
               onPressed: () {
-                if (assetIdCtrl.text.trim().isEmpty ||
+                if (selectedAsset == null ||
                     descCtrl.text.trim().length < 2) return;
                 context.read<AssetBloc>().add(MaintenanceCreateRequested(
                       data: {
-                        'asset_id': assetIdCtrl.text.trim(),
+                        'asset_id': selectedAsset!.id,
                         'type': type,
                         'description': descCtrl.text.trim(),
                       },

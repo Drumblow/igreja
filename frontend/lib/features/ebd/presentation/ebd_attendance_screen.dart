@@ -5,6 +5,8 @@ import '../../../core/network/api_client.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../core/widgets/searchable_entity_dropdown.dart';
+import '../../members/data/member_repository.dart';
 import '../bloc/ebd_bloc.dart';
 import '../bloc/ebd_event_state.dart';
 import '../data/ebd_repository.dart';
@@ -221,39 +223,54 @@ class _AttendanceViewState extends State<_AttendanceView> {
   }
 
   void _showAddEntryDialog(BuildContext context) {
-    final memberIdCtrl = TextEditingController();
+    final apiClient = RepositoryProvider.of<ApiClient>(context);
+    final memberRepo = MemberRepository(apiClient: apiClient);
+
     final nameCtrl = TextEditingController();
     bool isVisitor = false;
+    EntityOption? selectedMember;
 
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
           title: const Text('Adicionar Presença'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              SwitchListTile(
-                title: const Text('Visitante'),
-                value: isVisitor,
-                onChanged: (v) => setDialogState(() => isVisitor = v),
-              ),
-              if (!isVisitor)
-                TextField(
-                  controller: memberIdCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'ID do Membro *',
-                    hintText: 'UUID do membro',
-                  ),
+          content: SizedBox(
+            width: 360,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SwitchListTile(
+                  title: const Text('Visitante'),
+                  value: isVisitor,
+                  onChanged: (v) => setDialogState(() => isVisitor = v),
                 ),
-              if (isVisitor)
-                TextField(
-                  controller: nameCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Nome do Visitante *',
+                const SizedBox(height: AppSpacing.sm),
+                if (!isVisitor)
+                  SearchableEntityDropdown(
+                    label: 'Membro *',
+                    hint: 'Busque pelo nome...',
+                    onSelected: (entity) => selectedMember = entity,
+                    searchCallback: (query) async {
+                      final result = await memberRepo.getMembers(
+                        search: query,
+                        perPage: 20,
+                        status: 'ativo',
+                      );
+                      return result.members
+                          .map((m) => EntityOption(id: m.id, label: m.fullName))
+                          .toList();
+                    },
                   ),
-                ),
-            ],
+                if (isVisitor)
+                  TextField(
+                    controller: nameCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'Nome do Visitante *',
+                    ),
+                  ),
+              ],
+            ),
           ),
           actions: [
             TextButton(
@@ -262,14 +279,14 @@ class _AttendanceViewState extends State<_AttendanceView> {
             ),
             FilledButton(
               onPressed: () {
-                if (!isVisitor && memberIdCtrl.text.trim().isEmpty) return;
+                if (!isVisitor && selectedMember == null) return;
                 if (isVisitor && nameCtrl.text.trim().isEmpty) return;
                 setState(() {
                   _entries.add(_AttendanceEntry(
-                    memberId: isVisitor ? '' : memberIdCtrl.text.trim(),
+                    memberId: isVisitor ? '' : selectedMember!.id,
                     memberName: isVisitor
                         ? nameCtrl.text.trim()
-                        : memberIdCtrl.text.trim(),
+                        : selectedMember!.label,
                     status: 'present',
                     isVisitor: isVisitor,
                     visitorName: isVisitor ? nameCtrl.text.trim() : null,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
 import 'core/network/api_client.dart';
 import 'core/router/app_router.dart';
@@ -8,8 +9,9 @@ import 'features/auth/bloc/auth_bloc.dart';
 import 'features/auth/bloc/auth_event_state.dart';
 import 'features/auth/data/auth_repository.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await initializeDateFormatting('pt_BR');
 
   final apiClient = ApiClient();
   final authRepository = AuthRepository(apiClient: apiClient);

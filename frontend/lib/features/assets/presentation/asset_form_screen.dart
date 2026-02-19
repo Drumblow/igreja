@@ -6,6 +6,7 @@ import '../../../core/network/api_client.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../core/widgets/inline_create_dropdown.dart';
 import '../bloc/asset_bloc.dart';
 import '../bloc/asset_event_state.dart';
 import '../data/asset_repository.dart';
@@ -109,6 +110,54 @@ class _AssetFormScreenState extends State<AssetFormScreen> {
     if (date != null) {
       setState(() => _acquisitionDate = date);
     }
+  }
+
+  void _showCreateCategoryDialog() {
+    final nameCtrl = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Nova Categoria'),
+        content: TextField(
+          controller: nameCtrl,
+          decoration: const InputDecoration(labelText: 'Nome *'),
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              if (nameCtrl.text.trim().length < 2) return;
+              Navigator.pop(ctx);
+              try {
+                final apiClient = RepositoryProvider.of<ApiClient>(context);
+                final repo = AssetRepository(apiClient: apiClient);
+                final created = await repo.createCategory(
+                  {'name': nameCtrl.text.trim()},
+                );
+                if (mounted) {
+                  await _loadCategories();
+                  setState(() => _categoryId = created.id);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Categoria "${created.name}" criada!')),
+                  );
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Erro ao criar categoria: $e')),
+                  );
+                }
+              }
+            },
+            child: const Text('Criar'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _submit() {
@@ -219,10 +268,9 @@ class _AssetFormScreenState extends State<AssetFormScreen> {
                 _field(
                   child: _loadingCategories
                       ? const LinearProgressIndicator()
-                      : DropdownButtonFormField<String>(
+                      : InlineCreateDropdown<String>(
+                          labelText: 'Categoria *',
                           value: _categoryId,
-                          decoration:
-                              const InputDecoration(labelText: 'Categoria *'),
                           items: _categories
                               .map((c) => DropdownMenuItem(
                                     value: c.id,
@@ -230,6 +278,9 @@ class _AssetFormScreenState extends State<AssetFormScreen> {
                                   ))
                               .toList(),
                           onChanged: (v) => setState(() => _categoryId = v),
+                          validator: (v) => v == null ? 'Selecione uma categoria' : null,
+                          createTooltip: 'Criar nova categoria',
+                          onCreatePressed: () => _showCreateCategoryDialog(),
                         ),
                 ),
               ]),

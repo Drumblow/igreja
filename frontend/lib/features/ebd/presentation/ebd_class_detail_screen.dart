@@ -5,6 +5,8 @@ import '../../../core/network/api_client.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../core/widgets/searchable_entity_dropdown.dart';
+import '../../members/data/member_repository.dart';
 import '../bloc/ebd_bloc.dart';
 import '../bloc/ebd_event_state.dart';
 import '../data/ebd_repository.dart';
@@ -207,16 +209,30 @@ class _ClassDetailView extends StatelessWidget {
   }
 
   void _showEnrollDialog(BuildContext context) {
-    final memberIdCtrl = TextEditingController();
+    final apiClient = RepositoryProvider.of<ApiClient>(context);
+    final memberRepo = MemberRepository(apiClient: apiClient);
+    EntityOption? selectedMember;
+
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Matricular Aluno'),
-        content: TextField(
-          controller: memberIdCtrl,
-          decoration: const InputDecoration(
-            labelText: 'ID do Membro *',
-            hintText: 'UUID do membro',
+        content: SizedBox(
+          width: 360,
+          child: SearchableEntityDropdown(
+            label: 'Membro *',
+            hint: 'Busque pelo nome...',
+            onSelected: (entity) => selectedMember = entity,
+            searchCallback: (query) async {
+              final result = await memberRepo.getMembers(
+                search: query,
+                perPage: 20,
+                status: 'ativo',
+              );
+              return result.members
+                  .map((m) => EntityOption(id: m.id, label: m.fullName))
+                  .toList();
+            },
           ),
         ),
         actions: [
@@ -226,10 +242,10 @@ class _ClassDetailView extends StatelessWidget {
           ),
           FilledButton(
             onPressed: () {
-              if (memberIdCtrl.text.trim().isEmpty) return;
+              if (selectedMember == null) return;
               context.read<EbdBloc>().add(EbdEnrollMemberRequested(
                     classId: classId,
-                    data: {'member_id': memberIdCtrl.text.trim()},
+                    data: {'member_id': selectedMember!.id},
                   ));
               Navigator.pop(ctx);
             },
