@@ -1,0 +1,72 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: igreja_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-igreja_manager}
+      POSTGRES_USER: ${POSTGRES_USER:-igreja_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-igreja_pass}
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/01-init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-igreja_user} -d ${POSTGRES_DB:-igreja_manager}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: igreja_redis
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    image: igreja-backend:latest
+    container_name: igreja_backend
+    restart: unless-stopped
+    ports:
+      - "80:8080"
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-igreja_user}:${POSTGRES_PASSWORD:-igreja_pass}@postgres:5432/${POSTGRES_DB:-igreja_manager}
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_ACCESS_TOKEN_EXPIRY: ${JWT_ACCESS_TOKEN_EXPIRY:-900}
+      JWT_REFRESH_TOKEN_EXPIRY: ${JWT_REFRESH_TOKEN_EXPIRY:-604800}
+      HOST: 0.0.0.0
+      PORT: 8080
+      RUST_LOG: ${RUST_LOG:-info}
+      # Cloudinary
+      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME:-djc3smoxw}
+      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY}
+      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET}
+      # SMTP
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-noreply@igrejamanager.com}
+      # Upload
+      UPLOAD_DIR: /app/uploads
+      MAX_UPLOAD_SIZE_MB: ${MAX_UPLOAD_SIZE_MB:-10}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  redis_data:

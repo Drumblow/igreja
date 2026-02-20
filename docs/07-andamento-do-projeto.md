@@ -1,7 +1,7 @@
 # 📊 Andamento do Projeto — Igreja Manager
 
-> **Última atualização:** 20 de fevereiro de 2026  
-> **Versão do documento:** 1.14  
+> **Última atualização:** 19 de fevereiro de 2026  
+> **Versão do documento:** 1.15  
 > **Status geral do projeto:** Em Desenvolvimento Ativo (~99.5% concluído)
 
 ---
@@ -16,7 +16,7 @@ O **Igreja Manager** é uma plataforma de gestão para igrejas composta por **5 
 |------|:---------:|--------|
 | Documentação Técnica | ![100%](https://img.shields.io/badge/100%25-brightgreen) | ✅ Concluído |
 | Banco de Dados (Schema) | ![100%](https://img.shields.io/badge/100%25-brightgreen) | ✅ Concluído |
-| Infraestrutura (Docker) | ![95%](https://img.shields.io/badge/95%25-green) | ✅ Docker + Redis cache + SMTP config |
+| Infraestrutura (Docker) | ![100%](https://img.shields.io/badge/100%25-brightgreen) | ✅ Docker + Redis cache + SMTP config + Oracle Cloud deploy + Cloudinary |
 | Backend — Autenticação | ![100%](https://img.shields.io/badge/100%25-brightgreen) | ✅ Completo (login/refresh/logout/me/forgot/reset) |
 | Backend — Igrejas | ![100%](https://img.shields.io/badge/100%25-brightgreen) | ✅ CRUD completo (5 endpoints) + Audit Log |
 | Backend — Usuários/Papéis | ![100%](https://img.shields.io/badge/100%25-brightgreen) | ✅ CRUD completo (5 endpoints) + Audit Log |
@@ -565,8 +565,8 @@ backend/src/
 
 | Item | Descrição |
 |------|-----------|
-| Upload de arquivos (fotos) | `actix-multipart` importado, não utilizado |
-| Upload de imagens em Lesson Contents (E1) | Endpoint de upload multipart pendente — blocos de conteúdo suportam `image_url` |
+| Upload de arquivos (fotos) | ✅ **Concluído** — Cloudinary integration (backend `CloudinaryService` + upload handler) + Flutter `ImageUploadService` com compressão |
+| Upload de imagens em Lesson Contents (E1) | ✅ **Concluído** — Endpoint `POST /api/v1/upload/image` + `DELETE /api/v1/upload/image` via Cloudinary |
 | Repository traits (Clean Arch.) | Documentado mas usando queries diretas nos services |
 | Domain enums tipados | Usando strings raw em vez de enums Rust |
 | Exportação PDF/Excel | Não iniciado |
@@ -976,12 +976,59 @@ Crates/packages importados mas ainda sem uso no código — preparados para fase
 | 6.4 | Swagger UI funcional | ~~Montar `/swagger-ui`~~ ✅ **Concluído** |
 | 6.5 | Cache Redis | ~~Implementar caching de consultas frequentes~~ ✅ **Concluído** — `CacheService` (get/set/del/del_pattern), integrado em member_stats, ebd_stats, asset_stats + invalidation em write handlers |
 | 6.6 | Audit Log funcional | ~~Interceptar e registrar ações~~ ✅ **Concluído** — `AuditService` integrado em Members, Assets, Financial, Churches, Users e EBD (create/update/delete) |
-| 6.7 | Upload de arquivos | Fotos de membros e bens |
+| 6.7 | Upload de arquivos | ✅ **Concluído** — Cloudinary (backend + Flutter image compression + upload widget) |
 | 6.8 | Envio de emails | ~~Recuperação de senha, notificações~~ ✅ **Concluído** — lettre SMTP + forgot/reset password |
+| 6.9 | Deploy Oracle Cloud | ✅ **Concluído** — Docker Compose production + deployment scripts (IP: 147.15.109.89) |
 
 ---
 
-## 9.1 Changelog — Sessão v1.14 (20/02/2026)
+## 9.1 Changelog — Sessão v1.15 (19/02/2026)
+
+Melhorias implementadas nesta sessão:
+
+### Cloudinary — Upload de Imagens
+- **Backend `CloudinaryService`** — Novo service em `infrastructure/cloudinary.rs` com upload/delete via API Cloudinary (SHA-1 signed requests).
+- **Backend `upload_handler`** — Novos endpoints:
+  - `POST /api/v1/upload/image` — Upload multipart com validação de tipo (JPEG/PNG/GIF/WebP) e tamanho.
+  - `DELETE /api/v1/upload/image` — Exclusão por `public_id`.
+- **Flutter `ImageCompressService`** — Compressão progressiva (JPEG, começa em 85% quality, reduz até caber em 500KB). Evita consumir cota gratuita do Cloudinary.
+- **Flutter `ImageUploadService`** — Integra `ImagePicker` + compressão + upload multipart via backend.
+- **Flutter `ImageUploadWidget`** — Widget reutilizável com preview, seleção galeria/câmera, indicador de loading.
+- **Config** — Novas env vars: `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`.
+- **Dependencies** — Backend: `reqwest`, `sha1`, `futures-util`. Flutter: `image_picker`, `flutter_image_compress`, `path_provider`, `path`, `mime`, `http_parser`.
+
+### Deploy — Oracle Cloud Free Tier
+- **Backend Dockerfile** — Multi-stage build (Rust 1.85 builder → Debian slim runtime).
+- **Frontend Dockerfile** — Multi-stage build (Flutter builder → Nginx Alpine) com API_URL configurable via `--dart-define`.
+- **Nginx config** — SPA routing + reverse proxy para /api e /swagger-ui + gzip + cache headers.
+- **`docker-compose.prod.yml`** — Compose completo com 4 services (postgres, redis, backend, frontend) + env vars.
+- **`deploy/setup-server.sh`** — Script de setup do servidor (Docker, firewall, swap 2GB para compilação Rust).
+- **`deploy/deploy.sh`** — Script de deploy automatizado (tar + scp + docker compose build + up).
+- **`ApiClient`** — Base URL agora configurável via `--dart-define=API_URL=...` (usa `/api` em produção via nginx proxy).
+
+### Arquivos Criados/Modificados
+- `backend/src/infrastructure/cloudinary.rs` — CloudinaryService (upload/delete)
+- `backend/src/api/handlers/upload_handler.rs` — Upload/delete endpoints
+- `backend/Cargo.toml` — +reqwest, sha1, futures-util
+- `backend/src/config/mod.rs` — +Cloudinary config
+- `backend/Dockerfile` — Multi-stage Rust build
+- `backend/.dockerignore`
+- `frontend/lib/core/services/image_compress_service.dart`
+- `frontend/lib/core/services/image_upload_service.dart`
+- `frontend/lib/core/widgets/image_upload_widget.dart`
+- `frontend/lib/core/network/api_client.dart` — Configurable base URL
+- `frontend/pubspec.yaml` — +image_picker, flutter_image_compress, etc.
+- `frontend/Dockerfile` — Multi-stage Flutter web build
+- `frontend/nginx.conf` — Nginx reverse proxy config
+- `frontend/.dockerignore`
+- `docker-compose.prod.yml` — Production compose
+- `deploy/.env.production`
+- `deploy/setup-server.sh`
+- `deploy/deploy.sh`
+
+---
+
+## 9.2 Changelog — Sessão v1.14 (20/02/2026)
 
 Melhorias implementadas nesta sessão para aumentar completude do frontend:
 

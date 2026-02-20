@@ -11,11 +11,12 @@ use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
-use crate::api::handlers::{asset_handler, auth_handler, church_handler, ebd_handler, family_handler, financial_handler, health_handler, member_handler, member_history_handler, ministry_handler, user_handler};
+use crate::api::handlers::{asset_handler, auth_handler, church_handler, ebd_handler, family_handler, financial_handler, health_handler, member_handler, member_history_handler, ministry_handler, upload_handler, user_handler};
 use crate::application::services::AuthService;
 use crate::config::AppConfig;
 use crate::infrastructure::database;
 use crate::infrastructure::cache::CacheService;
+use crate::infrastructure::cloudinary::CloudinaryService;
 
 #[derive(OpenApi)]
 #[openapi(
@@ -30,6 +31,9 @@ use crate::infrastructure::cache::CacheService;
         auth_handler::me,
         auth_handler::forgot_password,
         auth_handler::reset_password,
+        // Upload
+        upload_handler::upload_image,
+        upload_handler::delete_image,
         // Churches
         church_handler::list_churches,
         church_handler::get_church,
@@ -242,10 +246,19 @@ async fn main() -> std::io::Result<()> {
     // Connect to Redis cache (optional — fails gracefully)
     let cache = CacheService::connect(&config.redis_url).await;
 
+    // Init Cloudinary service
+    let cloudinary = CloudinaryService::new(&config);
+    if cloudinary.is_configured() {
+        tracing::info!("Cloudinary configured for cloud: {}", config.cloudinary_cloud_name);
+    } else {
+        tracing::warn!("Cloudinary not configured — image upload disabled");
+    }
+
     // Shared state
     let pool_data = web::Data::new(pool);
     let config_data = web::Data::new(config);
     let cache_data = web::Data::new(cache);
+    let cloudinary_data = web::Data::new(cloudinary);
 
     HttpServer::new(move || {
         let cors = Cors::default()
@@ -260,9 +273,13 @@ async fn main() -> std::io::Result<()> {
             .app_data(pool_data.clone())
             .app_data(config_data.clone())
             .app_data(cache_data.clone())
+            .app_data(cloudinary_data.clone())
             .app_data(web::JsonConfig::default().limit(10 * 1024 * 1024)) // 10MB
             // Health
             .service(health_handler::health_check)
+            // Upload
+            .service(upload_handler::upload_image)
+            .service(upload_handler::delete_image)
             // Churches
             .service(church_handler::get_my_church) // before {id} route
             .service(church_handler::list_churches)

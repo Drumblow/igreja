@@ -10,10 +10,12 @@ pub struct AppConfig {
     pub jwt_secret: String,
     pub jwt_access_expiry: i64,
     pub jwt_refresh_expiry: i64,
-    #[allow(dead_code)]
     pub upload_dir: String,
-    #[allow(dead_code)]
     pub max_upload_size_mb: usize,
+    // Cloudinary
+    pub cloudinary_cloud_name: String,
+    pub cloudinary_api_key: String,
+    pub cloudinary_api_secret: String,
     pub smtp_host: String,
     pub smtp_username: String,
     pub smtp_password: String,
@@ -44,6 +46,12 @@ impl AppConfig {
                 .unwrap_or_else(|_| "10".to_string())
                 .parse()
                 .expect("MAX_UPLOAD_SIZE_MB must be a number"),
+            cloudinary_cloud_name: env::var("CLOUDINARY_CLOUD_NAME")
+                .unwrap_or_else(|_| "djc3smoxw".to_string()),
+            cloudinary_api_key: env::var("CLOUDINARY_API_KEY")
+                .unwrap_or_default(),
+            cloudinary_api_secret: env::var("CLOUDINARY_API_SECRET")
+                .unwrap_or_default(),
             smtp_host: env::var("SMTP_HOST").unwrap_or_default(),
             smtp_username: env::var("SMTP_USERNAME").unwrap_or_default(),
             smtp_password: env::var("SMTP_PASSWORD").unwrap_or_default(),

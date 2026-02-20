@@ -1,0 +1,11 @@
+build/
+.dart_tool/
+.git/
+.gitignore
+*.md
+android/.gradle/
+ios/Pods/
+ios/.symlinks/
+.idea/
+.vscode/
+test/

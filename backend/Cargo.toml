@@ -13,6 +13,7 @@ actix-rt = "2"
 
 # Async runtime
 tokio = { version = "1.49", features = ["full"] }
+futures-util = "0.3"
 
 # Serialization
 serde = { version = "1.0", features = ["derive"] }
@@ -63,9 +64,13 @@ utoipa-swagger-ui = { version = "9.0", features = ["actix-web"] }
 thiserror = "2.0"
 anyhow = "1.0"
 
+# HTTP Client (for Cloudinary)
+reqwest = { version = "0.12", features = ["json", "multipart", "stream"] }
+
 # Misc
 rand = "0.9"
 base64 = "0.22"
+sha1 = "0.10"
 
 [profile.dev]
 # debug = true é o padrão; rust-lld (em .cargo/config.toml) evita o erro LNK1318 do link.exe

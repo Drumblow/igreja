@@ -8,4 +8,5 @@ pub mod health_handler;
 pub mod member_handler;
 pub mod member_history_handler;
 pub mod ministry_handler;
+pub mod upload_handler;
 pub mod user_handler;
