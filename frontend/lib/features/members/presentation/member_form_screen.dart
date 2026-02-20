@@ -851,8 +851,10 @@ class _MemberFormViewState extends State<_MemberFormView> {
         ),
       );
     }
+    // On mobile, filter out Expanded placeholders (used for spacing in wide mode)
+    final filtered = children.where((w) => w is! Expanded).toList();
     return Column(
-      children: children.map((w) => Padding(
+      children: filtered.map((w) => Padding(
         padding: const EdgeInsets.only(bottom: AppSpacing.md),
         child: w,
       )).toList(),
@@ -915,7 +917,7 @@ class _MemberFormViewState extends State<_MemberFormView> {
         ),
         const SizedBox(height: AppSpacing.xs),
         DropdownButtonFormField<T>(
-          initialValue: items.containsKey(value) ? value : null,
+          value: items.containsKey(value) ? value : null,
           isExpanded: true,
           style: AppTypography.bodyMedium.copyWith(color: AppColors.textPrimary),
           decoration: InputDecoration(

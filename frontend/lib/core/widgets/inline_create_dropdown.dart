@@ -65,7 +65,7 @@ class InlineCreateDropdown<T> extends StatelessWidget {
       children: [
         Expanded(
           child: DropdownButtonFormField<T>(
-            initialValue: value,
+            value: value,
             decoration: InputDecoration(labelText: labelText),
             items: items,
             onChanged: onChanged,

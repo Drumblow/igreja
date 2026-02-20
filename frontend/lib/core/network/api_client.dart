@@ -4,7 +4,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 class ApiClient {
   static const String _baseUrl = String.fromEnvironment(
     'API_URL',
-    defaultValue: 'http://localhost:8080/api',
+    defaultValue: 'http://147.15.109.89:8080/api',
   );
   static const String _accessTokenKey = 'access_token';
   static const String _refreshTokenKey = 'refresh_token';

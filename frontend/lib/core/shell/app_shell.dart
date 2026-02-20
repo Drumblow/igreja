@@ -11,7 +11,8 @@ class AppShell extends StatelessWidget {
 
   const AppShell({super.key, required this.child});
 
-  static const _navItems = [
+  /// All navigation items (used by sidebar on desktop).
+  static const _allNavItems = [
     _NavItem(
       icon: Icons.dashboard_outlined,
       activeIcon: Icons.dashboard_rounded,
@@ -62,25 +63,82 @@ class AppShell extends StatelessWidget {
     ),
   ];
 
+  /// Items shown in the mobile bottom nav (first 4 + "Mais").
+  static const _mobileNavItems = [
+    _NavItem(
+      icon: Icons.dashboard_outlined,
+      activeIcon: Icons.dashboard_rounded,
+      label: 'Dashboard',
+      path: '/',
+    ),
+    _NavItem(
+      icon: Icons.people_outline_rounded,
+      activeIcon: Icons.people_rounded,
+      label: 'Membros',
+      path: '/members',
+    ),
+    _NavItem(
+      icon: Icons.family_restroom_outlined,
+      activeIcon: Icons.family_restroom_rounded,
+      label: 'Famílias',
+      path: '/families',
+    ),
+    _NavItem(
+      icon: Icons.groups_outlined,
+      activeIcon: Icons.groups_rounded,
+      label: 'Ministérios',
+      path: '/ministries',
+    ),
+  ];
+
+  /// Items shown inside the "Mais" bottom sheet.
+  static const _moreNavItems = [
+    _NavItem(
+      icon: Icons.attach_money_outlined,
+      activeIcon: Icons.attach_money_rounded,
+      label: 'Financeiro',
+      path: '/financial',
+    ),
+    _NavItem(
+      icon: Icons.inventory_2_outlined,
+      activeIcon: Icons.inventory_2_rounded,
+      label: 'Patrimônio',
+      path: '/assets',
+    ),
+    _NavItem(
+      icon: Icons.school_outlined,
+      activeIcon: Icons.school_rounded,
+      label: 'EBD',
+      path: '/ebd',
+    ),
+    _NavItem(
+      icon: Icons.settings_outlined,
+      activeIcon: Icons.settings_rounded,
+      label: 'Configurações',
+      path: '/settings',
+    ),
+  ];
+
   @override
   Widget build(BuildContext context) {
     final width = MediaQuery.of(context).size.width;
     final isWide = width >= 900;
     final currentPath = GoRouterState.of(context).matchedLocation;
 
-    int selectedIndex = 0;
-    for (int i = 0; i < _navItems.length; i++) {
-      if (currentPath.startsWith(_navItems[i].path)) {
-        selectedIndex = i;
-      }
-    }
-
+    // Desktop sidebar: match against all items
     if (isWide) {
+      int selectedIndex = 0;
+      for (int i = 0; i < _allNavItems.length; i++) {
+        if (currentPath.startsWith(_allNavItems[i].path)) {
+          selectedIndex = i;
+        }
+      }
+
       return Scaffold(
         body: Row(
           children: [
             _Sidebar(
-              items: _navItems,
+              items: _allNavItems,
               selectedIndex: selectedIndex,
               onItemTap: (item) => context.go(item.path),
             ),
@@ -91,20 +149,127 @@ class AppShell extends StatelessWidget {
       );
     }
 
-    // Mobile: bottom nav
+    // Mobile: bottom nav with 4 items + "Mais"
+    int selectedIndex = -1;
+    for (int i = 0; i < _mobileNavItems.length; i++) {
+      if (currentPath.startsWith(_mobileNavItems[i].path)) {
+        selectedIndex = i;
+      }
+    }
+    // If current path is in the "more" group, highlight "Mais" tab
+    final isInMore = _moreNavItems.any((item) => currentPath.startsWith(item.path));
+    final mobileSelectedIndex = isInMore ? 4 : (selectedIndex < 0 ? 0 : selectedIndex);
+
     return Scaffold(
       body: child,
       bottomNavigationBar: NavigationBar(
-        selectedIndex: selectedIndex,
-        onDestinationSelected: (i) => context.go(_navItems[i].path),
-        destinations: _navItems
-            .map((item) => NavigationDestination(
-                  icon: Icon(item.icon),
-                  selectedIcon: Icon(item.activeIcon),
-                  label: item.label,
-                ))
-            .toList(),
+        selectedIndex: mobileSelectedIndex,
+        onDestinationSelected: (i) {
+          if (i < _mobileNavItems.length) {
+            context.go(_mobileNavItems[i].path);
+          } else {
+            // "Mais" tab — show bottom sheet
+            _showMoreSheet(context, currentPath);
+          }
+        },
+        destinations: [
+          ..._mobileNavItems.map((item) => NavigationDestination(
+                icon: Icon(item.icon),
+                selectedIcon: Icon(item.activeIcon),
+                label: item.label,
+              )),
+          const NavigationDestination(
+            icon: Icon(Icons.more_horiz_rounded),
+            selectedIcon: Icon(Icons.more_horiz_rounded),
+            label: 'Mais',
+          ),
+        ],
       ),
+    );
+  }
+
+  static void _showMoreSheet(BuildContext context, String currentPath) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (ctx) {
+        return Container(
+          decoration: const BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(AppSpacing.radiusXl)),
+          ),
+          child: SafeArea(
+            top: false,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox(height: AppSpacing.md),
+                // Drag handle
+                Container(
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppColors.border,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'Mais opções',
+                      style: AppTypography.headingSmall,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                ..._moreNavItems.map((item) {
+                  final isActive = currentPath.startsWith(item.path);
+                  return ListTile(
+                    leading: Icon(
+                      isActive ? item.activeIcon : item.icon,
+                      color: isActive ? AppColors.accent : AppColors.textSecondary,
+                      size: 24,
+                    ),
+                    title: Text(
+                      item.label,
+                      style: AppTypography.bodyLarge.copyWith(
+                        color: isActive ? AppColors.primary : AppColors.textPrimary,
+                        fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
+                      ),
+                    ),
+                    trailing: isActive
+                        ? Container(
+                            width: 8,
+                            height: 8,
+                            decoration: const BoxDecoration(
+                              color: AppColors.accent,
+                              shape: BoxShape.circle,
+                            ),
+                          )
+                        : null,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.lg,
+                      vertical: AppSpacing.xs,
+                    ),
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      context.go(item.path);
+                    },
+                  );
+                }),
+                const SizedBox(height: AppSpacing.xl),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

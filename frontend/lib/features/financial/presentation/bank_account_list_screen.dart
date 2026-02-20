@@ -136,7 +136,7 @@ class _BankAccountListView extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   DropdownButtonFormField<String>(
-                    initialValue: type,
+                    value: type,
                     decoration: const InputDecoration(labelText: 'Tipo *'),
                     items: const [
                       DropdownMenuItem(value: 'caixa', child: Text('Caixa')),

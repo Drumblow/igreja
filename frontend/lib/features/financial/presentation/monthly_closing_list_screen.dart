@@ -216,7 +216,7 @@ class _MonthlyClosingListView extends StatelessWidget {
                         decoration: const InputDecoration(
                           labelText: 'Mês *',
                         ),
-                        initialValue: selectedMonth,
+                        value: selectedMonth,
                         items: List.generate(12, (i) {
                           final m = i + 1;
                           return DropdownMenuItem(
@@ -237,7 +237,7 @@ class _MonthlyClosingListView extends StatelessWidget {
                         decoration: const InputDecoration(
                           labelText: 'Ano *',
                         ),
-                        initialValue: selectedYear,
+                        value: selectedYear,
                         items: List.generate(5, (i) {
                           final y = now.year - 2 + i;
                           return DropdownMenuItem(

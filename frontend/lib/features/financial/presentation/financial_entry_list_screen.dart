@@ -230,7 +230,7 @@ class _EntryListViewState extends State<_EntryListView> {
 
   Widget _buildTypeFilter() {
     return DropdownButtonFormField<String>(
-      initialValue: _selectedType,
+      value: _selectedType,
       decoration: InputDecoration(
         hintText: 'Tipo',
         isDense: true,
@@ -251,7 +251,7 @@ class _EntryListViewState extends State<_EntryListView> {
 
   Widget _buildStatusFilter() {
     return DropdownButtonFormField<String>(
-      initialValue: _selectedStatus,
+      value: _selectedStatus,
       decoration: InputDecoration(
         hintText: 'Status',
         isDense: true,

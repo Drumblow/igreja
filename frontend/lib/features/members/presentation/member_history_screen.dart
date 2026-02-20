@@ -512,7 +512,7 @@ class _AddHistoryEventDialogState extends State<_AddHistoryEventDialog> {
               children: [
                 // Event type dropdown
                 DropdownButtonFormField<String>(
-                  initialValue: _selectedType,
+                  value: _selectedType,
                   decoration: const InputDecoration(
                     labelText: 'Tipo de Evento *',
                     border: OutlineInputBorder(),

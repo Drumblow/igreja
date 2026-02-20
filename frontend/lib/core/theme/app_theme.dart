@@ -140,11 +140,14 @@ class AppTheme {
       ),
 
       // ── Floating Action Button ──
-      floatingActionButtonTheme: const FloatingActionButtonThemeData(
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
         backgroundColor: AppColors.accent,
         foregroundColor: AppColors.textOnAccent,
         elevation: 4,
-        shape: CircleBorder(),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+        ),
+        extendedPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
       ),
 
       // ── Divider ──

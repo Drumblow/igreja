@@ -422,7 +422,7 @@ class _EntryFormViewState extends State<_EntryFormView> {
 
   Widget _buildPaymentMethodDropdown() {
     return DropdownButtonFormField<String>(
-      initialValue: _selectedPaymentMethod,
+      value: _selectedPaymentMethod,
       decoration: const InputDecoration(labelText: 'Forma de Pagamento'),
       items: const [
         DropdownMenuItem(value: null, child: Text('— Selecione —')),
@@ -454,7 +454,7 @@ class _EntryFormViewState extends State<_EntryFormView> {
 
   Widget _buildStatusDropdown() {
     return DropdownButtonFormField<String>(
-      initialValue: _status,
+      value: _status,
       decoration: const InputDecoration(labelText: 'Status'),
       items: const [
         DropdownMenuItem(value: 'confirmado', child: Text('Confirmado')),
