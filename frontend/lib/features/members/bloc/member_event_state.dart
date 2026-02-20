@@ -83,6 +83,8 @@ class MemberLoaded extends MemberState {
     this.activeStatus,
   });
 
+  bool get hasMore => currentPage * 20 < totalCount;
+
   @override
   List<Object?> get props =>
       [members, totalCount, currentPage, activeSearch, activeStatus];

@@ -14,21 +14,50 @@ import '../data/models/member_models.dart';
 
 /// Screen for creating or editing a member.
 /// Pass [existingMember] to enter edit mode; omit for creation.
+/// If [memberId] is provided and [existingMember] is null, fetches the member by ID.
 class MemberFormScreen extends StatelessWidget {
   final Member? existingMember;
+  final String? memberId;
 
-  const MemberFormScreen({super.key, this.existingMember});
+  const MemberFormScreen({super.key, this.existingMember, this.memberId});
 
-  bool get isEditing => existingMember != null;
+  bool get isEditing => existingMember != null || memberId != null;
 
   @override
   Widget build(BuildContext context) {
     final apiClient = RepositoryProvider.of<ApiClient>(context);
-    return BlocProvider(
-      create: (_) => MemberBloc(
-        repository: MemberRepository(apiClient: apiClient),
-      ),
-      child: _MemberFormView(existingMember: existingMember),
+    final repo = MemberRepository(apiClient: apiClient);
+
+    // If we already have the entity, show form immediately
+    if (existingMember != null || memberId == null) {
+      return BlocProvider(
+        create: (_) => MemberBloc(repository: repo),
+        child: _MemberFormView(existingMember: existingMember),
+      );
+    }
+
+    // Fetch by ID (deep link / browser refresh scenario)
+    return FutureBuilder<Member>(
+      future: repo.getMember(memberId!),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+        if (snapshot.hasError) {
+          return Scaffold(
+            appBar: AppBar(title: const Text('Editar Membro')),
+            body: Center(
+              child: Text('Erro ao carregar membro: ${snapshot.error}'),
+            ),
+          );
+        }
+        return BlocProvider(
+          create: (_) => MemberBloc(repository: repo),
+          child: _MemberFormView(existingMember: snapshot.data),
+        );
+      },
     );
   }
 }

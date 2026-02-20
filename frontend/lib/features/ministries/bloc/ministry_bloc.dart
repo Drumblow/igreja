@@ -19,15 +19,18 @@ class MinistryBloc extends Bloc<MinistryEvent, MinistryState> {
     MinistriesLoadRequested event,
     Emitter<MinistryState> emit,
   ) async {
-    emit(const MinistryLoading());
+    if (event.page == 1) emit(const MinistryLoading());
     try {
       final result = await repository.getMinistries(
         page: event.page,
         search: event.search,
         isActive: event.isActive,
       );
+      final allMinistries = event.page > 1 && state is MinistryListLoaded
+          ? [...(state as MinistryListLoaded).ministries, ...result.ministries]
+          : result.ministries;
       emit(MinistryListLoaded(
-        ministries: result.ministries,
+        ministries: allMinistries,
         totalCount: result.total,
         currentPage: event.page,
         activeSearch: event.search,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
 import '../../../core/network/api_client.dart';
 import '../../../core/theme/app_colors.dart';
@@ -38,6 +39,8 @@ class _EntryListViewState extends State<_EntryListView> {
   final _searchController = TextEditingController();
   String? _selectedType;
   String? _selectedStatus;
+  DateTime? _dateFrom;
+  DateTime? _dateTo;
 
   @override
   void dispose() {
@@ -46,10 +49,13 @@ class _EntryListViewState extends State<_EntryListView> {
   }
 
   void _search() {
+    final dateFormat = DateFormat('yyyy-MM-dd');
     context.read<FinancialBloc>().add(FinancialEntriesLoadRequested(
           search: _searchController.text.isEmpty ? null : _searchController.text,
           type: _selectedType,
           status: _selectedStatus,
+          dateFrom: _dateFrom != null ? dateFormat.format(_dateFrom!) : null,
+          dateTo: _dateTo != null ? dateFormat.format(_dateTo!) : null,
         ));
   }
 
@@ -110,11 +116,14 @@ class _EntryListViewState extends State<_EntryListView> {
 
   Widget _buildFilters() {
     final isWide = MediaQuery.of(context).size.width >= 700;
+    final dateFmt = DateFormat('dd/MM/yyyy');
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(AppSpacing.lg, 0, AppSpacing.lg, AppSpacing.md),
-      child: isWide
-          ? Row(
+      child: Column(
+        children: [
+          if (isWide)
+            Row(
               children: [
                 Expanded(flex: 3, child: _buildSearchField()),
                 const SizedBox(width: AppSpacing.md),
@@ -123,7 +132,8 @@ class _EntryListViewState extends State<_EntryListView> {
                 Expanded(flex: 1, child: _buildStatusFilter()),
               ],
             )
-          : Column(
+          else
+            Column(
               children: [
                 _buildSearchField(),
                 const SizedBox(height: AppSpacing.sm),
@@ -136,6 +146,62 @@ class _EntryListViewState extends State<_EntryListView> {
                 ),
               ],
             ),
+          const SizedBox(height: AppSpacing.sm),
+          Row(
+            children: [
+              Expanded(
+                child: _DateFilterChip(
+                  label: _dateFrom != null
+                      ? 'De: ${dateFmt.format(_dateFrom!)}'
+                      : 'Data inicial',
+                  hasValue: _dateFrom != null,
+                  onTap: () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      initialDate: _dateFrom ?? DateTime.now(),
+                      firstDate: DateTime(2020),
+                      lastDate: DateTime.now().add(const Duration(days: 365)),
+                    );
+                    if (picked != null) {
+                      setState(() => _dateFrom = picked);
+                      _search();
+                    }
+                  },
+                  onClear: () {
+                    setState(() => _dateFrom = null);
+                    _search();
+                  },
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: _DateFilterChip(
+                  label: _dateTo != null
+                      ? 'Até: ${dateFmt.format(_dateTo!)}'
+                      : 'Data final',
+                  hasValue: _dateTo != null,
+                  onTap: () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      initialDate: _dateTo ?? DateTime.now(),
+                      firstDate: DateTime(2020),
+                      lastDate: DateTime.now().add(const Duration(days: 365)),
+                    );
+                    if (picked != null) {
+                      setState(() => _dateTo = picked);
+                      _search();
+                    }
+                  },
+                  onClear: () {
+                    setState(() => _dateTo = null);
+                    _search();
+                  },
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
@@ -258,11 +324,70 @@ class _EntryListViewState extends State<_EntryListView> {
 
           return ListView.separated(
             padding: const EdgeInsets.all(AppSpacing.lg),
-            itemCount: state.entries.length,
+            itemCount: state.entries.length + (state.hasMore ? 1 : 0),
             separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.sm),
             itemBuilder: (context, index) {
+              if (index == state.entries.length) {
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+                  child: Center(
+                    child: OutlinedButton.icon(
+                      onPressed: () => context.read<FinancialBloc>().add(
+                        FinancialEntriesLoadRequested(
+                          page: state.currentPage + 1,
+                          search: state.activeSearch,
+                          type: state.activeType,
+                          status: state.activeStatus,
+                          dateFrom: state.activeDateFrom,
+                          dateTo: state.activeDateTo,
+                        ),
+                      ),
+                      icon: const Icon(Icons.expand_more),
+                      label: const Text('Carregar mais'),
+                    ),
+                  ),
+                );
+              }
               final entry = state.entries[index];
-              return _EntryTile(entry: entry);
+              return Dismissible(
+                key: ValueKey(entry.id),
+                direction: DismissDirection.endToStart,
+                background: Container(
+                  alignment: Alignment.centerRight,
+                  padding: const EdgeInsets.only(right: AppSpacing.lg),
+                  decoration: BoxDecoration(
+                    color: AppColors.error.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                  ),
+                  child: const Icon(Icons.delete_outline, color: AppColors.error),
+                ),
+                confirmDismiss: (_) async {
+                  return await showDialog<bool>(
+                    context: context,
+                    builder: (ctx) => AlertDialog(
+                      title: const Text('Excluir lançamento'),
+                      content: Text('Remover "${entry.description}"?'),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.of(ctx).pop(false),
+                          child: const Text('Cancelar'),
+                        ),
+                        FilledButton(
+                          style: FilledButton.styleFrom(backgroundColor: AppColors.error),
+                          onPressed: () => Navigator.of(ctx).pop(true),
+                          child: const Text('Excluir'),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+                onDismissed: (_) {
+                  context.read<FinancialBloc>().add(
+                    FinancialEntryDeleteRequested(entryId: entry.id),
+                  );
+                },
+                child: _EntryTile(entry: entry),
+              );
             },
           );
         }
@@ -421,5 +546,51 @@ String _formatDateBR(String isoDate) {
     return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
   } catch (_) {
     return isoDate;
+  }
+}
+
+class _DateFilterChip extends StatelessWidget {
+  final String label;
+  final bool hasValue;
+  final VoidCallback onTap;
+  final VoidCallback onClear;
+
+  const _DateFilterChip({
+    required this.label,
+    required this.hasValue,
+    required this.onTap,
+    required this.onClear,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+      onTap: onTap,
+      child: InputDecorator(
+        decoration: InputDecoration(
+          isDense: true,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md,
+            vertical: AppSpacing.sm,
+          ),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+          ),
+          suffixIcon: hasValue
+              ? IconButton(
+                  icon: const Icon(Icons.close, size: 16),
+                  onPressed: onClear,
+                )
+              : const Icon(Icons.calendar_today, size: 16),
+        ),
+        child: Text(
+          label,
+          style: AppTypography.bodySmall.copyWith(
+            color: hasValue ? AppColors.textPrimary : AppColors.textMuted,
+          ),
+        ),
+      ),
+    );
   }
 }

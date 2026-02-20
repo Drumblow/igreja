@@ -165,10 +165,27 @@ class _MinistryListViewState extends State<_MinistryListView> {
                       AppSpacing.lg,
                       AppSpacing.xxxl,
                     ),
-                    itemCount: state.ministries.length,
+                    itemCount: state.ministries.length + (state.hasMore ? 1 : 0),
                     separatorBuilder: (_, _) =>
                         const SizedBox(height: AppSpacing.sm),
                     itemBuilder: (context, index) {
+                      if (index == state.ministries.length) {
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+                          child: Center(
+                            child: OutlinedButton.icon(
+                              onPressed: () => context.read<MinistryBloc>().add(
+                                MinistriesLoadRequested(
+                                  page: state.currentPage + 1,
+                                  search: state.activeSearch,
+                                ),
+                              ),
+                              icon: const Icon(Icons.expand_more),
+                              label: const Text('Carregar mais'),
+                            ),
+                          ),
+                        );
+                      }
                       final ministry = state.ministries[index];
                       return _MinistryTile(
                         ministry: ministry,

@@ -14,8 +14,9 @@ import '../data/models/asset_models.dart';
 
 class AssetFormScreen extends StatefulWidget {
   final Asset? existingAsset;
+  final String? assetId;
 
-  const AssetFormScreen({super.key, this.existingAsset});
+  const AssetFormScreen({super.key, this.existingAsset, this.assetId});
 
   @override
   State<AssetFormScreen> createState() => _AssetFormScreenState();
@@ -23,7 +24,11 @@ class AssetFormScreen extends StatefulWidget {
 
 class _AssetFormScreenState extends State<AssetFormScreen> {
   final _formKey = GlobalKey<FormState>();
-  bool get _isEditing => widget.existingAsset != null;
+  bool get _isEditing => widget.existingAsset != null || widget.assetId != null;
+
+  // Loading state for fetch-by-ID
+  bool _loadingAsset = false;
+  Asset? _resolvedAsset;
 
   // Controllers
   late final TextEditingController _descriptionCtrl;
@@ -48,6 +53,16 @@ class _AssetFormScreenState extends State<AssetFormScreen> {
   void initState() {
     super.initState();
     final a = widget.existingAsset;
+    _initControllers(a);
+    _loadCategories();
+    // If no existing asset but we have an ID, fetch it
+    if (a == null && widget.assetId != null) {
+      _fetchAssetById();
+    }
+  }
+
+  void _initControllers(Asset? a) {
+    _resolvedAsset = a;
     _descriptionCtrl = TextEditingController(text: a?.description ?? '');
     _brandCtrl = TextEditingController(text: a?.brand ?? '');
     _modelCtrl = TextEditingController(text: a?.model ?? '');
@@ -66,7 +81,37 @@ class _AssetFormScreenState extends State<AssetFormScreen> {
     if (a?.acquisitionDate != null) {
       _acquisitionDate = DateTime.tryParse(a!.acquisitionDate!);
     }
-    _loadCategories();
+  }
+
+  Future<void> _fetchAssetById() async {
+    setState(() => _loadingAsset = true);
+    try {
+      final apiClient = RepositoryProvider.of<ApiClient>(context);
+      final repo = AssetRepository(apiClient: apiClient);
+      final asset = await repo.getAsset(widget.assetId!);
+      if (mounted) {
+        _descriptionCtrl.text = asset.description;
+        _brandCtrl.text = asset.brand ?? '';
+        _modelCtrl.text = asset.model ?? '';
+        _serialNumberCtrl.text = asset.serialNumber ?? '';
+        _acquisitionValueCtrl.text = asset.acquisitionValue?.toStringAsFixed(2) ?? '';
+        _currentValueCtrl.text = asset.currentValue?.toStringAsFixed(2) ?? '';
+        _locationCtrl.text = asset.location ?? '';
+        _notesCtrl.text = asset.notes ?? '';
+        setState(() {
+          _resolvedAsset = asset;
+          _categoryId = asset.categoryId;
+          _condition = asset.condition ?? 'bom';
+          _acquisitionType = asset.acquisitionType ?? 'compra';
+          if (asset.acquisitionDate != null) {
+            _acquisitionDate = DateTime.tryParse(asset.acquisitionDate!);
+          }
+          _loadingAsset = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _loadingAsset = false);
+    }
   }
 
   @override
@@ -201,8 +246,9 @@ class _AssetFormScreenState extends State<AssetFormScreen> {
     final bloc = AssetBloc(repository: AssetRepository(apiClient: apiClient));
 
     if (_isEditing) {
+      final editId = widget.existingAsset?.id ?? _resolvedAsset?.id ?? widget.assetId!;
       bloc.add(
-          AssetUpdateRequested(assetId: widget.existingAsset!.id, data: data));
+          AssetUpdateRequested(assetId: editId, data: data));
     } else {
       bloc.add(AssetCreateRequested(data: data));
     }
@@ -223,6 +269,13 @@ class _AssetFormScreenState extends State<AssetFormScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_loadingAsset) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Editar Bem')),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
     final isWide = MediaQuery.of(context).size.width >= 700;
 
     return Scaffold(

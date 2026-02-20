@@ -7,6 +7,8 @@ import '../../../core/network/api_client.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../members/data/member_repository.dart';
+import '../../members/data/models/member_models.dart';
 import '../data/ministry_repository.dart';
 import '../data/models/ministry_models.dart';
 
@@ -155,6 +157,39 @@ class _MinistryDetailScreenState extends State<MinistryDetailScreen> {
     }
   }
 
+  Future<void> _showAddMemberDialog() async {
+    final apiClient = RepositoryProvider.of<ApiClient>(context);
+    final memberRepo = MemberRepository(apiClient: apiClient);
+    final existingIds = _members?.map((m) => m.memberId).toSet() ?? {};
+
+    await showDialog(
+      context: context,
+      builder: (ctx) {
+        return _AddMemberDialog(
+          memberRepo: memberRepo,
+          existingMemberIds: existingIds,
+          onAdd: (memberId, role) async {
+            await _repo.addMember(
+              ministryId: widget.ministryId,
+              memberId: memberId,
+              roleInMinistry: role,
+            );
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Membro adicionado ao ministério'),
+                  backgroundColor: AppColors.success,
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+              _loadMinistry();
+            }
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -164,10 +199,15 @@ class _MinistryDetailScreenState extends State<MinistryDetailScreen> {
         actions: _ministry != null
             ? [
                 IconButton(
+                  icon: const Icon(Icons.person_add_outlined),
+                  tooltip: 'Adicionar Membro',
+                  onPressed: _showAddMemberDialog,
+                ),
+                IconButton(
                   icon: const Icon(Icons.edit_outlined),
                   tooltip: 'Editar',
                   onPressed: () =>
-                      context.go('/ministries/${widget.ministryId}/edit'),
+                      context.go('/ministries/${widget.ministryId}/edit', extra: _ministry),
                 ),
                 IconButton(
                   icon: const Icon(Icons.delete_outline,
@@ -530,5 +570,167 @@ class _MinistryMemberCard extends StatelessWidget {
       return '${parts.first[0]}${parts.last[0]}'.toUpperCase();
     }
     return parts.first[0].toUpperCase();
+  }
+}
+
+/// Dialog to search and add a member to the ministry
+class _AddMemberDialog extends StatefulWidget {
+  final MemberRepository memberRepo;
+  final Set<String> existingMemberIds;
+  final Future<void> Function(String memberId, String? role) onAdd;
+
+  const _AddMemberDialog({
+    required this.memberRepo,
+    required this.existingMemberIds,
+    required this.onAdd,
+  });
+
+  @override
+  State<_AddMemberDialog> createState() => _AddMemberDialogState();
+}
+
+class _AddMemberDialogState extends State<_AddMemberDialog> {
+  final _searchCtrl = TextEditingController();
+  final _roleCtrl = TextEditingController();
+  List<Member> _results = [];
+  bool _searching = false;
+  bool _adding = false;
+
+  Future<void> _search(String query) async {
+    if (query.trim().length < 2) {
+      setState(() => _results = []);
+      return;
+    }
+    setState(() => _searching = true);
+    try {
+      final result = await widget.memberRepo.getMembers(
+        page: 1,
+        search: query.trim(),
+      );
+      setState(() {
+        _results = result.members
+            .where((m) => !widget.existingMemberIds.contains(m.id))
+            .toList();
+        _searching = false;
+      });
+    } catch (_) {
+      setState(() => _searching = false);
+    }
+  }
+
+  Future<void> _addMember(Member member) async {
+    setState(() => _adding = true);
+    try {
+      await widget.onAdd(
+        member.id,
+        _roleCtrl.text.trim().isNotEmpty ? _roleCtrl.text.trim() : null,
+      );
+      if (mounted) Navigator.of(context).pop();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erro: $e'),
+            backgroundColor: AppColors.error,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        setState(() => _adding = false);
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    _roleCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Adicionar Membro'),
+      content: SizedBox(
+        width: 400,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: _searchCtrl,
+              decoration: const InputDecoration(
+                hintText: 'Buscar membro por nome...',
+                prefixIcon: Icon(Icons.search),
+                isDense: true,
+              ),
+              onChanged: _search,
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            TextField(
+              controller: _roleCtrl,
+              decoration: const InputDecoration(
+                hintText: 'Função no ministério (opcional)',
+                prefixIcon: Icon(Icons.badge_outlined),
+                isDense: true,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            if (_searching)
+              const Padding(
+                padding: EdgeInsets.all(AppSpacing.lg),
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            else if (_results.isEmpty && _searchCtrl.text.trim().length >= 2)
+              Padding(
+                padding: const EdgeInsets.all(AppSpacing.lg),
+                child: Text(
+                  'Nenhum membro encontrado',
+                  style: AppTypography.bodySmall
+                      .copyWith(color: AppColors.textMuted),
+                ),
+              )
+            else
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 250),
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: _results.length,
+                  itemBuilder: (_, i) {
+                    final member = _results[i];
+                    return ListTile(
+                      dense: true,
+                      leading: CircleAvatar(
+                        radius: 16,
+                        backgroundColor: AppColors.primaryLight,
+                        child: Text(
+                          member.fullName[0].toUpperCase(),
+                          style: AppTypography.labelSmall.copyWith(
+                            color: AppColors.accent,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                      title: Text(member.fullName,
+                          style: AppTypography.bodyMedium),
+                      subtitle: member.phonePrimary != null
+                          ? Text(member.phonePrimary!,
+                              style: AppTypography.bodySmall)
+                          : null,
+                      enabled: !_adding,
+                      onTap: () => _addMember(member),
+                    );
+                  },
+                ),
+              ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _adding ? null : () => Navigator.of(context).pop(),
+          child: const Text('Fechar'),
+        ),
+      ],
+    );
   }
 }

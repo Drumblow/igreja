@@ -207,10 +207,27 @@ class _FamilyListViewState extends State<_FamilyListView> {
 
           return ListView.separated(
             padding: const EdgeInsets.all(AppSpacing.lg),
-            itemCount: state.families.length,
+            itemCount: state.families.length + (state.hasMore ? 1 : 0),
             separatorBuilder: (_, _) =>
                 const SizedBox(height: AppSpacing.sm),
             itemBuilder: (context, index) {
+              if (index == state.families.length) {
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+                  child: Center(
+                    child: OutlinedButton.icon(
+                      onPressed: () => context.read<FamilyBloc>().add(
+                        FamiliesLoadRequested(
+                          page: state.currentPage + 1,
+                          search: state.activeSearch,
+                        ),
+                      ),
+                      icon: const Icon(Icons.expand_more),
+                      label: const Text('Carregar mais'),
+                    ),
+                  ),
+                );
+              }
               return _FamilyTile(family: state.families[index]);
             },
           );

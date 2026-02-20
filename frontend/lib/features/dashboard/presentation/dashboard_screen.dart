@@ -144,8 +144,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: CustomScrollView(
-        slivers: [
+      body: RefreshIndicator(
+        onRefresh: _loadStats,
+        color: AppColors.primary,
+        child: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [
           // ── Header ──
           SliverToBoxAdapter(
             child: _buildHeader(context, userName),
@@ -257,6 +261,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   label: 'Relatórios',
                   onTap: () => context.go('/reports'),
                 ),
+                _QuickAction(
+                  icon: Icons.attach_money_rounded,
+                  label: 'Novo Lançamento',
+                  onTap: () => context.go('/financial/entries/new'),
+                ),
+                _QuickAction(
+                  icon: Icons.school_outlined,
+                  label: 'EBD',
+                  onTap: () => context.go('/ebd'),
+                ),
               ],
             ),
           ),
@@ -265,6 +279,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             child: SizedBox(height: AppSpacing.xxl),
           ),
         ],
+      ),
       ),
     );
   }

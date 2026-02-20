@@ -6,6 +6,8 @@ import '../../../core/network/api_client.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../members/data/member_repository.dart';
+import '../../members/data/models/member_models.dart';
 import '../bloc/ministry_bloc.dart';
 import '../bloc/ministry_event_state.dart';
 import '../data/ministry_repository.dart';
@@ -13,21 +15,48 @@ import '../data/models/ministry_models.dart';
 
 /// Screen for creating or editing a ministry.
 /// Pass [existingMinistry] to enter edit mode; omit for creation.
+/// If [ministryId] is provided and [existingMinistry] is null, fetches by ID.
 class MinistryFormScreen extends StatelessWidget {
   final Ministry? existingMinistry;
+  final String? ministryId;
 
-  const MinistryFormScreen({super.key, this.existingMinistry});
+  const MinistryFormScreen({super.key, this.existingMinistry, this.ministryId});
 
-  bool get isEditing => existingMinistry != null;
+  bool get isEditing => existingMinistry != null || ministryId != null;
 
   @override
   Widget build(BuildContext context) {
     final apiClient = RepositoryProvider.of<ApiClient>(context);
-    return BlocProvider(
-      create: (_) => MinistryBloc(
-        repository: MinistryRepository(apiClient: apiClient),
-      ),
-      child: _MinistryFormView(existingMinistry: existingMinistry),
+    final repo = MinistryRepository(apiClient: apiClient);
+
+    if (existingMinistry != null || ministryId == null) {
+      return BlocProvider(
+        create: (_) => MinistryBloc(repository: repo),
+        child: _MinistryFormView(existingMinistry: existingMinistry),
+      );
+    }
+
+    return FutureBuilder<Ministry>(
+      future: repo.getMinistry(ministryId!),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+        if (snapshot.hasError) {
+          return Scaffold(
+            appBar: AppBar(title: const Text('Editar Ministério')),
+            body: Center(
+              child: Text('Erro ao carregar ministério: ${snapshot.error}'),
+            ),
+          );
+        }
+        return BlocProvider(
+          create: (_) => MinistryBloc(repository: repo),
+          child: _MinistryFormView(existingMinistry: snapshot.data),
+        );
+      },
     );
   }
 }
@@ -51,6 +80,16 @@ class _MinistryFormViewState extends State<_MinistryFormView> {
       TextEditingController(text: widget.existingMinistry?.description);
   late bool _isActive = widget.existingMinistry?.isActive ?? true;
 
+  String? _selectedLeaderId;
+  String? _selectedLeaderName;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedLeaderId = widget.existingMinistry?.leaderId;
+    _selectedLeaderName = widget.existingMinistry?.leaderName;
+  }
+
   @override
   void dispose() {
     _nameCtrl.dispose();
@@ -70,6 +109,10 @@ class _MinistryFormViewState extends State<_MinistryFormView> {
     }
 
     addIfNotEmpty('description', _descriptionCtrl.text);
+
+    if (_selectedLeaderId != null) {
+      data['leader_id'] = _selectedLeaderId;
+    }
 
     if (_isEditing) {
       data['is_active'] = _isActive;
@@ -249,9 +292,74 @@ class _MinistryFormViewState extends State<_MinistryFormView> {
               return null;
             },
           ),
+          const SizedBox(height: AppSpacing.lg),
+          _buildLeaderField(),
         ],
       ),
     );
+  }
+
+  Widget _buildLeaderField() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'LÍDER DO MINISTÉRIO',
+          style: AppTypography.labelSmall.copyWith(
+            color: AppColors.textSecondary,
+            letterSpacing: 0.8,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        InkWell(
+          borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+          onTap: _showLeaderSearchDialog,
+          child: InputDecorator(
+            decoration: InputDecoration(
+              hintText: 'Selecionar líder...',
+              isDense: true,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.sm + 2,
+              ),
+              suffixIcon: _selectedLeaderId != null
+                  ? IconButton(
+                      icon: const Icon(Icons.close, size: 18),
+                      onPressed: () => setState(() {
+                        _selectedLeaderId = null;
+                        _selectedLeaderName = null;
+                      }),
+                    )
+                  : const Icon(Icons.search, size: 18),
+            ),
+            child: Text(
+              _selectedLeaderName ?? 'Selecionar líder...',
+              style: _selectedLeaderName != null
+                  ? AppTypography.bodyMedium
+                  : AppTypography.bodyMedium
+                      .copyWith(color: AppColors.textMuted),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _showLeaderSearchDialog() async {
+    final apiClient = RepositoryProvider.of<ApiClient>(context);
+    final memberRepo = MemberRepository(apiClient: apiClient);
+
+    final result = await showDialog<Member>(
+      context: context,
+      builder: (ctx) => _LeaderSearchDialog(memberRepo: memberRepo),
+    );
+
+    if (result != null) {
+      setState(() {
+        _selectedLeaderId = result.id;
+        _selectedLeaderName = result.fullName;
+      });
+    }
   }
 
   // ── Helpers ──
@@ -309,6 +417,122 @@ class _MinistryFormViewState extends State<_MinistryFormView> {
               vertical: AppSpacing.sm + 2,
             ),
           ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Dialog to search for a member to set as leader
+class _LeaderSearchDialog extends StatefulWidget {
+  final MemberRepository memberRepo;
+
+  const _LeaderSearchDialog({required this.memberRepo});
+
+  @override
+  State<_LeaderSearchDialog> createState() => _LeaderSearchDialogState();
+}
+
+class _LeaderSearchDialogState extends State<_LeaderSearchDialog> {
+  final _searchCtrl = TextEditingController();
+  List<Member> _results = [];
+  bool _searching = false;
+
+  Future<void> _search(String query) async {
+    if (query.trim().length < 2) {
+      setState(() => _results = []);
+      return;
+    }
+    setState(() => _searching = true);
+    try {
+      final result = await widget.memberRepo.getMembers(
+        page: 1,
+        search: query.trim(),
+      );
+      setState(() {
+        _results = result.members;
+        _searching = false;
+      });
+    } catch (_) {
+      setState(() => _searching = false);
+    }
+  }
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Selecionar Líder'),
+      content: SizedBox(
+        width: 400,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: _searchCtrl,
+              autofocus: true,
+              decoration: const InputDecoration(
+                hintText: 'Buscar membro por nome...',
+                prefixIcon: Icon(Icons.search),
+                isDense: true,
+              ),
+              onChanged: _search,
+            ),
+            const SizedBox(height: AppSpacing.md),
+            if (_searching)
+              const Padding(
+                padding: EdgeInsets.all(AppSpacing.lg),
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            else if (_results.isEmpty && _searchCtrl.text.trim().length >= 2)
+              Padding(
+                padding: const EdgeInsets.all(AppSpacing.lg),
+                child: Text(
+                  'Nenhum membro encontrado',
+                  style: AppTypography.bodySmall
+                      .copyWith(color: AppColors.textMuted),
+                ),
+              )
+            else
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 250),
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: _results.length,
+                  itemBuilder: (_, i) {
+                    final member = _results[i];
+                    return ListTile(
+                      dense: true,
+                      leading: CircleAvatar(
+                        radius: 16,
+                        backgroundColor: AppColors.primaryLight,
+                        child: Text(
+                          member.fullName[0].toUpperCase(),
+                          style: AppTypography.labelSmall.copyWith(
+                            color: AppColors.accent,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                      title: Text(member.fullName,
+                          style: AppTypography.bodyMedium),
+                      onTap: () => Navigator.of(context).pop(member),
+                    );
+                  },
+                ),
+              ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancelar'),
         ),
       ],
     );

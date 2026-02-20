@@ -104,6 +104,8 @@ class FamilyListLoaded extends FamilyState {
     this.activeSearch,
   });
 
+  bool get hasMore => currentPage * 20 < totalCount;
+
   @override
   List<Object?> get props => [families, totalCount, currentPage, activeSearch];
 }

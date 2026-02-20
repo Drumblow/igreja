@@ -27,7 +27,7 @@ class FinancialBloc extends Bloc<FinancialEvent, FinancialState> {
     FinancialEntriesLoadRequested event,
     Emitter<FinancialState> emit,
   ) async {
-    emit(const FinancialLoading());
+    if (event.page == 1) emit(const FinancialLoading());
     try {
       final result = await _repository.getEntries(
         page: event.page,
@@ -37,13 +37,18 @@ class FinancialBloc extends Bloc<FinancialEvent, FinancialState> {
         dateFrom: event.dateFrom,
         dateTo: event.dateTo,
       );
+      final allEntries = event.page > 1 && state is FinancialEntriesLoaded
+          ? [...(state as FinancialEntriesLoaded).entries, ...result.items]
+          : result.items;
       emit(FinancialEntriesLoaded(
-        entries: result.items,
+        entries: allEntries,
         totalCount: result.total,
         currentPage: event.page,
         activeSearch: event.search,
         activeType: event.type,
         activeStatus: event.status,
+        activeDateFrom: event.dateFrom,
+        activeDateTo: event.dateTo,
       ));
     } catch (e) {
       emit(FinancialError(message: e.toString()));

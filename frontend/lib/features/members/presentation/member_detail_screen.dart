@@ -121,7 +121,7 @@ class _MemberDetailScreenState extends State<MemberDetailScreen> {
                 IconButton(
                   icon: const Icon(Icons.edit_outlined),
                   tooltip: 'Editar',
-                  onPressed: () => context.go('/members/${widget.memberId}/edit'),
+                  onPressed: () => context.go('/members/${widget.memberId}/edit', extra: _member),
                 ),
                 IconButton(
                   icon: const Icon(Icons.delete_outline, color: AppColors.error),

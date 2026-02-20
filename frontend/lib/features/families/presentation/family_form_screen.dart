@@ -13,21 +13,48 @@ import '../data/models/family_models.dart';
 
 /// Screen for creating or editing a family.
 /// Pass [existingFamily] to enter edit mode; omit for creation.
+/// If [familyId] is provided and [existingFamily] is null, fetches by ID.
 class FamilyFormScreen extends StatelessWidget {
   final Family? existingFamily;
+  final String? familyId;
 
-  const FamilyFormScreen({super.key, this.existingFamily});
+  const FamilyFormScreen({super.key, this.existingFamily, this.familyId});
 
-  bool get isEditing => existingFamily != null;
+  bool get isEditing => existingFamily != null || familyId != null;
 
   @override
   Widget build(BuildContext context) {
     final apiClient = RepositoryProvider.of<ApiClient>(context);
-    return BlocProvider(
-      create: (_) => FamilyBloc(
-        repository: FamilyRepository(apiClient: apiClient),
-      ),
-      child: _FamilyFormView(existingFamily: existingFamily),
+    final repo = FamilyRepository(apiClient: apiClient);
+
+    if (existingFamily != null || familyId == null) {
+      return BlocProvider(
+        create: (_) => FamilyBloc(repository: repo),
+        child: _FamilyFormView(existingFamily: existingFamily),
+      );
+    }
+
+    return FutureBuilder<Family>(
+      future: repo.getFamily(familyId!),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+        if (snapshot.hasError) {
+          return Scaffold(
+            appBar: AppBar(title: const Text('Editar Família')),
+            body: Center(
+              child: Text('Erro ao carregar família: ${snapshot.error}'),
+            ),
+          );
+        }
+        return BlocProvider(
+          create: (_) => FamilyBloc(repository: repo),
+          child: _FamilyFormView(existingFamily: snapshot.data),
+        );
+      },
     );
   }
 }

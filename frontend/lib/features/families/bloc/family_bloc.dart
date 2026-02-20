@@ -20,14 +20,17 @@ class FamilyBloc extends Bloc<FamilyEvent, FamilyState> {
     FamiliesLoadRequested event,
     Emitter<FamilyState> emit,
   ) async {
-    emit(const FamilyLoading());
+    if (event.page == 1) emit(const FamilyLoading());
     try {
       final result = await _repository.getFamilies(
         page: event.page,
         search: event.search,
       );
+      final allFamilies = event.page > 1 && state is FamilyListLoaded
+          ? [...(state as FamilyListLoaded).families, ...result.families]
+          : result.families;
       emit(FamilyListLoaded(
-        families: result.families,
+        families: allFamilies,
         totalCount: result.total,
         currentPage: event.page,
         activeSearch: event.search,

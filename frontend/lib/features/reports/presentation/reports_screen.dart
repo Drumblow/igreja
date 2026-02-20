@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fl_chart/fl_chart.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
@@ -263,15 +264,76 @@ class _ReportsScreenState extends State<ReportsScreen> {
       ),
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.xl),
-        child: Wrap(
-          spacing: AppSpacing.xxl,
-          runSpacing: AppSpacing.lg,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _metricTile('Total de Membros', '${stats.total}', AppColors.primary),
-            _metricTile('Ativos', '${stats.totalActive}', AppColors.success),
-            _metricTile('Inativos', '${stats.totalInactive}', AppColors.error),
-            _metricTile('Novos (Mês)', '${stats.newMembersThisMonth}', AppColors.info),
-            _metricTile('Novos (Ano)', '${stats.newMembersThisYear}', AppColors.accent),
+            Wrap(
+              spacing: AppSpacing.xxl,
+              runSpacing: AppSpacing.lg,
+              children: [
+                _metricTile('Total de Membros', '${stats.total}', AppColors.primary),
+                _metricTile('Ativos', '${stats.totalActive}', AppColors.success),
+                _metricTile('Inativos', '${stats.totalInactive}', AppColors.error),
+                _metricTile('Novos (Mês)', '${stats.newMembersThisMonth}', AppColors.info),
+                _metricTile('Novos (Ano)', '${stats.newMembersThisYear}', AppColors.accent),
+              ],
+            ),
+            if (stats.totalActive > 0 || stats.totalInactive > 0) ...[
+              const SizedBox(height: AppSpacing.xl),
+              const Divider(),
+              const SizedBox(height: AppSpacing.md),
+              Text('Distribuição de Membros', style: AppTypography.labelLarge),
+              const SizedBox(height: AppSpacing.md),
+              SizedBox(
+                height: 180,
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: PieChart(
+                        PieChartData(
+                          sectionsSpace: 2,
+                          centerSpaceRadius: 35,
+                          sections: [
+                            if (stats.totalActive > 0)
+                              PieChartSectionData(
+                                value: stats.totalActive.toDouble(),
+                                color: AppColors.success,
+                                title: '${stats.totalActive}',
+                                titleStyle: AppTypography.labelSmall.copyWith(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                                radius: 45,
+                              ),
+                            if (stats.totalInactive > 0)
+                              PieChartSectionData(
+                                value: stats.totalInactive.toDouble(),
+                                color: AppColors.error,
+                                title: '${stats.totalInactive}',
+                                titleStyle: AppTypography.labelSmall.copyWith(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                                radius: 45,
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.lg),
+                    Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _legendItem('Ativos', AppColors.success),
+                        const SizedBox(height: AppSpacing.sm),
+                        _legendItem('Inativos', AppColors.error),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -353,6 +415,129 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 _metricTile('Total Despesas', formatCurrency(bal.totalExpense), AppColors.error),
               ],
             ),
+
+            // ── Receita vs Despesa Pie Chart ──
+            if (bal.totalIncome > 0 || bal.totalExpense > 0) ...[
+              const SizedBox(height: AppSpacing.xl),
+              const Divider(),
+              const SizedBox(height: AppSpacing.md),
+              Text('Receitas vs Despesas', style: AppTypography.labelLarge),
+              const SizedBox(height: AppSpacing.md),
+              SizedBox(
+                height: 200,
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: PieChart(
+                        PieChartData(
+                          sectionsSpace: 2,
+                          centerSpaceRadius: 40,
+                          sections: [
+                            if (bal.totalIncome > 0)
+                              PieChartSectionData(
+                                value: bal.totalIncome,
+                                color: AppColors.success,
+                                title: '',
+                                radius: 50,
+                              ),
+                            if (bal.totalExpense > 0)
+                              PieChartSectionData(
+                                value: bal.totalExpense,
+                                color: AppColors.error,
+                                title: '',
+                                radius: 50,
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.lg),
+                    Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _legendItem('Receitas', AppColors.success),
+                        const SizedBox(height: AppSpacing.sm),
+                        _legendItem('Despesas', AppColors.error),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+
+            // ── Expense by Category Bar Chart ──
+            if (bal.expenseByCategory.isNotEmpty) ...[
+              const SizedBox(height: AppSpacing.xl),
+              const Divider(),
+              const SizedBox(height: AppSpacing.md),
+              Text('Despesas por Categoria', style: AppTypography.labelLarge),
+              const SizedBox(height: AppSpacing.md),
+              SizedBox(
+                height: 200,
+                child: BarChart(
+                  BarChartData(
+                    alignment: BarChartAlignment.spaceAround,
+                    maxY: bal.expenseByCategory
+                        .map((c) => c.amount)
+                        .reduce((a, b) => a > b ? a : b) * 1.2,
+                    barTouchData: BarTouchData(
+                      touchTooltipData: BarTouchTooltipData(
+                        getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                          final cat = bal.expenseByCategory[groupIndex];
+                          return BarTooltipItem(
+                            '${cat.categoryName}\n${formatCurrency(cat.amount)}',
+                            AppTypography.bodySmall.copyWith(color: Colors.white),
+                          );
+                        },
+                      ),
+                    ),
+                    titlesData: FlTitlesData(
+                      show: true,
+                      bottomTitles: AxisTitles(
+                        sideTitles: SideTitles(
+                          showTitles: true,
+                          getTitlesWidget: (value, meta) {
+                            final idx = value.toInt();
+                            if (idx < 0 || idx >= bal.expenseByCategory.length) {
+                              return const SizedBox.shrink();
+                            }
+                            final name = bal.expenseByCategory[idx].categoryName;
+                            return Padding(
+                              padding: const EdgeInsets.only(top: 4),
+                              child: Text(
+                                name.length > 8 ? '${name.substring(0, 8)}…' : name,
+                                style: AppTypography.bodySmall.copyWith(fontSize: 10),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                      leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                      topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                      rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                    ),
+                    borderData: FlBorderData(show: false),
+                    gridData: const FlGridData(show: false),
+                    barGroups: List.generate(
+                      bal.expenseByCategory.length,
+                      (i) => BarChartGroupData(
+                        x: i,
+                        barRods: [
+                          BarChartRodData(
+                            toY: bal.expenseByCategory[i].amount,
+                            color: AppColors.error.withValues(alpha: 0.7),
+                            width: 20,
+                            borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+
             if (bal.incomeByCategory.isNotEmpty) ...[
               const SizedBox(height: AppSpacing.xl),
               const Divider(),
@@ -380,36 +565,27 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     ),
                   )),
             ],
-            if (bal.expenseByCategory.isNotEmpty) ...[
-              const SizedBox(height: AppSpacing.lg),
-              const Divider(),
-              const SizedBox(height: AppSpacing.md),
-              Text('Despesas por Categoria', style: AppTypography.labelLarge),
-              const SizedBox(height: AppSpacing.md),
-              ...bal.expenseByCategory.map((cat) => Padding(
-                    padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            cat.categoryName,
-                            style: AppTypography.bodyMedium,
-                          ),
-                        ),
-                        Text(
-                          formatCurrency(cat.amount),
-                          style: AppTypography.bodyMedium.copyWith(
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.error,
-                          ),
-                        ),
-                      ],
-                    ),
-                  )),
-            ],
           ],
         ),
       ),
+    );
+  }
+
+  Widget _legendItem(String label, Color color) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 14,
+          height: 14,
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(3),
+          ),
+        ),
+        const SizedBox(width: AppSpacing.sm),
+        Text(label, style: AppTypography.bodySmall),
+      ],
     );
   }
 

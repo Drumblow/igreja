@@ -295,7 +295,7 @@ class _FamilyDetailScreenState extends State<FamilyDetailScreen> {
                   icon: const Icon(Icons.edit_outlined),
                   tooltip: 'Editar',
                   onPressed: () =>
-                      context.go('/families/${widget.familyId}/edit'),
+                      context.go('/families/${widget.familyId}/edit', extra: _family),
                 ),
                 IconButton(
                   icon: const Icon(Icons.delete_outline,

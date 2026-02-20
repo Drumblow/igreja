@@ -197,6 +197,8 @@ class AssetListLoaded extends AssetState {
     this.activeCondition,
   });
 
+  bool get hasMore => currentPage * 20 < totalCount;
+
   @override
   List<Object?> get props =>
       [assets, totalCount, currentPage, activeSearch, activeStatus, activeCondition];

@@ -36,6 +36,27 @@ class _AssetListView extends StatefulWidget {
 class _AssetListViewState extends State<_AssetListView> {
   final _searchCtrl = TextEditingController();
   String? _statusFilter;
+  String? _categoryFilter;
+  List<AssetCategory> _categories = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCategories();
+  }
+
+  Future<void> _loadCategories() async {
+    try {
+      final apiClient = RepositoryProvider.of<ApiClient>(context);
+      final repo = AssetRepository(apiClient: apiClient);
+      final result = await repo.getCategories(page: 1, perPage: 100);
+      if (mounted) {
+        setState(() => _categories = result.items);
+      }
+    } catch (_) {
+      // Categories are non-critical for filtering
+    }
+  }
 
   @override
   void dispose() {
@@ -47,6 +68,7 @@ class _AssetListViewState extends State<_AssetListView> {
     context.read<AssetBloc>().add(AssetsLoadRequested(
           search: query.isEmpty ? null : query,
           status: _statusFilter,
+          categoryId: _categoryFilter,
         ));
   }
 
@@ -55,6 +77,16 @@ class _AssetListViewState extends State<_AssetListView> {
     context.read<AssetBloc>().add(AssetsLoadRequested(
           search: _searchCtrl.text.isEmpty ? null : _searchCtrl.text,
           status: status,
+          categoryId: _categoryFilter,
+        ));
+  }
+
+  void _onCategoryFilter(String? categoryId) {
+    setState(() => _categoryFilter = categoryId);
+    context.read<AssetBloc>().add(AssetsLoadRequested(
+          search: _searchCtrl.text.isEmpty ? null : _searchCtrl.text,
+          status: _statusFilter,
+          categoryId: categoryId,
         ));
   }
 
@@ -117,6 +149,20 @@ class _AssetListViewState extends State<_AssetListView> {
                   ],
                   onChanged: _onStatusFilter,
                 ),
+                const SizedBox(width: AppSpacing.sm),
+                DropdownButton<String?>(
+                  value: _categoryFilter,
+                  hint: const Text('Categoria'),
+                  underline: const SizedBox.shrink(),
+                  items: [
+                    const DropdownMenuItem(value: null, child: Text('Todas')),
+                    ..._categories.map((c) => DropdownMenuItem(
+                          value: c.id,
+                          child: Text(c.name),
+                        )),
+                  ],
+                  onChanged: _onCategoryFilter,
+                ),
               ],
             ),
           ),
@@ -174,11 +220,32 @@ class _AssetListViewState extends State<_AssetListView> {
                     padding: const EdgeInsets.fromLTRB(
                       AppSpacing.lg, AppSpacing.sm, AppSpacing.lg, 100,
                     ),
-                    itemCount: state.assets.length,
+                    itemCount: state.assets.length + (state.hasMore ? 1 : 0),
                     separatorBuilder: (_, __) =>
                         const SizedBox(height: AppSpacing.sm),
-                    itemBuilder: (context, i) =>
-                        _AssetTile(asset: state.assets[i]),
+                    itemBuilder: (context, i) {
+                      if (i == state.assets.length) {
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+                          child: Center(
+                            child: OutlinedButton.icon(
+                              onPressed: () => context.read<AssetBloc>().add(
+                                AssetsLoadRequested(
+                                  page: state.currentPage + 1,
+                                  search: state.activeSearch,
+                                  status: state.activeStatus,
+                                  condition: state.activeCondition,
+                                  categoryId: _categoryFilter,
+                                ),
+                              ),
+                              icon: const Icon(Icons.expand_more),
+                              label: const Text('Carregar mais'),
+                            ),
+                          ),
+                        );
+                      }
+                      return _AssetTile(asset: state.assets[i]);
+                    },
                   );
                 }
                 return const SizedBox.shrink();

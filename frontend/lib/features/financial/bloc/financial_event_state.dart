@@ -156,6 +156,8 @@ class FinancialEntriesLoaded extends FinancialState {
   final String? activeSearch;
   final String? activeType;
   final String? activeStatus;
+  final String? activeDateFrom;
+  final String? activeDateTo;
 
   const FinancialEntriesLoaded({
     required this.entries,
@@ -164,10 +166,14 @@ class FinancialEntriesLoaded extends FinancialState {
     this.activeSearch,
     this.activeType,
     this.activeStatus,
+    this.activeDateFrom,
+    this.activeDateTo,
   });
 
+  bool get hasMore => currentPage * 20 < totalCount;
+
   @override
-  List<Object?> get props => [entries, totalCount, currentPage, activeSearch, activeType, activeStatus];
+  List<Object?> get props => [entries, totalCount, currentPage, activeSearch, activeType, activeStatus, activeDateFrom, activeDateTo];
 }
 
 /// Balance report loaded

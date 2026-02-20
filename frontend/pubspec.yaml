@@ -63,6 +63,9 @@ dependencies:
   cupertino_icons: ^1.0.8
   phosphor_flutter: ^2.1.0
 
+  # Charts
+  fl_chart: ^0.70.2
+
   # Utilities
   logger: ^2.5.0
   url_launcher: ^6.3.1

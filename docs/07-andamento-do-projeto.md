@@ -1,8 +1,8 @@
 # 📊 Andamento do Projeto — Igreja Manager
 
 > **Última atualização:** 20 de fevereiro de 2026  
-> **Versão do documento:** 1.13  
-> **Status geral do projeto:** Em Desenvolvimento Ativo (~99% concluído)
+> **Versão do documento:** 1.14  
+> **Status geral do projeto:** Em Desenvolvimento Ativo (~99.5% concluído)
 
 ---
 
@@ -27,14 +27,14 @@ O **Igreja Manager** é uma plataforma de gestão para igrejas composta por **5 
 | Backend — Swagger UI | ![100%](https://img.shields.io/badge/100%25-brightgreen) | ✅ Montado em `/swagger-ui/` |
 | Frontend — Design System | ![100%](https://img.shields.io/badge/100%25-brightgreen) | ✅ Concluído |
 | Frontend — Autenticação | ![100%](https://img.shields.io/badge/100%25-brightgreen) | ✅ Login + Forgot Password + Reset Password completos |
-| Frontend — Dashboard | ![95%](https://img.shields.io/badge/95%25-green) | 🟢 Stats wired (4 módulos) + Quick Actions + Relatórios |
-| Frontend — Membros | ![90%](https://img.shields.io/badge/90%25-green) | 🟢 CRUD completo + Histórico com timeline |
-| Frontend — Famílias | ![85%](https://img.shields.io/badge/85%25-green) | 🟢 CRUD completo (lista/detalhe/form) |
-| Frontend — Ministérios | ![85%](https://img.shields.io/badge/85%25-green) | 🟢 CRUD completo (lista/detalhe/form) |
-| Frontend — Financeiro | ![85%](https://img.shields.io/badge/85%25-green) | 🟢 7 telas + BLoC + Repositório + Fechamento Mensal |
-| Frontend — Patrimônio | ![85%](https://img.shields.io/badge/85%25-green) | 🟢 12 telas + BLoC + Repositório |
+| Frontend — Dashboard | ![100%](https://img.shields.io/badge/100%25-brightgreen) | ✅ Stats wired (4 módulos) + Quick Actions (6) + Pull-to-refresh + Relatórios |
+| Frontend — Membros | ![98%](https://img.shields.io/badge/98%25-brightgreen) | ✅ CRUD completo + Histórico + Paginação + Edit navigation fix |
+| Frontend — Famílias | ![98%](https://img.shields.io/badge/98%25-brightgreen) | ✅ CRUD completo + Paginação + Edit navigation fix |
+| Frontend — Ministérios | ![98%](https://img.shields.io/badge/98%25-brightgreen) | ✅ CRUD + Paginação + Edit fix + Adicionar membro (dialog) + Campo líder (form) |
+| Frontend — Financeiro | ![95%](https://img.shields.io/badge/95%25-green) | 🟢 7 telas + BLoC + Paginação + Filtro data + Swipe-to-delete + Fechamento Mensal |
+| Frontend — Patrimônio | ![95%](https://img.shields.io/badge/95%25-green) | 🟢 12 telas + BLoC + Paginação + Filtro categoria + Edit navigation fix |
 | Frontend — EBD | ![98%](https://img.shields.io/badge/98%25-brightgreen) | ✅ Overview + 10 telas + BLoC + Relatórios + Paginação (E1–E7 + F1) |
-| Frontend — Relatórios | ![95%](https://img.shields.io/badge/95%25-green) | 🟢 Tela central com métricas (4 módulos) + aniversariantes + navegação |
+| Frontend — Relatórios | ![100%](https://img.shields.io/badge/100%25-brightgreen) | ✅ Tela central + métricas (4 módulos) + Gráficos fl_chart (pie + bar) + aniversariantes |
 | Frontend — Configurações | ![100%](https://img.shields.io/badge/100%25-brightgreen) | ✅ NOVO — Igrejas + Usuários/Papéis (3 telas + BLoC + Repositório) |
 
 ---
@@ -978,6 +978,37 @@ Crates/packages importados mas ainda sem uso no código — preparados para fase
 | 6.6 | Audit Log funcional | ~~Interceptar e registrar ações~~ ✅ **Concluído** — `AuditService` integrado em Members, Assets, Financial, Churches, Users e EBD (create/update/delete) |
 | 6.7 | Upload de arquivos | Fotos de membros e bens |
 | 6.8 | Envio de emails | ~~Recuperação de senha, notificações~~ ✅ **Concluído** — lettre SMTP + forgot/reset password |
+
+---
+
+## 9.1 Changelog — Sessão v1.14 (20/02/2026)
+
+Melhorias implementadas nesta sessão para aumentar completude do frontend:
+
+### Correções
+- **Edit Navigation Fix** — Corrigido bug em que telas de edição de Membros, Famílias, Ministérios e Patrimônio abriam em modo criação ao invés de edição. Adicionado `entityId` + `FutureBuilder` fallback para deep links.
+
+### Novas Funcionalidades
+- **Paginação** — Botão "Carregar mais" em 5 telas de lista: Membros, Famílias, Ministérios, Financeiro e Patrimônio. BLoC com append mode (page > 1 concatena resultados).
+- **Dashboard Pull-to-Refresh** — `RefreshIndicator` com `AlwaysScrollableScrollPhysics` para atualizar stats.
+- **Dashboard Quick Actions** — Adicionados "Novo Lançamento" e "EBD" (+2 ações rápidas, total: 6).
+- **Ministérios — Adicionar Membro** — Dialog de busca de membro com campo de função, integrado ao endpoint `POST /ministries/:id/members`.
+- **Ministérios — Campo Líder** — Field "Líder do Ministério" no formulário, com dialog de busca e envio de `leader_id` no request.
+- **Financeiro — Filtro por Data** — DatePicker para filtrar lançamentos por data inicial/final (`dateFrom`/`dateTo`).
+- **Financeiro — Swipe-to-Delete** — `Dismissible` com confirmação para excluir lançamentos via `FinancialEntryDeleteRequested`.
+- **Patrimônio — Filtro por Categoria** — Dropdown carregado dinamicamente via `getCategories()`, filtra por `categoryId`.
+- **Gráficos fl_chart** — Dependência `fl_chart: ^0.70.2` adicionada. Pie charts (membros ativos/inativos, receita/despesa) + bar chart (despesas por categoria) na tela de Relatórios.
+
+### Arquivos Modificados (21 arquivos)
+- `pubspec.yaml` — Adicionado fl_chart
+- `core/router/app_router.dart` — 4 edit routes com entityId fallback
+- `features/members/` — bloc, event_state, form_screen, detail_screen, list_screen
+- `features/families/` — bloc, event_state, form_screen, detail_screen, list_screen
+- `features/ministries/` — bloc, event_state, form_screen, detail_screen, list_screen
+- `features/financial/` — bloc, event_state, entry_list_screen
+- `features/assets/` — bloc, event_state, form_screen, list_screen
+- `features/dashboard/` — dashboard_screen
+- `features/reports/` — reports_screen
 
 ---
 

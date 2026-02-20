@@ -98,7 +98,8 @@ class AppRouter {
                     name: 'member-edit',
                     builder: (context, state) {
                       final member = state.extra as dynamic;
-                      return MemberFormScreen(existingMember: member);
+                      final id = state.pathParameters['id'];
+                      return MemberFormScreen(existingMember: member, memberId: member == null ? id : null);
                     },
                   ),
                   GoRoute(
@@ -142,7 +143,8 @@ class AppRouter {
                     name: 'family-edit',
                     builder: (context, state) {
                       final family = state.extra as dynamic;
-                      return FamilyFormScreen(existingFamily: family);
+                      final id = state.pathParameters['id'];
+                      return FamilyFormScreen(existingFamily: family, familyId: family == null ? id : null);
                     },
                   ),
                 ],
@@ -174,7 +176,8 @@ class AppRouter {
                     name: 'ministry-edit',
                     builder: (context, state) {
                       final ministry = state.extra as dynamic;
-                      return MinistryFormScreen(existingMinistry: ministry);
+                      final id = state.pathParameters['id'];
+                      return MinistryFormScreen(existingMinistry: ministry, ministryId: ministry == null ? id : null);
                     },
                   ),
                 ],
@@ -270,7 +273,8 @@ class AppRouter {
                         name: 'asset-edit',
                         builder: (context, state) {
                           final asset = state.extra as dynamic;
-                          return AssetFormScreen(existingAsset: asset);
+                          final id = state.pathParameters['id'];
+                          return AssetFormScreen(existingAsset: asset, assetId: asset == null ? id : null);
                         },
                       ),
                     ],

@@ -29,7 +29,7 @@ class AssetBloc extends Bloc<AssetEvent, AssetState> {
     AssetsLoadRequested event,
     Emitter<AssetState> emit,
   ) async {
-    emit(const AssetLoading());
+    if (event.page == 1) emit(const AssetLoading());
     try {
       final result = await _repository.getAssets(
         page: event.page,
@@ -38,8 +38,11 @@ class AssetBloc extends Bloc<AssetEvent, AssetState> {
         status: event.status,
         condition: event.condition,
       );
+      final allAssets = event.page > 1 && state is AssetListLoaded
+          ? [...(state as AssetListLoaded).assets, ...result.items]
+          : result.items;
       emit(AssetListLoaded(
-        assets: result.items,
+        assets: allAssets,
         totalCount: result.total,
         currentPage: event.page,
         activeSearch: event.search,

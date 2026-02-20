@@ -18,15 +18,18 @@ class MemberBloc extends Bloc<MemberEvent, MemberState> {
     MembersLoadRequested event,
     Emitter<MemberState> emit,
   ) async {
-    emit(const MemberLoading());
+    if (event.page == 1) emit(const MemberLoading());
     try {
       final result = await _repository.getMembers(
         page: event.page,
         search: event.search,
         status: event.status,
       );
+      final allMembers = event.page > 1 && state is MemberLoaded
+          ? [...(state as MemberLoaded).members, ...result.members]
+          : result.members;
       emit(MemberLoaded(
-        members: result.members,
+        members: allMembers,
         totalCount: result.total,
         currentPage: event.page,
         activeSearch: event.search,

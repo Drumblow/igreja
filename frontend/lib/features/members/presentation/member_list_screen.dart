@@ -262,10 +262,28 @@ class _MemberListViewState extends State<_MemberListView> {
 
           return ListView.separated(
             padding: const EdgeInsets.all(AppSpacing.lg),
-            itemCount: state.members.length,
+            itemCount: state.members.length + (state.hasMore ? 1 : 0),
             separatorBuilder: (context2, index2) =>
                 const SizedBox(height: AppSpacing.sm),
             itemBuilder: (context, index) {
+              if (index == state.members.length) {
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+                  child: Center(
+                    child: OutlinedButton.icon(
+                      onPressed: () => context.read<MemberBloc>().add(
+                        MembersLoadRequested(
+                          page: state.currentPage + 1,
+                          search: state.activeSearch,
+                          status: state.activeStatus,
+                        ),
+                      ),
+                      icon: const Icon(Icons.expand_more),
+                      label: const Text('Carregar mais'),
+                    ),
+                  ),
+                );
+              }
               return _MemberTile(member: state.members[index]);
             },
           );

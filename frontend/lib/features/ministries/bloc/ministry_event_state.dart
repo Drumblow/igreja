@@ -105,6 +105,8 @@ class MinistryListLoaded extends MinistryState {
     this.activeSearch,
   });
 
+  bool get hasMore => currentPage * 20 < totalCount;
+
   @override
   List<Object?> get props =>
       [ministries, totalCount, currentPage, activeSearch];
