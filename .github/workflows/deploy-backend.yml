@@ -72,16 +72,17 @@ jobs:
             ${{ secrets.ORACLE_SSH_USER }}@${{ secrets.ORACLE_SERVER_IP }}:/tmp/
 
       - name: Deploy on server
-        env:
-          RESET_DB: ${{ github.event.inputs.reset_database || 'false' }}
         run: |
+          RESET_DB="${{ github.event.inputs.reset_database || 'false' }}"
           ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
-            ${{ secrets.ORACLE_SSH_USER }}@${{ secrets.ORACLE_SERVER_IP }} << REMOTE_SCRIPT
+            ${{ secrets.ORACLE_SSH_USER }}@${{ secrets.ORACLE_SERVER_IP }} \
+            "bash -s -- $RESET_DB" << 'REMOTE_SCRIPT'
           set -euo pipefail
+          RESET_DB="${1:-false}"
           REMOTE_DIR="/opt/igreja-manager"
 
-          mkdir -p \$REMOTE_DIR
-          cd \$REMOTE_DIR
+          mkdir -p "$REMOTE_DIR"
+          cd "$REMOTE_DIR"
 
           # Extract config
           tar xzf /tmp/igreja-config.tar.gz
@@ -94,7 +95,7 @@ jobs:
           echo "Docker image loaded."
 
           # Database reset (only when explicitly requested)
-          if [ "${RESET_DB}" = "true" ]; then
+          if [ "$RESET_DB" = "true" ]; then
             echo "⚠️ DATABASE RESET REQUESTED — dropping all data..."
             docker compose -f docker-compose.prod.yml down -v 2>/dev/null || true
             echo "✓ Volumes removed. Database will be recreated from scratch."
@@ -109,20 +110,25 @@ jobs:
           echo "Waiting for services to start..."
           sleep 20
 
-          # Health check (with more time for migrations)
+          # Health check
           echo "Running health check..."
-          for i in {1..10}; do
+          HEALTHY=false
+          for i in $(seq 1 10); do
             if curl -sf http://localhost/api/health > /dev/null 2>&1; then
-              echo "Health check passed!"
-              exit 0
+              HEALTHY=true
+              break
             fi
-            echo "Attempt \$i/10 failed, retrying in 5s..."
+            echo "Attempt $i/10 failed, retrying in 5s..."
             sleep 5
           done
 
-          echo "Health check failed after 10 attempts"
-          docker compose -f docker-compose.prod.yml logs --tail=80 backend
-          exit 1
+          if [ "$HEALTHY" = "true" ]; then
+            echo "Health check passed!"
+          else
+            echo "Health check failed after 10 attempts"
+            docker compose -f docker-compose.prod.yml logs --tail=80 backend
+            exit 1
+          fi
           REMOTE_SCRIPT
 
       - name: Cleanup SSH key
