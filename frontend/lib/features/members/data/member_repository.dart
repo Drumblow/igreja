@@ -1,4 +1,5 @@
 import '../../../core/network/api_client.dart';
+import 'models/church_role_model.dart';
 import 'models/member_models.dart';
 
 class MemberRepository {
@@ -100,6 +101,36 @@ class MemberRepository {
       },
     );
     return MemberHistory.fromJson(
+      response.data['data'] as Map<String, dynamic>,
+    );
+  }
+
+  // ── Church Roles ──
+
+  /// Fetch all active church roles.
+  Future<List<ChurchRole>> getChurchRoles() async {
+    final response = await _apiClient.dio.get('/v1/church-roles');
+    final data = response.data['data'] as List;
+    return data
+        .map((json) => ChurchRole.fromJson(json as Map<String, dynamic>))
+        .toList();
+  }
+
+  /// Create a new custom church role.
+  Future<ChurchRole> createChurchRole({
+    required String key,
+    required String displayName,
+    String? investitureType,
+  }) async {
+    final response = await _apiClient.dio.post(
+      '/v1/church-roles',
+      data: {
+        'key': key,
+        'display_name': displayName,
+        if (investitureType != null) 'investiture_type': investitureType,
+      },
+    );
+    return ChurchRole.fromJson(
       response.data['data'] as Map<String, dynamic>,
     );
   }

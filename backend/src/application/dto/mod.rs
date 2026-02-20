@@ -1,6 +1,7 @@
 pub mod asset_dto;
 pub mod auth_dto;
 pub mod church_dto;
+pub mod church_role_dto;
 pub mod ebd_dto;
 pub mod family_dto;
 pub mod financial_dto;
@@ -12,6 +13,7 @@ pub mod user_dto;
 pub use asset_dto::*;
 pub use auth_dto::*;
 pub use church_dto::*;
+pub use church_role_dto::*;
 pub use ebd_dto::*;
 pub use family_dto::*;
 pub use financial_dto::*;

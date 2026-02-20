@@ -10,6 +10,7 @@ import '../../../core/theme/app_typography.dart';
 import '../bloc/member_bloc.dart';
 import '../bloc/member_event_state.dart';
 import '../data/member_repository.dart';
+import '../data/models/church_role_model.dart';
 import '../data/models/member_models.dart';
 
 /// Screen for creating or editing a member.
@@ -79,7 +80,6 @@ class _MemberFormViewState extends State<_MemberFormView> {
   late final _fullNameCtrl = TextEditingController(text: widget.existingMember?.fullName);
   late final _socialNameCtrl = TextEditingController(text: widget.existingMember?.socialName);
   late final _cpfCtrl = TextEditingController(text: widget.existingMember?.cpf);
-  late final _rgCtrl = TextEditingController(text: widget.existingMember?.rg);
   late final _emailCtrl = TextEditingController(text: widget.existingMember?.email);
   late final _phonePrimaryCtrl = TextEditingController(text: widget.existingMember?.phonePrimary);
   late final _phoneSecondaryCtrl = TextEditingController(text: widget.existingMember?.phoneSecondary);
@@ -118,15 +118,43 @@ class _MemberFormViewState extends State<_MemberFormView> {
   late DateTime? _spiritBaptismDate = widget.existingMember?.spiritBaptismDate;
   late DateTime? _entryDate = widget.existingMember?.entryDate;
   late DateTime? _ordinationDate = widget.existingMember?.ordinationDate;
+  late DateTime? _marriageDate = widget.existingMember?.marriageDate;
+
+  // Dynamic church roles
+  List<ChurchRole> _churchRoles = [];
+  bool _rolesLoading = true;
 
   final _dateFormat = DateFormat('dd/MM/yyyy');
+
+  @override
+  void initState() {
+    super.initState();
+    _loadChurchRoles();
+  }
+
+  Future<void> _loadChurchRoles() async {
+    try {
+      final repo = MemberRepository(
+        apiClient: RepositoryProvider.of<ApiClient>(context),
+      );
+      final roles = await repo.getChurchRoles();
+      if (mounted) {
+        setState(() {
+          _churchRoles = roles;
+          _rolesLoading = false;
+        });
+      }
+    } catch (_) {
+      // Fallback: use empty list, dropdown will show nothing
+      if (mounted) setState(() => _rolesLoading = false);
+    }
+  }
 
   @override
   void dispose() {
     _fullNameCtrl.dispose();
     _socialNameCtrl.dispose();
     _cpfCtrl.dispose();
-    _rgCtrl.dispose();
     _emailCtrl.dispose();
     _phonePrimaryCtrl.dispose();
     _phoneSecondaryCtrl.dispose();
@@ -167,7 +195,6 @@ class _MemberFormViewState extends State<_MemberFormView> {
     addDate('birth_date', _birthDate);
     addIfNotEmpty('marital_status', _maritalStatus);
     addIfNotEmpty('cpf', _cpfCtrl.text);
-    addIfNotEmpty('rg', _rgCtrl.text);
     addIfNotEmpty('email', _emailCtrl.text);
     addIfNotEmpty('phone_primary', _phonePrimaryCtrl.text);
     addIfNotEmpty('phone_secondary', _phoneSecondaryCtrl.text);
@@ -193,6 +220,7 @@ class _MemberFormViewState extends State<_MemberFormView> {
     addIfNotEmpty('entry_type', _entryType);
     addIfNotEmpty('role_position', _rolePosition);
     addDate('ordination_date', _ordinationDate);
+    addDate('marriage_date', _marriageDate);
     addIfNotEmpty('notes', _notesCtrl.text);
 
     if (_isEditing) {
@@ -411,12 +439,23 @@ class _MemberFormViewState extends State<_MemberFormView> {
                 'viuvo': 'Viúvo(a)',
                 'uniao_estavel': 'União Estável',
               },
-              onChanged: (v) => setState(() => _maritalStatus = v),
+              onChanged: (v) => setState(() {
+                _maritalStatus = v;
+                if (v != 'casado') _marriageDate = null;
+              }),
             ),
             _textField(controller: _cpfCtrl, label: 'CPF', hint: '000.000.000-00'),
           ]),
+          if (_maritalStatus == 'casado')
+            _fieldRow(isWide, [
+              _dateField(
+                label: 'Data de Casamento',
+                value: _marriageDate,
+                onChanged: (d) => setState(() => _marriageDate = d),
+              ),
+              const Expanded(child: SizedBox.shrink()),
+            ]),
           _fieldRow(isWide, [
-            _textField(controller: _rgCtrl, label: 'RG', hint: '00.000.000-0'),
             _textField(
               controller: _emailCtrl,
               label: 'E-mail',
@@ -584,21 +623,9 @@ class _MemberFormViewState extends State<_MemberFormView> {
             ),
           ]),
           _fieldRow(isWide, [
-            _dropdown<String>(
-              label: 'Cargo / Função',
-              value: _rolePosition,
-              items: const {
-                'membro': 'Membro',
-                'cooperador': 'Cooperador(a)',
-                'diacono': 'Diácono/Diaconisa',
-                'presbitero': 'Presbítero',
-                'evangelista': 'Evangelista',
-                'pastor': 'Pastor(a)',
-              },
-              onChanged: (v) => setState(() => _rolePosition = v),
-            ),
+            _buildRoleDropdownWithAdd(),
             _dateField(
-              label: 'Data de Consagração',
+              label: _getInvestitureLabel(),
               value: _ordinationDate,
               onChanged: (d) => setState(() => _ordinationDate = d),
             ),
@@ -622,6 +649,167 @@ class _MemberFormViewState extends State<_MemberFormView> {
         ],
       ),
     );
+  }
+
+  // ── Role dropdown with "+" button ──
+
+  /// Returns the investiture date label based on the selected role.
+  String _getInvestitureLabel() {
+    if (_rolePosition == null || _churchRoles.isEmpty) {
+      return 'Data de Investidura';
+    }
+    try {
+      final role = _churchRoles.firstWhere((r) => r.key == _rolePosition);
+      return role.investitureLabel;
+    } catch (_) {
+      return 'Data de Investidura';
+    }
+  }
+
+  /// Builds the Cargo / Função dropdown with a "+" button to add new roles.
+  Widget _buildRoleDropdownWithAdd() {
+    // Build items from loaded church roles
+    final Map<String, String> roleItems = _rolesLoading
+        ? const {'membro': 'Membro'}
+        : {for (final r in _churchRoles) r.key: r.displayName};
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text(
+              'CARGO / FUNÇÃO',
+              style: AppTypography.labelSmall.copyWith(
+                color: AppColors.textSecondary,
+                letterSpacing: 0.8,
+              ),
+            ),
+            const SizedBox(width: AppSpacing.xs),
+            SizedBox(
+              height: 20,
+              width: 20,
+              child: IconButton(
+                icon: const Icon(Icons.add_circle_outline, size: 16),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+                tooltip: 'Adicionar cargo',
+                onPressed: _showAddRoleDialog,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        DropdownButtonFormField<String>(
+          value: roleItems.containsKey(_rolePosition) ? _rolePosition : null,
+          isExpanded: true,
+          style: AppTypography.bodyMedium.copyWith(color: AppColors.textPrimary),
+          decoration: InputDecoration(
+            isDense: true,
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.md,
+              vertical: AppSpacing.sm + 2,
+            ),
+            hintText: 'Selecione',
+            hintStyle: AppTypography.bodyMedium.copyWith(color: AppColors.textMuted),
+          ),
+          items: roleItems.entries
+              .map((e) => DropdownMenuItem<String>(value: e.key, child: Text(e.value)))
+              .toList(),
+          onChanged: (v) => setState(() => _rolePosition = v),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _showAddRoleDialog() async {
+    final nameCtrl = TextEditingController();
+    String investitureType = 'nomeacao';
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: const Text('Novo Cargo'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Nome do Cargo *',
+                  hintText: 'Ex: Líder de Louvor',
+                ),
+                autofocus: true,
+              ),
+              const SizedBox(height: AppSpacing.md),
+              DropdownButtonFormField<String>(
+                value: investitureType,
+                isExpanded: true,
+                decoration: const InputDecoration(
+                  labelText: 'Tipo de Investidura',
+                ),
+                items: const [
+                  DropdownMenuItem(value: 'consagracao', child: Text('Consagração')),
+                  DropdownMenuItem(value: 'ordenacao', child: Text('Ordenação')),
+                  DropdownMenuItem(value: 'eleicao', child: Text('Eleição')),
+                  DropdownMenuItem(value: 'nomeacao', child: Text('Nomeação')),
+                ],
+                onChanged: (v) => setDialogState(() => investitureType = v ?? 'nomeacao'),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: const Text('Criar'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (result == true && nameCtrl.text.trim().isNotEmpty && mounted) {
+      try {
+        final repo = MemberRepository(
+          apiClient: RepositoryProvider.of<ApiClient>(context),
+        );
+        final newRole = await repo.createChurchRole(
+          key: nameCtrl.text.trim().toLowerCase().replaceAll(' ', '_').replaceAll('-', '_'),
+          displayName: nameCtrl.text.trim(),
+          investitureType: investitureType,
+        );
+        if (mounted) {
+          setState(() {
+            _churchRoles.add(newRole);
+            _rolePosition = newRole.key;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Cargo "${newRole.displayName}" criado com sucesso'),
+              backgroundColor: AppColors.success,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Erro ao criar cargo: $e'),
+              backgroundColor: AppColors.error,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      }
+    }
+
+    nameCtrl.dispose();
   }
 
   // ── Helpers ──

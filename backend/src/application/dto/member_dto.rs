@@ -13,7 +13,6 @@ pub struct CreateMemberRequest {
     pub gender: String,
     pub marital_status: Option<String>,
     pub cpf: Option<String>,
-    pub rg: Option<String>,
     #[validate(email(message = "E-mail inválido"))]
     pub email: Option<String>,
     pub phone_primary: Option<String>,
@@ -46,6 +45,7 @@ pub struct CreateMemberRequest {
     pub entry_type: Option<String>,
     pub role_position: Option<String>,
     pub ordination_date: Option<NaiveDate>,
+    pub marriage_date: Option<NaiveDate>,
 
     pub status: Option<String>,
     pub notes: Option<String>,
@@ -60,7 +60,6 @@ pub struct UpdateMemberRequest {
     pub gender: Option<String>,
     pub marital_status: Option<String>,
     pub cpf: Option<String>,
-    pub rg: Option<String>,
     pub email: Option<String>,
     pub phone_primary: Option<String>,
     pub phone_secondary: Option<String>,
@@ -89,6 +88,7 @@ pub struct UpdateMemberRequest {
     pub entry_type: Option<String>,
     pub role_position: Option<String>,
     pub ordination_date: Option<NaiveDate>,
+    pub marriage_date: Option<NaiveDate>,
 
     pub status: Option<String>,
     pub status_reason: Option<String>,

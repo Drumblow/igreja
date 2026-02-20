@@ -17,7 +17,6 @@ pub struct Member {
     pub gender: String,
     pub marital_status: Option<String>,
     pub cpf: Option<String>,
-    pub rg: Option<String>,
     pub email: Option<String>,
     pub phone_primary: Option<String>,
     pub phone_secondary: Option<String>,
@@ -50,6 +49,7 @@ pub struct Member {
     pub entry_type: Option<String>,
     pub role_position: Option<String>,
     pub ordination_date: Option<NaiveDate>,
+    pub marriage_date: Option<NaiveDate>,
 
     // Status
     pub status: String,

@@ -67,6 +67,10 @@ impl AppError {
     pub fn not_found(entity: &str) -> Self {
         Self::NotFound(format!("{entity} não encontrado"))
     }
+
+    pub fn conflict(message: impl Into<String>) -> Self {
+        Self::Conflict(message.into())
+    }
 }
 
 impl ResponseError for AppError {

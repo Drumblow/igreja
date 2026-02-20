@@ -177,19 +177,19 @@ impl MemberService {
             r#"
             INSERT INTO members (
                 church_id, full_name, social_name, birth_date, gender, marital_status,
-                cpf, rg, email, phone_primary, phone_secondary,
+                cpf, email, phone_primary, phone_secondary,
                 zip_code, street, number, complement, neighborhood, city, state,
                 profession, workplace, birthplace_city, birthplace_state,
                 nationality, education_level, blood_type,
                 conversion_date, water_baptism_date, spirit_baptism_date,
                 origin_church, entry_date, entry_type, role_position, ordination_date,
-                status, notes
+                marriage_date, status, notes
             ) VALUES (
-                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11,
-                $12, $13, $14, $15, $16, $17, $18,
-                $19, $20, $21, $22, $23, $24, $25,
-                $26, $27, $28, $29, $30, $31, $32, $33,
-                $34, $35
+                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+                $11, $12, $13, $14, $15, $16, $17,
+                $18, $19, $20, $21, $22, $23, $24,
+                $25, $26, $27, $28, $29, $30, $31, $32,
+                $33, $34, $35
             )
             RETURNING *
             "#,
@@ -201,7 +201,6 @@ impl MemberService {
         .bind(&req.gender)
         .bind(&req.marital_status)
         .bind(&req.cpf)
-        .bind(&req.rg)
         .bind(&req.email)
         .bind(&req.phone_primary)
         .bind(&req.phone_secondary)
@@ -227,6 +226,7 @@ impl MemberService {
         .bind(&req.entry_type)
         .bind(&req.role_position)
         .bind(req.ordination_date)
+        .bind(req.marriage_date)
         .bind(req.status.as_deref().unwrap_or("ativo"))
         .bind(&req.notes)
         .fetch_one(pool)
@@ -275,7 +275,6 @@ impl MemberService {
         set_field_str!(gender);
         set_field_str!(marital_status);
         set_field_str!(cpf);
-        set_field_str!(rg);
         set_field_str!(email);
         set_field_str!(phone_primary);
         set_field_str!(phone_secondary);
@@ -301,6 +300,7 @@ impl MemberService {
         set_field_str!(entry_type);
         set_field_str!(role_position);
         set_field_date!(ordination_date);
+        set_field_date!(marriage_date);
         set_field_str!(status);
         set_field_str!(status_reason);
         set_field_str!(notes);

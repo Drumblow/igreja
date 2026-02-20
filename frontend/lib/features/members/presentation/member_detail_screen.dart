@@ -251,8 +251,10 @@ class _MemberDetailScreenState extends State<MemberDetailScreen> {
                   member.birthDate != null ? dateFormat.format(member.birthDate!) : null),
               _infoRow(Icons.wc_outlined, 'Sexo', _formatGender(member.gender)),
               _infoRow(Icons.favorite_border, 'Estado Civil', _formatMaritalStatus(member.maritalStatus)),
+              if (member.marriageDate != null)
+                _infoRow(Icons.celebration_outlined, 'Data de Casamento',
+                    dateFormat.format(member.marriageDate!)),
               _infoRow(Icons.badge_outlined, 'CPF', member.cpf),
-              _infoRow(Icons.credit_card_outlined, 'RG', member.rg),
               _infoRow(Icons.bloodtype_outlined, 'Tipo Sanguíneo', member.bloodType),
             ]),
             const SizedBox(height: AppSpacing.lg),
@@ -300,7 +302,7 @@ class _MemberDetailScreenState extends State<MemberDetailScreen> {
                   _formatEntryType(member.entryType)),
               _infoRow(Icons.badge_outlined, 'Cargo / Função',
                   _formatRole(member.rolePosition)),
-              _infoRow(Icons.star_outline, 'Consagração',
+              _infoRow(Icons.star_outline, 'Investidura',
                   member.ordinationDate != null ? dateFormat.format(member.ordinationDate!) : null),
             ]),
 
@@ -494,8 +496,10 @@ class _MemberDetailScreenState extends State<MemberDetailScreen> {
       'presbitero' => 'Presbítero',
       'evangelista' => 'Evangelista',
       'pastor' => 'Pastor(a)',
+      'congregado' => 'Congregado(a)',
+      'coordenador_ministerio' => 'Coord. de Ministério',
       null => null,
-      _ => role,
+      _ => role!.replaceAll('_', ' '),
     };
   }
 

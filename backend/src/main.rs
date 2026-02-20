@@ -11,7 +11,7 @@ use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
-use crate::api::handlers::{asset_handler, auth_handler, church_handler, ebd_handler, family_handler, financial_handler, health_handler, member_handler, member_history_handler, ministry_handler, upload_handler, user_handler};
+use crate::api::handlers::{asset_handler, auth_handler, church_handler, church_role_handler, ebd_handler, family_handler, financial_handler, health_handler, member_handler, member_history_handler, ministry_handler, upload_handler, user_handler};
 use crate::application::services::AuthService;
 use crate::config::AppConfig;
 use crate::infrastructure::database;
@@ -56,6 +56,11 @@ use crate::infrastructure::cloudinary::CloudinaryService;
         // Member History
         member_history_handler::get_member_history,
         member_history_handler::create_member_history,
+        // Church Roles
+        church_role_handler::list_church_roles,
+        church_role_handler::create_church_role,
+        church_role_handler::update_church_role,
+        church_role_handler::delete_church_role,
         // Families
         family_handler::list_families,
         family_handler::get_family,
@@ -309,6 +314,11 @@ async fn main() -> std::io::Result<()> {
             .service(member_handler::delete_member)            // Member History
             .service(member_history_handler::get_member_history)
             .service(member_history_handler::create_member_history)
+            // Church Roles (Cargos)
+            .service(church_role_handler::list_church_roles)
+            .service(church_role_handler::create_church_role)
+            .service(church_role_handler::update_church_role)
+            .service(church_role_handler::delete_church_role)
             // Families
             .service(family_handler::list_families)
             .service(family_handler::get_family)

@@ -12,7 +12,6 @@ class Member extends Equatable {
   final String gender;
   final String? maritalStatus;
   final String? cpf;
-  final String? rg;
   final String? email;
   final String? phonePrimary;
   final String? phoneSecondary;
@@ -45,6 +44,7 @@ class Member extends Equatable {
   final String? entryType;
   final String? rolePosition;
   final DateTime? ordinationDate;
+  final DateTime? marriageDate;
 
   // Status
   final String status;
@@ -65,7 +65,6 @@ class Member extends Equatable {
     required this.gender,
     this.maritalStatus,
     this.cpf,
-    this.rg,
     this.email,
     this.phonePrimary,
     this.phoneSecondary,
@@ -92,6 +91,7 @@ class Member extends Equatable {
     this.entryType,
     this.rolePosition,
     this.ordinationDate,
+    this.marriageDate,
     required this.status,
     this.statusChangedAt,
     this.statusReason,
@@ -111,7 +111,6 @@ class Member extends Equatable {
       gender: json['gender'] as String? ?? '',
       maritalStatus: json['marital_status'] as String?,
       cpf: json['cpf'] as String?,
-      rg: json['rg'] as String?,
       email: json['email'] as String?,
       phonePrimary: json['phone_primary'] as String?,
       phoneSecondary: json['phone_secondary'] as String?,
@@ -138,6 +137,7 @@ class Member extends Equatable {
       entryType: json['entry_type'] as String?,
       rolePosition: json['role_position'] as String?,
       ordinationDate: _parseDate(json['ordination_date']),
+      marriageDate: _parseDate(json['marriage_date']),
       status: json['status'] as String? ?? 'ativo',
       statusChangedAt: _parseDate(json['status_changed_at']),
       statusReason: json['status_reason'] as String?,
@@ -155,7 +155,6 @@ class Member extends Equatable {
       'gender': gender,
       if (maritalStatus != null) 'marital_status': maritalStatus,
       if (cpf != null) 'cpf': cpf,
-      if (rg != null) 'rg': rg,
       if (email != null && email!.isNotEmpty) 'email': email,
       if (phonePrimary != null) 'phone_primary': phonePrimary,
       if (phoneSecondary != null) 'phone_secondary': phoneSecondary,
@@ -181,6 +180,7 @@ class Member extends Equatable {
       if (entryType != null) 'entry_type': entryType,
       if (rolePosition != null) 'role_position': rolePosition,
       if (ordinationDate != null) 'ordination_date': _formatDate(ordinationDate),
+      if (marriageDate != null) 'marriage_date': _formatDate(marriageDate),
       'status': status,
       if (notes != null) 'notes': notes,
     };
