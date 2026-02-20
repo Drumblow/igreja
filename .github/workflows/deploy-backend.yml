@@ -112,7 +112,7 @@ jobs:
           # Health check (with more time for migrations)
           echo "Running health check..."
           for i in {1..10}; do
-            if curl -sf http://localhost/api/v1/health > /dev/null 2>&1; then
+            if curl -sf http://localhost/api/health > /dev/null 2>&1; then
               echo "Health check passed!"
               exit 0
             fi

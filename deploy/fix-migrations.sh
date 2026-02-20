@@ -39,7 +39,7 @@ sleep 30
 
 echo "▶ Step 4: Health check..."
 for i in {1..10}; do
-    if curl -sf http://localhost/api/v1/health > /dev/null 2>&1; then
+    if curl -sf http://localhost/api/health > /dev/null 2>&1; then
         echo ""
         echo "✓ Backend está saudável! Banco recriado com sucesso."
         exit 0
