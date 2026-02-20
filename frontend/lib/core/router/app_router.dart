@@ -40,6 +40,8 @@ import '../../features/ebd/presentation/ebd_lesson_detail_screen.dart';
 import '../../features/ebd/presentation/ebd_attendance_screen.dart';
 import '../../features/ebd/presentation/ebd_student_list_screen.dart';
 import '../../features/ebd/presentation/ebd_student_profile_screen.dart';
+import '../../features/ebd/presentation/ebd_activity_responses_screen.dart';
+import '../../features/ebd/presentation/ebd_report_screen.dart';
 import '../../features/reports/presentation/reports_screen.dart';
 import '../../features/settings/presentation/settings_overview_screen.dart';
 import '../../features/settings/presentation/church_settings_screen.dart';
@@ -358,6 +360,14 @@ class AppRouter {
                 },
               ),
               GoRoute(
+                path: 'activities/:activityId/responses',
+                name: 'ebd-activity-responses',
+                builder: (context, state) {
+                  final activityId = state.pathParameters['activityId']!;
+                  return EbdActivityResponsesScreen(activityId: activityId);
+                },
+              ),
+              GoRoute(
                 path: 'students',
                 name: 'ebd-students',
                 builder: (context, state) => const EbdStudentListScreen(),
@@ -371,6 +381,11 @@ class AppRouter {
                     },
                   ),
                 ],
+              ),
+              GoRoute(
+                path: 'reports',
+                name: 'ebd-reports',
+                builder: (context, state) => const EbdReportScreen(),
               ),
             ],
           ),

@@ -294,10 +294,41 @@ class _TermTile extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 4),
-            IconButton(
-              icon: const Icon(Icons.edit_outlined, size: 20),
-              tooltip: 'Editar Trimestre',
-              onPressed: () => _showEditTermDialog(context),
+            PopupMenuButton<String>(
+              icon: const Icon(Icons.more_vert, size: 20),
+              onSelected: (action) {
+                switch (action) {
+                  case 'edit':
+                    _showEditTermDialog(context);
+                    break;
+                  case 'clone':
+                    _showCloneDialog(context);
+                    break;
+                  case 'delete':
+                    _showDeleteConfirmation(context);
+                    break;
+                }
+              },
+              itemBuilder: (_) => [
+                const PopupMenuItem(value: 'edit', child: ListTile(
+                  leading: Icon(Icons.edit_outlined, size: 20),
+                  title: Text('Editar'),
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                )),
+                const PopupMenuItem(value: 'clone', child: ListTile(
+                  leading: Icon(Icons.copy_outlined, size: 20),
+                  title: Text('Clonar Turmas'),
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                )),
+                const PopupMenuItem(value: 'delete', child: ListTile(
+                  leading: Icon(Icons.delete_outline, size: 20, color: AppColors.error),
+                  title: Text('Excluir', style: TextStyle(color: AppColors.error)),
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                )),
+              ],
             ),
           ],
         ),
@@ -434,6 +465,129 @@ class _TermTile extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  void _showCloneDialog(BuildContext context) {
+    // Clone turmas de outro trimestre para este
+    final apiClient = RepositoryProvider.of<ApiClient>(context);
+    final repo = EbdRepository(apiClient: apiClient);
+    bool includeEnrollments = false;
+    String? selectedSourceTermId;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) {
+          return AlertDialog(
+            title: const Text('Clonar Turmas'),
+            content: FutureBuilder<List<EbdTerm>>(
+              future: repo.getTerms(),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) {
+                  return const SizedBox(
+                    height: 80,
+                    child: Center(child: CircularProgressIndicator()),
+                  );
+                }
+                final otherTerms = snapshot.data!
+                    .where((t) => t.id != term.id)
+                    .toList();
+                if (otherTerms.isEmpty) {
+                  return const Text(
+                      'Não há outros trimestres para clonar turmas.');
+                }
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Copiar turmas de outro trimestre para "${term.name}"',
+                      style: AppTypography.bodySmall
+                          .copyWith(color: AppColors.textSecondary),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    DropdownButtonFormField<String>(
+                      value: selectedSourceTermId,
+                      decoration: const InputDecoration(
+                          labelText: 'Trimestre de Origem'),
+                      items: otherTerms
+                          .map((t) => DropdownMenuItem(
+                              value: t.id, child: Text(t.name)))
+                          .toList(),
+                      onChanged: (v) => setDialogState(
+                          () => selectedSourceTermId = v),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    SwitchListTile(
+                      title: const Text('Incluir matrículas'),
+                      subtitle: Text(
+                        includeEnrollments
+                            ? 'Alunos serão copiados para as novas turmas'
+                            : 'Apenas turmas serão criadas, sem alunos',
+                        style: AppTypography.bodySmall
+                            .copyWith(color: AppColors.textSecondary),
+                      ),
+                      value: includeEnrollments,
+                      onChanged: (v) =>
+                          setDialogState(() => includeEnrollments = v),
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ],
+                );
+              },
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Cancelar'),
+              ),
+              FilledButton(
+                onPressed: () {
+                  if (selectedSourceTermId == null) return;
+                  context.read<EbdBloc>().add(EbdCloneClassesRequested(
+                    termId: term.id,
+                    sourceTermId: selectedSourceTermId!,
+                    includeEnrollments: includeEnrollments,
+                  ));
+                  Navigator.pop(ctx);
+                },
+                child: const Text('Clonar'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  void _showDeleteConfirmation(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Excluir Trimestre'),
+        content: Text(
+          'Tem certeza que deseja excluir o trimestre "${term.name}"?\n\n'
+          'Todas as turmas, aulas e frequências vinculadas serão removidas. '
+          'Esta ação não pode ser desfeita.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppColors.error),
+            onPressed: () {
+              context.read<EbdBloc>().add(
+                    EbdTermDeleteRequested(termId: term.id),
+                  );
+              Navigator.pop(ctx);
+            },
+            child: const Text('Excluir'),
+          ),
+        ],
       ),
     );
   }

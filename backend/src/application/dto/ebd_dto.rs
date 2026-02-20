@@ -113,9 +113,200 @@ pub struct AttendanceRecord {
     pub offering_amount: Option<Decimal>,
     pub is_visitor: Option<bool>,
     pub visitor_name: Option<String>,
+    pub notes: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Validate, ToSchema)]
 pub struct CreateEbdAttendanceRequest {
     pub attendances: Vec<AttendanceRecord>,
+}
+
+// ==========================================
+// EBD Lesson Update (F1.2)
+// ==========================================
+
+#[derive(Debug, Deserialize, Validate, ToSchema)]
+pub struct UpdateEbdLessonRequest {
+    pub lesson_date: Option<NaiveDate>,
+    pub lesson_number: Option<i32>,
+    pub title: Option<String>,
+    pub theme: Option<String>,
+    pub bible_text: Option<String>,
+    pub summary: Option<String>,
+    pub teacher_id: Option<Uuid>,
+    pub materials_used: Option<String>,
+}
+
+#[derive(Debug, Deserialize, ToSchema)]
+pub struct DeleteLessonParams {
+    pub force: Option<bool>,
+}
+
+// ==========================================
+// E1: Conteúdo Enriquecido de Lições
+// ==========================================
+
+#[derive(Debug, Deserialize, Validate, ToSchema)]
+pub struct CreateLessonContentRequest {
+    pub content_type: String,
+    #[validate(length(max = 200))]
+    pub title: Option<String>,
+    pub body: Option<String>,
+    #[validate(length(max = 500))]
+    pub image_url: Option<String>,
+    #[validate(length(max = 300))]
+    pub image_caption: Option<String>,
+    pub sort_order: Option<i32>,
+}
+
+#[derive(Debug, Deserialize, Validate, ToSchema)]
+pub struct UpdateLessonContentRequest {
+    pub content_type: Option<String>,
+    #[validate(length(max = 200))]
+    pub title: Option<String>,
+    pub body: Option<String>,
+    #[validate(length(max = 500))]
+    pub image_url: Option<String>,
+    #[validate(length(max = 300))]
+    pub image_caption: Option<String>,
+    pub sort_order: Option<i32>,
+}
+
+#[derive(Debug, Deserialize, Validate, ToSchema)]
+pub struct ReorderContentsRequest {
+    pub content_ids: Vec<Uuid>,
+}
+
+// ==========================================
+// E2: Atividades por Lição
+// ==========================================
+
+#[derive(Debug, Deserialize, Validate, ToSchema)]
+pub struct CreateLessonActivityRequest {
+    pub activity_type: String,
+    #[validate(length(min = 3, max = 300))]
+    pub title: String,
+    pub description: Option<String>,
+    pub options: Option<serde_json::Value>,
+    pub correct_answer: Option<String>,
+    #[validate(length(max = 200))]
+    pub bible_reference: Option<String>,
+    pub is_required: Option<bool>,
+    pub sort_order: Option<i32>,
+}
+
+#[derive(Debug, Deserialize, Validate, ToSchema)]
+pub struct UpdateLessonActivityRequest {
+    pub activity_type: Option<String>,
+    #[validate(length(min = 3, max = 300))]
+    pub title: Option<String>,
+    pub description: Option<String>,
+    pub options: Option<serde_json::Value>,
+    pub correct_answer: Option<String>,
+    #[validate(length(max = 200))]
+    pub bible_reference: Option<String>,
+    pub is_required: Option<bool>,
+    pub sort_order: Option<i32>,
+}
+
+#[derive(Debug, Deserialize, Validate, ToSchema)]
+pub struct ActivityResponseRecord {
+    pub member_id: Uuid,
+    pub response_text: Option<String>,
+    pub is_completed: bool,
+    pub score: Option<i16>,
+    pub teacher_feedback: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Validate, ToSchema)]
+pub struct CreateActivityResponsesRequest {
+    pub responses: Vec<ActivityResponseRecord>,
+}
+
+#[derive(Debug, Deserialize, Validate, ToSchema)]
+pub struct UpdateActivityResponseRequest {
+    pub response_text: Option<String>,
+    pub is_completed: Option<bool>,
+    pub score: Option<i16>,
+    pub teacher_feedback: Option<String>,
+}
+
+// ==========================================
+// E4: Materiais e Recursos da Lição
+// ==========================================
+
+#[derive(Debug, Deserialize, Validate, ToSchema)]
+pub struct CreateLessonMaterialRequest {
+    pub material_type: String,
+    #[validate(length(min = 2, max = 200))]
+    pub title: String,
+    #[validate(length(max = 500))]
+    pub description: Option<String>,
+    #[validate(length(min = 1, max = 500))]
+    pub url: String,
+    pub file_size_bytes: Option<i64>,
+    pub mime_type: Option<String>,
+}
+
+// ==========================================
+// E3: Perfil do Aluno EBD
+// ==========================================
+
+#[derive(Debug, Deserialize)]
+pub struct EbdStudentFilter {
+    pub term_id: Option<Uuid>,
+    pub class_id: Option<Uuid>,
+    pub search: Option<String>,
+    pub min_attendance: Option<Decimal>,
+    pub max_attendance: Option<Decimal>,
+}
+
+// ==========================================
+// E5: Anotações do Professor por Aluno
+// ==========================================
+
+#[derive(Debug, Deserialize, Validate, ToSchema)]
+pub struct CreateStudentNoteRequest {
+    pub term_id: Option<Uuid>,
+    pub note_type: String,
+    #[validate(length(max = 200))]
+    pub title: Option<String>,
+    #[validate(length(min = 1))]
+    pub content: String,
+    pub is_private: Option<bool>,
+}
+
+#[derive(Debug, Deserialize, Validate, ToSchema)]
+pub struct UpdateStudentNoteRequest {
+    pub note_type: Option<String>,
+    #[validate(length(max = 200))]
+    pub title: Option<String>,
+    #[validate(length(min = 1))]
+    pub content: Option<String>,
+    pub is_private: Option<bool>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct StudentNoteFilter {
+    pub term_id: Option<Uuid>,
+    pub note_type: Option<String>,
+}
+
+// ==========================================
+// E7: Clonagem de Turmas
+// ==========================================
+
+#[derive(Debug, Deserialize, Validate, ToSchema)]
+pub struct CloneClassesRequest {
+    pub source_term_id: Uuid,
+    pub include_enrollments: Option<bool>,
+}
+
+// ==========================================
+// E6: Relatórios Avançados
+// ==========================================
+
+#[derive(Debug, Deserialize)]
+pub struct TermComparisonQuery {
+    pub term_ids: String, // comma-separated UUIDs
 }

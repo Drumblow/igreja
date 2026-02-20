@@ -83,11 +83,26 @@ class _LessonListView extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(
                 AppSpacing.lg, AppSpacing.md, AppSpacing.lg, 100,
               ),
-              itemCount: state.lessons.length,
+              itemCount: state.lessons.length + (state.hasMore ? 1 : 0),
               separatorBuilder: (_, __) =>
                   const SizedBox(height: AppSpacing.sm),
-              itemBuilder: (ctx, i) =>
-                  _LessonTile(lesson: state.lessons[i]),
+              itemBuilder: (ctx, i) {
+                if (i == state.lessons.length) {
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(AppSpacing.md),
+                      child: OutlinedButton.icon(
+                        icon: const Icon(Icons.expand_more),
+                        label: const Text('Carregar mais'),
+                        onPressed: () => context.read<EbdBloc>().add(
+                              EbdLessonsLoadRequested(page: state.currentPage + 1),
+                            ),
+                      ),
+                    ),
+                  );
+                }
+                return _LessonTile(lesson: state.lessons[i]);
+              },
             );
           }
           if (state is EbdError) {
@@ -136,7 +151,7 @@ class _LessonListView extends StatelessWidget {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) {
           return FutureBuilder<List<EbdClassSummary>>(
-            future: repo.getClasses(),
+            future: repo.getClasses().then((result) => result.$1),
             builder: (context, snapshot) {
               final classes = snapshot.data ?? [];
               final isLoadingClasses = snapshot.connectionState == ConnectionState.waiting;

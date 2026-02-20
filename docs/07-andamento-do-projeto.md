@@ -1,7 +1,7 @@
 # 📊 Andamento do Projeto — Igreja Manager
 
 > **Última atualização:** 20 de fevereiro de 2026  
-> **Versão do documento:** 1.12  
+> **Versão do documento:** 1.13  
 > **Status geral do projeto:** Em Desenvolvimento Ativo (~99% concluído)
 
 ---
@@ -23,7 +23,7 @@ O **Igreja Manager** é uma plataforma de gestão para igrejas composta por **5 
 | Backend — Membros | ![100%](https://img.shields.io/badge/100%25-brightgreen) | ✅ Famílias + Ministérios + Histórico + Cache + Audit |
 | Backend — Financeiro | ![95%](https://img.shields.io/badge/95%25-green) | 🟢 CRUD completo (5 sub-módulos, 18 endpoints) + Audit Log |
 | Backend — Patrimônio | ![100%](https://img.shields.io/badge/100%25-brightgreen) | ✅ CRUD + Stats + Cache + Audit (5 sub-módulos, 18 endpoints) |
-| Backend — EBD | ![100%](https://img.shields.io/badge/100%25-brightgreen) | ✅ CRUD + Stats + Cache + Audit (4 sub-módulos, 16 endpoints) |
+| Backend — EBD | ![100%](https://img.shields.io/badge/100%25-brightgreen) | ✅ CRUD + Stats + Cache + Audit + Reports (10 sub-módulos, 48+ endpoints) — Evolução E1-E7 + F1 |
 | Backend — Swagger UI | ![100%](https://img.shields.io/badge/100%25-brightgreen) | ✅ Montado em `/swagger-ui/` |
 | Frontend — Design System | ![100%](https://img.shields.io/badge/100%25-brightgreen) | ✅ Concluído |
 | Frontend — Autenticação | ![100%](https://img.shields.io/badge/100%25-brightgreen) | ✅ Login + Forgot Password + Reset Password completos |
@@ -33,7 +33,7 @@ O **Igreja Manager** é uma plataforma de gestão para igrejas composta por **5 
 | Frontend — Ministérios | ![85%](https://img.shields.io/badge/85%25-green) | 🟢 CRUD completo (lista/detalhe/form) |
 | Frontend — Financeiro | ![85%](https://img.shields.io/badge/85%25-green) | 🟢 7 telas + BLoC + Repositório + Fechamento Mensal |
 | Frontend — Patrimônio | ![85%](https://img.shields.io/badge/85%25-green) | 🟢 12 telas + BLoC + Repositório |
-| Frontend — EBD | ![90%](https://img.shields.io/badge/90%25-green) | 🟢 Overview com stats wired via API + 6 telas + BLoC |
+| Frontend — EBD | ![98%](https://img.shields.io/badge/98%25-brightgreen) | ✅ Overview + 10 telas + BLoC + Relatórios + Paginação (E1–E7 + F1) |
 | Frontend — Relatórios | ![95%](https://img.shields.io/badge/95%25-green) | 🟢 Tela central com métricas (4 módulos) + aniversariantes + navegação |
 | Frontend — Configurações | ![100%](https://img.shields.io/badge/100%25-brightgreen) | ✅ NOVO — Igrejas + Usuários/Papéis (3 telas + BLoC + Repositório) |
 
@@ -41,7 +41,7 @@ O **Igreja Manager** é uma plataforma de gestão para igrejas composta por **5 
 
 ## 2. Documentação Técnica — ✅ 100% Concluída
 
-Toda a documentação de especificação foi finalizada, totalizando **~5.052 linhas** distribuídas em 6 documentos:
+Toda a documentação de especificação foi finalizada, totalizando **~6.600 linhas** distribuídas em 9 documentos:
 
 | Documento | Linhas | Conteúdo |
 |-----------|:------:|----------|
@@ -51,6 +51,8 @@ Toda a documentação de especificação foi finalizada, totalizando **~5.052 li
 | `04-api-rest.md` | 1.226 | 60+ endpoints REST com exemplos de request/response |
 | `05-frontend-flutter.md` | 1.107 | Design system, BLoC pattern, go_router, wireframes, responsividade |
 | `06-regras-de-negocio.md` | 399 | 40+ regras de negócio por módulo |
+| `08-inline-create-ux.md` | — | UX patterns para criação inline |
+| `09-ebd-evolucao-modulo.md` | ~1.470 | Evolução do módulo EBD — especificação E1-E7 + F1 + registro de implementação |
 
 **Documento adicional:**
 - `SKILL.md` (`.github/skills/frontend/SKILL.md`) — Guia de estética: "Sacred Geometry meets Modern Editorial" (DM Serif Display + Source Sans 3, paleta navy #0D1B2A + gold #D4A843)
@@ -67,9 +69,9 @@ Toda a documentação de especificação foi finalizada, totalizando **~5.052 li
 | Redis | 7-alpine | ✅ Configurado via `docker-compose.yml` |
 | Extensões | uuid-ossp, pgcrypto, unaccent | ✅ Ativadas no `init.sql` |
 
-### 3.2 Tabelas Criadas (Migration `20250101000000_initial.sql` — 793 linhas)
+### 3.2 Tabelas Criadas (Migrations: `initial.sql` + `password_reset_tokens.sql` + `ebd_evolution.sql`)
 
-**Total: 24 tabelas, 3 views, 20+ triggers, 3 extensões**
+**Total: 29 tabelas, 4 views, 23+ triggers, 3 extensões**
 
 #### Módulo Sistema (5 tabelas)
 
@@ -123,15 +125,20 @@ Toda a documentação de especificação foi finalizada, totalizando **~5.052 li
 | `inventory_items` | 7 | ✅ Auto-populado + atualização | ✅ (via inventário) |
 | `asset_loans` | 8 | ✅ CRUD (list/create/return) | ✅ Lista + registro + devolução |
 
-#### Módulo EBD (5 tabelas)
+#### Módulo EBD (10 tabelas + 1 view) — ✅ Evolução E1-E7 implementada
 
 | Tabela | Campos | Backend | Frontend |
 |--------|:------:|:-------:|:--------:|
 | `ebd_terms` | 7 | ✅ CRUD (list/get/create/update) | ✅ Lista + criação |
-| `ebd_classes` | 8 | ✅ CRUD (list/get/create/update) | ✅ Lista + Detalhe + matrículas |
+| `ebd_classes` | 8 | ✅ CRUD (list/get/create/update) + clone | ✅ Lista + Detalhe + matrículas |
 | `ebd_enrollments` | 5 | ✅ List/Create/Remove | ✅ Matricular/Remover na UI |
-| `ebd_lessons` | 10 | ✅ CRUD (list/get/create) | ✅ Lista + criação |
-| `ebd_attendances` | 7 | ✅ Record batch/get by lesson/report | ✅ Tela de frequência (P/A/J) |
+| `ebd_lessons` | 10 | ✅ CRUD completo (list/get/create/update/delete) | ✅ Lista + criação |
+| `ebd_attendances` | 7 | ✅ Record batch (com notes)/get by lesson/report | ✅ Tela de frequência (P/A/J) |
+| `ebd_lesson_contents` | 10 | ✅ CRUD + reorder (5 endpoints) — **NOVO E1** | ✅ Aba "Conteúdo" no detalhe da lição |
+| `ebd_lesson_activities` | 10 | ✅ CRUD (4 endpoints) — **NOVO E2** | ✅ Aba "Atividades" + Respostas |
+| `ebd_activity_responses` | 7 | ✅ List/Record/Update (3 endpoints) — **NOVO E2** | ✅ Tela de respostas |
+| `ebd_lesson_materials` | 8 | ✅ List/Create/Delete (3 endpoints) — **NOVO E4** | ✅ Aba "Materiais" |
+| `ebd_student_notes` | 8 | ✅ CRUD (4 endpoints) — **NOVO E5** | ✅ Seção no perfil + edição |
 
 #### Views e Triggers
 
@@ -140,6 +147,7 @@ Toda a documentação de especificação foi finalizada, totalizando **~5.052 li
 | `vw_member_stats` | Estatísticas de membros por status/gênero por igreja |
 | `vw_account_balances` | Saldos correntes de contas bancárias |
 | `vw_ebd_class_attendance` | Frequência de alunos por turma/aula |
+| `vw_ebd_student_profile` | Perfil unificado do aluno EBD (histórico + frequência acumulada) — **NOVO E3** |
 
 - **18 triggers** `update_updated_at` em tabelas com coluna `updated_at`
 - **1 trigger** `update_campaign_balance` para atualizar saldo de campanhas
@@ -157,7 +165,7 @@ Toda a documentação de especificação foi finalizada, totalizando **~5.052 li
 | Rust Version | 1.85+ |
 | Framework | Actix-Web 4.13 |
 | ORM | SQLx 0.8 (runtime queries) |
-| Build Status | ✅ **Compila com sucesso** (apenas warnings) |
+| Build Status | ✅ **Compila com sucesso** (0 errors, 0 warnings) |
 
 #### Dependências Principais (`Cargo.toml`)
 
@@ -190,25 +198,34 @@ backend/src/
 │   └── handlers/
 │       ├── health_handler.rs
 │       ├── auth_handler.rs
+│       ├── church_handler.rs     ← CRUD igrejas (5 endpoints)
+│       ├── user_handler.rs       ← CRUD usuários + roles (5 endpoints)
 │       ├── member_handler.rs
 │       ├── family_handler.rs
 │       ├── ministry_handler.rs
 │       ├── member_history_handler.rs
 │       ├── financial_handler.rs
 │       ├── asset_handler.rs
-│       └── ebd_handler.rs
+│       └── ebd_handler.rs       ← 48+ endpoints (Evolução E1-E7 + F1 + Reports)
 ├── application/
 │   ├── dto/
 │   │   ├── auth_dto.rs      ← LoginRequest, Claims, etc.
+│   │   ├── church_dto.rs    ← CreateChurchRequest, UpdateChurchRequest
+│   │   ├── user_dto.rs      ← CreateUserRequest, UpdateUserRequest
 │   │   ├── member_dto.rs    ← CreateMemberRequest, MemberFilter, etc.
+│   │   ├── member_history_dto.rs ← CreateMemberHistoryRequest
 │   │   ├── family_dto.rs    ← CreateFamilyRequest, AddFamilyMemberRequest
 │   │   ├── ministry_dto.rs  ← CreateMinistryRequest, AddMinistryMemberRequest
 │   │   ├── financial_dto.rs ← CreateFinancialEntryRequest, etc.
 │   │   ├── asset_dto.rs     ← CreateAssetRequest, AssetFilter, etc.
-│   │   └── ebd_dto.rs       ← CreateEbdTermRequest, CreateEbdAttendanceRequest, etc.
+│   │   └── ebd_dto.rs       ← 30+ DTOs: Terms, Classes, Lessons, Contents, Activities, Responses, Materials, Students, Notes, Clone, Reports
 │   └── services/
 │       ├── auth_service.rs   ← Hashing, JWT, login flow
+│       ├── audit_service.rs  ← AuditService::log() integrado em 6 módulos (Members, Assets, Financial, Churches, Users, EBD)
+│       ├── church_service.rs ← CRUD igrejas
+│       ├── user_service.rs   ← CRUD usuários + roles
 │       ├── member_service.rs ← CRUD completo + stats + histórico
+│       ├── member_history_service.rs ← Histórico de eventos do membro
 │       ├── family_service.rs ← CRUD famílias + membros
 │       ├── ministry_service.rs ← CRUD ministérios + membros
 │       ├── account_plan_service.rs ← CRUD plano de contas
@@ -221,13 +238,20 @@ backend/src/
 │       ├── maintenance_service.rs ← Manutenções
 │       ├── inventory_service.rs ← Inventários
 │       ├── ebd_term_service.rs ← CRUD períodos EBD
-│       ├── ebd_class_service.rs ← CRUD turmas + matrículas
-│       ├── ebd_lesson_service.rs ← CRUD aulas
-│       └── ebd_attendance_service.rs ← Frequência + relatórios
+│       ├── ebd_class_service.rs ← CRUD turmas + matrículas + clone (E7)
+│       ├── ebd_lesson_service.rs ← CRUD aulas (com update/delete — F1.2)
+│       ├── ebd_attendance_service.rs ← Frequência + relatórios (com notes — F1.5)
+│       ├── ebd_lesson_content_service.rs ← Conteúdo enriquecido de lições (E1)
+│       ├── ebd_lesson_activity_service.rs ← Atividades + respostas (E2)
+│       ├── ebd_lesson_material_service.rs ← Materiais e recursos (E4)
+│       ├── ebd_student_note_service.rs ← Anotações do professor (E5)
+│       ├── ebd_student_service.rs ← Perfil unificado do aluno (E3)
+│       └── ebd_report_service.rs ← Relatórios avançados (E6)
 ├── domain/entities/
 │   ├── church.rs
 │   ├── user.rs              ← User, Role, RefreshToken
 │   ├── member.rs            ← Member (62 campos), MemberSummary
+│   ├── member_history.rs    ← MemberHistory
 │   ├── family.rs            ← Family, FamilyDetail, FamilyMemberInfo
 │   ├── ministry.rs          ← Ministry, MinistrySummary, MinistryMemberInfo
 │   ├── account_plan.rs      ← AccountPlan, AccountPlanSummary
@@ -244,9 +268,16 @@ backend/src/
 │   ├── ebd_class.rs          ← EbdClass, EbdClassSummary
 │   ├── ebd_enrollment.rs     ← EbdEnrollment, EbdEnrollmentDetail
 │   ├── ebd_lesson.rs         ← EbdLesson, EbdLessonSummary
-│   └── ebd_attendance.rs     ← EbdAttendance, EbdAttendanceDetail
+│   ├── ebd_attendance.rs     ← EbdAttendance, EbdAttendanceDetail (com notes)
+│   ├── ebd_lesson_content.rs ← EbdLessonContent (E1)
+│   ├── ebd_lesson_activity.rs ← EbdLessonActivity (E2)
+│   ├── ebd_activity_response.rs ← EbdActivityResponse (E2)
+│   ├── ebd_lesson_material.rs ← EbdLessonMaterial (E4)
+│   ├── ebd_student_note.rs   ← EbdStudentNote (E5)
+│   └── ebd_student_profile.rs ← EbdStudentProfile (E3 — view)
 └── infrastructure/
-    └── database.rs          ← Pool de conexões PG
+    ├── database.rs          ← Pool de conexões PG
+    └── cache.rs             ← CacheService (get/set/del/del_pattern)
 ```
 
 ### 4.3 Endpoints Implementados
@@ -384,7 +415,9 @@ backend/src/
 | `PUT` | `/api/v1/assets/loans/{id}/return` | ✅ `assets:write` | Devolver bem emprestado | ✅ Completo |
 | `GET` | `/api/v1/assets/stats` | ✅ `assets:read` | Estatísticas de patrimônio (dashboard) | ✅ Completo |
 
-#### EBD — Escola Bíblica Dominical (16 endpoints) — ✅ NOVO
+#### EBD — Escola Bíblica Dominical (44 endpoints) — ✅ Evolução E1-E7 + F1
+
+##### Períodos (4 endpoints)
 
 | Método | Rota | Auth | Descrição | Status |
 |--------|------|------|-----------|--------|
@@ -392,20 +425,117 @@ backend/src/
 | `GET` | `/api/v1/ebd/terms/{id}` | ✅ `ebd:read` | Detalhes do período | ✅ Completo |
 | `POST` | `/api/v1/ebd/terms` | ✅ `ebd:write` | Criar período (desativa anteriores — RN-EBD-001) | ✅ Completo |
 | `PUT` | `/api/v1/ebd/terms/{id}` | ✅ `ebd:write` | Atualizar período | ✅ Completo |
+
+##### Turmas (4 endpoints)
+
+| Método | Rota | Auth | Descrição | Status |
+|--------|------|------|-----------|--------|
 | `GET` | `/api/v1/ebd/classes` | ✅ `ebd:read` | Listar turmas (filtros: term, teacher, status) | ✅ Completo |
 | `GET` | `/api/v1/ebd/classes/{id}` | ✅ `ebd:read` | Detalhes da turma | ✅ Completo |
 | `POST` | `/api/v1/ebd/classes` | ✅ `ebd:write` | Criar turma | ✅ Completo |
 | `PUT` | `/api/v1/ebd/classes/{id}` | ✅ `ebd:write` | Atualizar turma | ✅ Completo |
+
+##### Matrículas (3 endpoints)
+
+| Método | Rota | Auth | Descrição | Status |
+|--------|------|------|-----------|--------|
 | `GET` | `/api/v1/ebd/classes/{id}/enrollments` | ✅ `ebd:read` | Listar matrículas da turma | ✅ Completo |
 | `POST` | `/api/v1/ebd/classes/{id}/enrollments` | ✅ `ebd:write` | Matricular membro (RN-EBD-003: 1 por turma/período) | ✅ Completo |
 | `DELETE` | `/api/v1/ebd/classes/{id}/enrollments/{eid}` | ✅ `ebd:write` | Remover matrícula | ✅ Completo |
+
+##### Aulas (5 endpoints) — F1.2: update/delete adicionados
+
+| Método | Rota | Auth | Descrição | Status |
+|--------|------|------|-----------|--------|
 | `GET` | `/api/v1/ebd/lessons` | ✅ `ebd:read` | Listar aulas (filtros: class, date range) | ✅ Completo |
 | `GET` | `/api/v1/ebd/lessons/{id}` | ✅ `ebd:read` | Detalhes da aula | ✅ Completo |
 | `POST` | `/api/v1/ebd/lessons` | ✅ `ebd:write` | Criar aula | ✅ Completo |
-| `POST` | `/api/v1/ebd/lessons/{id}/attendance` | ✅ `ebd:write` | Registrar frequência em lote (RN-EBD-004: 7 dias) | ✅ Completo |
+| `PUT` | `/api/v1/ebd/lessons/{id}` | ✅ `ebd:write` | Atualizar aula — **NOVO F1.2** | ✅ Completo |
+| `DELETE` | `/api/v1/ebd/lessons/{id}` | ✅ `ebd:write` | Excluir aula — **NOVO F1.2** | ✅ Completo |
+
+##### Frequência + Relatório + Stats (4 endpoints) — F1.5: notes em attendance
+
+| Método | Rota | Auth | Descrição | Status |
+|--------|------|------|-----------|--------|
+| `POST` | `/api/v1/ebd/lessons/{id}/attendance` | ✅ `ebd:write` | Registrar frequência em lote (RN-EBD-004: 7 dias) + campo notes | ✅ Completo |
 | `GET` | `/api/v1/ebd/lessons/{id}/attendance` | ✅ `ebd:read` | Listar frequência da aula | ✅ Completo |
 | `GET` | `/api/v1/ebd/classes/{id}/report` | ✅ `ebd:read` | Relatório de frequência da turma | ✅ Completo |
-| `GET` | `/api/v1/ebd/stats` | ✅ `ebd:read` | Estatísticas da EBD (dashboard) | ✅ Completo |
+| `GET` | `/api/v1/ebd/stats` | ✅ `ebd:read` | Estatísticas da EBD (dashboard, cached) | ✅ Completo |
+
+##### Conteúdo Enriquecido de Lições (5 endpoints) — NOVO E1
+
+| Método | Rota | Auth | Descrição | Status |
+|--------|------|------|-----------|--------|
+| `GET` | `/api/v1/ebd/lessons/{id}/contents` | ✅ `ebd:read` | Listar blocos de conteúdo (ordenados) | ✅ Completo |
+| `POST` | `/api/v1/ebd/lessons/{id}/contents` | ✅ `ebd:write` | Criar bloco de conteúdo (text/image/bible_ref/note) | ✅ Completo |
+| `PUT` | `/api/v1/ebd/lessons/{lid}/contents/{cid}` | ✅ `ebd:write` | Atualizar bloco de conteúdo | ✅ Completo |
+| `DELETE` | `/api/v1/ebd/lessons/{lid}/contents/{cid}` | ✅ `ebd:write` | Remover bloco de conteúdo | ✅ Completo |
+| `PUT` | `/api/v1/ebd/lessons/{id}/contents/reorder` | ✅ `ebd:write` | Reordenar blocos | ✅ Completo |
+
+##### Atividades por Lição (4 endpoints) — NOVO E2
+
+| Método | Rota | Auth | Descrição | Status |
+|--------|------|------|-----------|--------|
+| `GET` | `/api/v1/ebd/lessons/{id}/activities` | ✅ `ebd:read` | Listar atividades da lição | ✅ Completo |
+| `POST` | `/api/v1/ebd/lessons/{id}/activities` | ✅ `ebd:write` | Criar atividade (question/multiple_choice/homework/etc.) | ✅ Completo |
+| `PUT` | `/api/v1/ebd/lessons/{lid}/activities/{aid}` | ✅ `ebd:write` | Atualizar atividade | ✅ Completo |
+| `DELETE` | `/api/v1/ebd/lessons/{lid}/activities/{aid}` | ✅ `ebd:write` | Remover atividade | ✅ Completo |
+
+##### Respostas de Atividades (3 endpoints) — NOVO E2
+
+| Método | Rota | Auth | Descrição | Status |
+|--------|------|------|-----------|--------|
+| `GET` | `/api/v1/ebd/activities/{aid}/responses` | ✅ `ebd:read` | Listar respostas de uma atividade | ✅ Completo |
+| `POST` | `/api/v1/ebd/activities/{aid}/responses` | ✅ `ebd:write` | Registrar respostas em lote | ✅ Completo |
+| `PUT` | `/api/v1/ebd/activities/{aid}/responses/{rid}` | ✅ `ebd:write` | Atualizar resposta individual | ✅ Completo |
+
+##### Materiais e Recursos (3 endpoints) — NOVO E4
+
+| Método | Rota | Auth | Descrição | Status |
+|--------|------|------|-----------|--------|
+| `GET` | `/api/v1/ebd/lessons/{id}/materials` | ✅ `ebd:read` | Listar materiais da lição | ✅ Completo |
+| `POST` | `/api/v1/ebd/lessons/{id}/materials` | ✅ `ebd:write` | Adicionar material (link/document/video/image/audio/other) | ✅ Completo |
+| `DELETE` | `/api/v1/ebd/lessons/{lid}/materials/{mid}` | ✅ `ebd:write` | Remover material | ✅ Completo |
+
+##### Perfil Unificado do Aluno EBD (4 endpoints) — NOVO E3
+
+| Método | Rota | Auth | Descrição | Status |
+|--------|------|------|-----------|--------|
+| `GET` | `/api/v1/ebd/students` | ✅ `ebd:read` | Listar alunos EBD (com filtros: class, term, search) | ✅ Completo |
+| `GET` | `/api/v1/ebd/students/{mid}/profile` | ✅ `ebd:read` | Perfil unificado do aluno (frequência acumulada, turmas, etc.) | ✅ Completo |
+| `GET` | `/api/v1/ebd/students/{mid}/history` | ✅ `ebd:read` | Histórico de turmas do aluno | ✅ Completo |
+| `GET` | `/api/v1/ebd/students/{mid}/activities` | ✅ `ebd:read` | Atividades e respostas do aluno | ✅ Completo |
+
+##### Anotações do Professor por Aluno (4 endpoints) — NOVO E5
+
+| Método | Rota | Auth | Descrição | Status |
+|--------|------|------|-----------|--------|
+| `GET` | `/api/v1/ebd/students/{mid}/notes` | ✅ `ebd:read` | Listar anotações do professor sobre o aluno | ✅ Completo |
+| `POST` | `/api/v1/ebd/students/{mid}/notes` | ✅ `ebd:write` | Criar anotação (observation/concern/praise/follow_up/other) | ✅ Completo |
+| `PUT` | `/api/v1/ebd/students/{mid}/notes/{nid}` | ✅ `ebd:write` | Atualizar anotação | ✅ Completo |
+| `DELETE` | `/api/v1/ebd/students/{mid}/notes/{nid}` | ✅ `ebd:write` | Remover anotação | ✅ Completo |
+
+##### Clonagem de Turmas (1 endpoint) — NOVO E7
+
+| Método | Rota | Auth | Descrição | Status |
+|--------|------|------|-----------|--------|
+| `POST` | `/api/v1/ebd/terms/{id}/clone-classes` | ✅ `ebd:write` | Clonar turmas de outro período (com matrículas opcionais) | ✅ Completo |
+
+##### Relatórios Avançados (4 endpoints) — NOVO E6
+
+| Método | Rota | Auth | Descrição | Status |
+|--------|------|------|-----------|--------|
+| `GET` | `/api/v1/ebd/reports/term/{id}` | ✅ `ebd:read` | Relatório resumo do trimestre (total aulas, frequência média, etc.) | ✅ Completo |
+| `GET` | `/api/v1/ebd/reports/term/{id}/ranking` | ✅ `ebd:read` | Ranking de alunos por frequência no trimestre | ✅ Completo |
+| `GET` | `/api/v1/ebd/reports/comparison` | ✅ `ebd:read` | Comparativo de frequência entre trimestres | ✅ Completo |
+| `GET` | `/api/v1/ebd/reports/absent-students` | ✅ `ebd:read` | Alunos com maior número de faltas consecutivas | ✅ Completo |
+
+##### Exclusão de Termos e Turmas (2 endpoints) — NOVO F1.10
+
+| Método | Rota | Auth | Descrição | Status |
+|--------|------|------|-----------|--------|
+| `DELETE` | `/api/v1/ebd/terms/{id}` | ✅ `ebd:write` | Excluir trimestre (transacional: aulas → turmas → notas → período) | ✅ Completo |
+| `DELETE` | `/api/v1/ebd/classes/{id}` | ✅ `ebd:write` | Excluir turma (transacional: aulas → turma) | ✅ Completo |
 
 ### 4.4 O que Falta no Backend
 
@@ -425,10 +555,10 @@ backend/src/
 | Item | Descrição | Complexidade |
 |------|-----------|:------------:|
 | Módulo Financeiro completo | ~~5 tabelas prontas, 11 endpoints documentados~~ ✅ **Backend completo (18 endpoints)** | ~~Alta~~ ✅ |
-| Módulo EBD completo | ~~5 tabelas prontas, 7 endpoints documentados~~ ✅ **Backend completo (16 endpoints com stats)** | ~~Alta~~ ✅ |
+| Módulo EBD completo | ~~5 tabelas prontas, 7 endpoints documentados~~ ✅ **Backend completo (48+ endpoints com stats + reports) — Evolução E1-E7 + F1** | ~~Alta~~ ✅ |
 | Módulo Patrimônio completo | ~~7 tabelas prontas, 7 endpoints documentados~~ ✅ **Backend completo (18 endpoints com stats)** | ~~Alta~~ ✅ |
 | Famílias e Ministérios | ~~Tabelas prontas, endpoints documentados~~ ✅ **Backend + Frontend completos** | ~~Média~~ ✅ |
-| Audit Log (escrita) | ~~Tabela existe, falta interceptar ações~~ ✅ **Concluído** — `AuditService::log()` + `log_action()`, integrado em Members, Assets, Financial, Churches e Users | ~~Média~~ ✅ |
+| Audit Log (escrita) | ~~Tabela existe, falta interceptar ações~~ ✅ **Concluído** — `AuditService::log()` + `log_action()`, integrado em Members, Assets, Financial, Churches, Users e **EBD** (13 handlers) | ~~Média~~ ✅ |
 | Cache Redis | ~~Crate importado, não configurado~~ ✅ **Concluído** — `CacheService` (get/set/del/del_pattern), integrado em stats endpoints (Members, Assets, EBD) + cache invalidation em write handlers | ~~Média~~ ✅ |
 
 #### Prioridade Baixa
@@ -436,6 +566,7 @@ backend/src/
 | Item | Descrição |
 |------|-----------|
 | Upload de arquivos (fotos) | `actix-multipart` importado, não utilizado |
+| Upload de imagens em Lesson Contents (E1) | Endpoint de upload multipart pendente — blocos de conteúdo suportam `image_url` |
 | Repository traits (Clean Arch.) | Documentado mas usando queries diretas nos services |
 | Domain enums tipados | Usando strings raw em vez de enums Rust |
 | Exportação PDF/Excel | Não iniciado |
@@ -744,7 +875,8 @@ frontend/lib/
 | 23 | Reports screen incompleta (só Membros + Financeiro) | Adicionadas seções de Patrimônio (5 métricas) e EBD (4 métricas) via API |
 | 24 | Sem frontend para gestão de Igrejas e Usuários (APIs existiam sem UI) | Criado módulo `settings/` completo: 3 telas + BLoC + Repositório + Models |
 | 25 | Redis cache conectado mas nunca utilizado (`#[allow(dead_code)]`) | Integrado em `member_stats`, `ebd_stats`, `asset_stats` + cache invalidation em write handlers |
-| 26 | Audit logging apenas no módulo de Membros | Expandido para Financial (entries), Assets (CRUD), Churches (create/update), Users (create/update) |
+| 26 | Audit logging apenas no módulo de Membros | Expandido para Financial (entries), Assets (CRUD), Churches (create/update), Users (create/update), **EBD** (13 write handlers) |
+| 27 | EBD: sem update/delete de aulas, notas em attendance não salvas, módulo limitado a fluxo básico | Implementada **Evolução EBD** (doc 09): migration `20250219100000_ebd_evolution.sql` (5 tabelas + 1 view), 6 entities, 6 services, 16 DTOs, 28 novos endpoints (E1-E7 + F1.2 + F1.5 + F1.10 + E6) — total EBD: 48+ endpoints. Frontend: 10 telas, paginação, relatórios, audit logging |
 
 ---
 
@@ -805,7 +937,24 @@ Crates/packages importados mas ainda sem uso no código — preparados para fase
 | 4.3 | Matrículas | ✅ **Frontend: matricular/remover alunos na tela de detalhe** |
 | 4.4 | Aulas | ✅ **Frontend: lista + criação de aulas** |
 | 4.5 | Chamada | ✅ **Frontend: tela de frequência com P/A/J + Bíblia/Revista** |
-| 4.6 | Relatórios EBD | 🟡 BLoC event/state prontos, tela de relatório pendente |
+| 4.6 | Relatórios EBD | ✅ **Frontend: tela de relatórios com 3 abas (Resumo/Ranking/Ausentes) + 4 endpoints backend** |
+
+### Fase 4.1 — Evolução EBD (doc 09-ebd-evolucao-modulo.md)
+
+| # | Tarefa | Backend | Frontend | Descrição |
+|---|--------|:-------:|:--------:|:-----------:|
+| 4.1.1 | [F1.2] Update/Delete de Aulas | ✅ | ✅ Completo | PUT/DELETE em `/ebd/lessons/{id}` |
+| 4.1.2 | [F1.5] Notes em Attendance | ✅ | ✅ Completo | Campo `notes` agora exposto e salvo |
+| 4.1.3 | [E1] Conteúdo Enriquecido de Lições | ✅ 5 endpoints | ✅ Aba no detalhe | Blocos de conteúdo ordenáveis (text/image/bible_ref/note) |
+| 4.1.4 | [E2] Atividades por Lição | ✅ 7 endpoints | ✅ Aba + Respostas | Atividades + respostas dos alunos |
+| 4.1.5 | [E3] Perfil Unificado do Aluno EBD | ✅ 4 endpoints | ✅ Lista + Perfil | View + historico + atividades do aluno |
+| 4.1.6 | [E4] Materiais e Recursos | ✅ 3 endpoints | ✅ Aba no detalhe | Links/documentos/vídeos por lição |
+| 4.1.7 | [E5] Anotações do Professor | ✅ 4 endpoints | ✅ Seção + edição | Notas por aluno (observation/concern/praise/follow_up) |
+| 4.1.8 | [E6] Relatórios Avançados | ✅ 4 endpoints | ✅ 3 abas | Frequência por período, comparativos, progresso individual |
+| 4.1.9 | [E7] Clonagem de Turmas | ✅ 1 endpoint | ✅ Botão + dialog | Clonar turmas entre trimestres (com matrículas opcionais) |
+| 4.1.10 | [F1.7] Audit Logging EBD | ✅ 13 handlers | — | AuditService integrado em todos os write handlers |
+| 4.1.11 | [F1.8] Paginação | — | ✅ Load more | Botão "Carregar mais" em turmas, aulas, alunos |
+| 4.1.12 | [F1.10] Delete Termos/Turmas | ✅ 2 endpoints | ✅ Botões + dialogs | DELETE transacional + confirmação na UI |
 
 ### Fase 5 — Módulo Patrimônio (Prioridade: 🟡 Média)
 
@@ -826,7 +975,7 @@ Crates/packages importados mas ainda sem uso no código — preparados para fase
 | 6.3 | CI/CD Pipeline | GitHub Actions: build, test, deploy |
 | 6.4 | Swagger UI funcional | ~~Montar `/swagger-ui`~~ ✅ **Concluído** |
 | 6.5 | Cache Redis | ~~Implementar caching de consultas frequentes~~ ✅ **Concluído** — `CacheService` (get/set/del/del_pattern), integrado em member_stats, ebd_stats, asset_stats + invalidation em write handlers |
-| 6.6 | Audit Log funcional | ~~Interceptar e registrar ações~~ ✅ **Concluído** — `AuditService` integrado em Members, Assets, Financial, Churches, Users (create/update/delete) |
+| 6.6 | Audit Log funcional | ~~Interceptar e registrar ações~~ ✅ **Concluído** — `AuditService` integrado em Members, Assets, Financial, Churches, Users e EBD (create/update/delete) |
 | 6.7 | Upload de arquivos | Fotos de membros e bens |
 | 6.8 | Envio de emails | ~~Recuperação de senha, notificações~~ ✅ **Concluído** — lettre SMTP + forgot/reset password |
 
@@ -838,19 +987,19 @@ Crates/packages importados mas ainda sem uso no código — preparados para fase
 
 | Componente | Arquivos | Linhas Estimadas |
 |------------|:--------:|:----------------:|
-| Documentação (docs/) | 7 | ~5.900 |
-| Backend (Rust) | 28 .rs | ~5.900 |
-| Migrations (SQL) | 2 | ~810 |
-| Frontend (Dart) | 73 .dart | ~20.500 |
+| Documentação (docs/) | 9 | ~6.600 |
+| Backend (Rust) | 90 .rs | ~14.500 |
+| Migrations (SQL) | 3 | ~875 |
+| Frontend (Dart) | 84 .dart | ~24.000 |
 | Configuração | 5 | ~200 |
-| **Total** | **115** | **~33.300** |
+| **Total** | **187** | **~43.500** |
 
 ### Status de Compilação
 
 | Componente | Comando | Resultado |
 |------------|---------|-----------|
-| Backend Rust | `SQLX_OFFLINE=true cargo check` | ✅ Compila (apenas warnings) |
-| Frontend Flutter | `flutter analyze` | ✅ 20 info issues (zero errors) |
+| Backend Rust | `SQLX_OFFLINE=true cargo check` | ✅ Compila (0 errors, 0 warnings) |
+| Frontend Flutter | `flutter analyze` | ✅ 44 info issues (zero errors, zero warnings) |
 
 ---
 

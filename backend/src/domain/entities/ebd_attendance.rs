@@ -33,4 +33,5 @@ pub struct EbdAttendanceDetail {
     pub offering_amount: Option<Decimal>,
     pub is_visitor: bool,
     pub visitor_name: Option<String>,
+    pub notes: Option<String>,
 }

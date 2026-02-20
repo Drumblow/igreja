@@ -201,4 +201,52 @@ impl EbdTermService {
 
         Ok(term)
     }
+
+    /// Delete an EBD term and all related data (classes, lessons, etc.)
+    pub async fn delete(
+        pool: &PgPool,
+        church_id: Uuid,
+        term_id: Uuid,
+    ) -> Result<(), AppError> {
+        // Verify term exists
+        Self::get_by_id(pool, church_id, term_id).await?;
+
+        let mut tx = pool.begin().await?;
+
+        // 1. Delete lessons that belong to classes in this term
+        //    (cascades: attendances, contents, activities, responses, materials)
+        sqlx::query(
+            r#"DELETE FROM ebd_lessons WHERE class_id IN (
+                SELECT id FROM ebd_classes WHERE term_id = $1 AND church_id = $2
+            )"#,
+        )
+        .bind(term_id)
+        .bind(church_id)
+        .execute(&mut *tx)
+        .await?;
+
+        // 2. Delete classes (cascades: enrollments)
+        sqlx::query("DELETE FROM ebd_classes WHERE term_id = $1 AND church_id = $2")
+            .bind(term_id)
+            .bind(church_id)
+            .execute(&mut *tx)
+            .await?;
+
+        // 3. Nullify student notes referencing this term
+        sqlx::query("UPDATE ebd_student_notes SET term_id = NULL WHERE term_id = $1 AND church_id = $2")
+            .bind(term_id)
+            .bind(church_id)
+            .execute(&mut *tx)
+            .await?;
+
+        // 4. Delete the term
+        sqlx::query("DELETE FROM ebd_terms WHERE id = $1 AND church_id = $2")
+            .bind(term_id)
+            .bind(church_id)
+            .execute(&mut *tx)
+            .await?;
+
+        tx.commit().await?;
+        Ok(())
+    }
 }

@@ -55,8 +55,8 @@ impl EbdAttendanceService {
 
             let attendance = sqlx::query_as::<_, EbdAttendance>(
                 r#"
-                INSERT INTO ebd_attendances (lesson_id, member_id, status, brought_bible, brought_magazine, offering_amount, is_visitor, visitor_name, registered_by)
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+                INSERT INTO ebd_attendances (lesson_id, member_id, status, brought_bible, brought_magazine, offering_amount, is_visitor, visitor_name, registered_by, notes)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
                 ON CONFLICT (lesson_id, member_id) DO UPDATE SET
                     status = EXCLUDED.status,
                     brought_bible = EXCLUDED.brought_bible,
@@ -64,7 +64,8 @@ impl EbdAttendanceService {
                     offering_amount = EXCLUDED.offering_amount,
                     is_visitor = EXCLUDED.is_visitor,
                     visitor_name = EXCLUDED.visitor_name,
-                    registered_by = EXCLUDED.registered_by
+                    registered_by = EXCLUDED.registered_by,
+                    notes = EXCLUDED.notes
                 RETURNING *
                 "#,
             )
@@ -77,6 +78,7 @@ impl EbdAttendanceService {
             .bind(record.is_visitor.unwrap_or(false))
             .bind(&record.visitor_name)
             .bind(user_id)
+            .bind(&record.notes)
             .fetch_one(pool)
             .await?;
 
@@ -96,7 +98,7 @@ impl EbdAttendanceService {
             SELECT a.id, a.lesson_id, a.member_id,
                    CASE WHEN a.is_visitor THEN a.visitor_name ELSE m.full_name END AS member_name,
                    a.status, a.brought_bible, a.brought_magazine,
-                   a.offering_amount, a.is_visitor, a.visitor_name
+                   a.offering_amount, a.is_visitor, a.visitor_name, a.notes
             FROM ebd_attendances a
             LEFT JOIN members m ON m.id = a.member_id
             WHERE a.lesson_id = $1

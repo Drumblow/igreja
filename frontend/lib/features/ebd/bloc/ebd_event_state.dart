@@ -37,9 +37,10 @@ class EbdTermUpdateRequested extends EbdEvent {
 class EbdClassesLoadRequested extends EbdEvent {
   final String? termId;
   final bool? isActive;
-  const EbdClassesLoadRequested({this.termId, this.isActive});
+  final int page;
+  const EbdClassesLoadRequested({this.termId, this.isActive, this.page = 1});
   @override
-  List<Object?> get props => [termId, isActive];
+  List<Object?> get props => [termId, isActive, page];
 }
 
 class EbdClassDetailLoadRequested extends EbdEvent {
@@ -95,9 +96,10 @@ class EbdLessonsLoadRequested extends EbdEvent {
   final String? classId;
   final String? dateFrom;
   final String? dateTo;
-  const EbdLessonsLoadRequested({this.classId, this.dateFrom, this.dateTo});
+  final int page;
+  const EbdLessonsLoadRequested({this.classId, this.dateFrom, this.dateTo, this.page = 1});
   @override
-  List<Object?> get props => [classId, dateFrom, dateTo];
+  List<Object?> get props => [classId, dateFrom, dateTo, page];
 }
 
 class EbdLessonDetailLoadRequested extends EbdEvent {
@@ -189,15 +191,42 @@ class EbdLessonActivityDeleteRequested extends EbdEvent {
   List<Object?> get props => [lessonId, activityId];
 }
 
+class EbdLessonActivityUpdateRequested extends EbdEvent {
+  final String lessonId;
+  final String activityId;
+  final Map<String, dynamic> data;
+  const EbdLessonActivityUpdateRequested({required this.lessonId, required this.activityId, required this.data});
+  @override
+  List<Object?> get props => [lessonId, activityId, data];
+}
+
+// ---- Activity Responses (E2) ----
+
+class EbdActivityResponsesLoadRequested extends EbdEvent {
+  final String activityId;
+  const EbdActivityResponsesLoadRequested({required this.activityId});
+  @override
+  List<Object?> get props => [activityId];
+}
+
+class EbdActivityResponsesRecordRequested extends EbdEvent {
+  final String activityId;
+  final List<Map<String, dynamic>> responses;
+  const EbdActivityResponsesRecordRequested({required this.activityId, required this.responses});
+  @override
+  List<Object?> get props => [activityId, responses];
+}
+
 // ---- Students (E3) ----
 
 class EbdStudentsLoadRequested extends EbdEvent {
   final String? termId;
   final String? classId;
   final String? search;
-  const EbdStudentsLoadRequested({this.termId, this.classId, this.search});
+  final int page;
+  const EbdStudentsLoadRequested({this.termId, this.classId, this.search, this.page = 1});
   @override
-  List<Object?> get props => [termId, classId, search];
+  List<Object?> get props => [termId, classId, search, page];
 }
 
 class EbdStudentProfileLoadRequested extends EbdEvent {
@@ -223,6 +252,62 @@ class EbdStudentNoteDeleteRequested extends EbdEvent {
   const EbdStudentNoteDeleteRequested({required this.memberId, required this.noteId});
   @override
   List<Object?> get props => [memberId, noteId];
+}
+
+class EbdStudentNoteUpdateRequested extends EbdEvent {
+  final String memberId;
+  final String noteId;
+  final Map<String, dynamic> data;
+  const EbdStudentNoteUpdateRequested({required this.memberId, required this.noteId, required this.data});
+  @override
+  List<Object?> get props => [memberId, noteId, data];
+}
+
+// ---- Clone Classes (E7) ----
+
+class EbdCloneClassesRequested extends EbdEvent {
+  final String termId;
+  final String sourceTermId;
+  final bool includeEnrollments;
+  const EbdCloneClassesRequested({required this.termId, required this.sourceTermId, this.includeEnrollments = false});
+  @override
+  List<Object?> get props => [termId, sourceTermId, includeEnrollments];
+}
+
+// ---- Delete Terms/Classes (F1.10) ----
+
+class EbdTermDeleteRequested extends EbdEvent {
+  final String termId;
+  const EbdTermDeleteRequested({required this.termId});
+  @override
+  List<Object?> get props => [termId];
+}
+
+class EbdClassDeleteRequested extends EbdEvent {
+  final String classId;
+  const EbdClassDeleteRequested({required this.classId});
+  @override
+  List<Object?> get props => [classId];
+}
+
+// ---- Reports (E6) ----
+
+class EbdTermReportLoadRequested extends EbdEvent {
+  final String termId;
+  const EbdTermReportLoadRequested({required this.termId});
+  @override
+  List<Object?> get props => [termId];
+}
+
+class EbdTermRankingLoadRequested extends EbdEvent {
+  final String termId;
+  const EbdTermRankingLoadRequested({required this.termId});
+  @override
+  List<Object?> get props => [termId];
+}
+
+class EbdAbsentStudentsLoadRequested extends EbdEvent {
+  const EbdAbsentStudentsLoadRequested();
 }
 
 // ---- Attendance ----
@@ -280,9 +365,11 @@ class EbdTermsLoaded extends EbdState {
 
 class EbdClassesLoaded extends EbdState {
   final List<EbdClassSummary> classes;
-  const EbdClassesLoaded({required this.classes});
+  final int currentPage;
+  final bool hasMore;
+  const EbdClassesLoaded({required this.classes, this.currentPage = 1, this.hasMore = false});
   @override
-  List<Object?> get props => [classes];
+  List<Object?> get props => [classes, currentPage, hasMore];
 }
 
 class EbdClassDetailLoaded extends EbdState {
@@ -295,9 +382,11 @@ class EbdClassDetailLoaded extends EbdState {
 
 class EbdLessonsLoaded extends EbdState {
   final List<EbdLessonSummary> lessons;
-  const EbdLessonsLoaded({required this.lessons});
+  final int currentPage;
+  final bool hasMore;
+  const EbdLessonsLoaded({required this.lessons, this.currentPage = 1, this.hasMore = false});
   @override
-  List<Object?> get props => [lessons];
+  List<Object?> get props => [lessons, currentPage, hasMore];
 }
 
 class EbdLessonDetailLoaded extends EbdState {
@@ -341,9 +430,11 @@ class EbdLessonFullLoaded extends EbdState {
 
 class EbdStudentsLoaded extends EbdState {
   final List<EbdStudentSummary> students;
-  const EbdStudentsLoaded({required this.students});
+  final int currentPage;
+  final bool hasMore;
+  const EbdStudentsLoaded({required this.students, this.currentPage = 1, this.hasMore = false});
   @override
-  List<Object?> get props => [students];
+  List<Object?> get props => [students, currentPage, hasMore];
 }
 
 class EbdStudentProfileLoaded extends EbdState {
@@ -359,6 +450,14 @@ class EbdStudentProfileLoaded extends EbdState {
   List<Object?> get props => [summary, history, notes];
 }
 
+class EbdActivityResponsesLoaded extends EbdState {
+  final String activityId;
+  final List<EbdActivityResponse> responses;
+  const EbdActivityResponsesLoaded({required this.activityId, required this.responses});
+  @override
+  List<Object?> get props => [activityId, responses];
+}
+
 class EbdSaved extends EbdState {
   final String message;
   const EbdSaved({required this.message});
@@ -371,4 +470,19 @@ class EbdError extends EbdState {
   const EbdError({required this.message});
   @override
   List<Object?> get props => [message];
+}
+
+class EbdTermReportLoaded extends EbdState {
+  final Map<String, dynamic> report;
+  final List<Map<String, dynamic>> ranking;
+  const EbdTermReportLoaded({required this.report, required this.ranking});
+  @override
+  List<Object?> get props => [report, ranking];
+}
+
+class EbdAbsentStudentsLoaded extends EbdState {
+  final List<Map<String, dynamic>> students;
+  const EbdAbsentStudentsLoaded({required this.students});
+  @override
+  List<Object?> get props => [students];
 }

@@ -936,6 +936,22 @@ class _ActivityCard extends StatelessWidget {
                 ],
               ),
             ],
+            if (activity.activityType != 'group_activity') ...[
+              const SizedBox(height: AppSpacing.sm),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton.icon(
+                  onPressed: () => context.go('/ebd/activities/${activity.id}/responses'),
+                  icon: const Icon(Icons.people_outline, size: 16),
+                  label: const Text('Respostas dos Alunos'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.accent,
+                    visualDensity: VisualDensity.compact,
+                    textStyle: AppTypography.bodySmall.copyWith(fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),

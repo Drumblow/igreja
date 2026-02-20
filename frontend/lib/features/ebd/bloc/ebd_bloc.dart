@@ -36,17 +36,31 @@ class EbdBloc extends Bloc<EbdEvent, EbdState> {
     on<EbdLessonActivitiesLoadRequested>(_onLessonActivitiesLoad);
     on<EbdLessonActivityCreateRequested>(_onLessonActivityCreate);
     on<EbdLessonActivityDeleteRequested>(_onLessonActivityDelete);
+    on<EbdLessonActivityUpdateRequested>(_onLessonActivityUpdate);
+    // Activity Responses (E2)
+    on<EbdActivityResponsesLoadRequested>(_onActivityResponsesLoad);
+    on<EbdActivityResponsesRecordRequested>(_onActivityResponsesRecord);
     // Students (E3)
     on<EbdStudentsLoadRequested>(_onStudentsLoad);
     on<EbdStudentProfileLoadRequested>(_onStudentProfileLoad);
     // Student Notes (E5)
     on<EbdStudentNoteCreateRequested>(_onStudentNoteCreate);
     on<EbdStudentNoteDeleteRequested>(_onStudentNoteDelete);
+    on<EbdStudentNoteUpdateRequested>(_onStudentNoteUpdate);
+    // Clone (E7)
+    on<EbdCloneClassesRequested>(_onCloneClasses);
+    // Delete terms/classes (F1.10)
+    on<EbdTermDeleteRequested>(_onTermDelete);
+    on<EbdClassDeleteRequested>(_onClassDelete);
     // Attendance
     on<EbdAttendanceLoadRequested>(_onAttendanceLoad);
     on<EbdAttendanceRecordRequested>(_onAttendanceRecord);
     // Report
     on<EbdClassReportLoadRequested>(_onClassReportLoad);
+    // Reports (E6)
+    on<EbdTermReportLoadRequested>(_onTermReportLoad);
+    on<EbdTermRankingLoadRequested>(_onTermRankingLoad);
+    on<EbdAbsentStudentsLoadRequested>(_onAbsentStudentsLoad);
   }
 
   // ==========================================
@@ -88,13 +102,22 @@ class EbdBloc extends Bloc<EbdEvent, EbdState> {
   // ==========================================
 
   Future<void> _onClassesLoad(EbdClassesLoadRequested event, Emitter<EbdState> emit) async {
-    emit(const EbdLoading());
+    final isLoadMore = event.page > 1;
+    if (!isLoadMore) emit(const EbdLoading());
     try {
-      final classes = await repository.getClasses(
+      final (newClasses, meta) = await repository.getClasses(
         termId: event.termId,
         isActive: event.isActive,
+        page: event.page,
       );
-      emit(EbdClassesLoaded(classes: classes));
+      final existing = isLoadMore && state is EbdClassesLoaded
+          ? (state as EbdClassesLoaded).classes
+          : <EbdClassSummary>[];
+      emit(EbdClassesLoaded(
+        classes: [...existing, ...newClasses],
+        currentPage: meta.page,
+        hasMore: meta.hasMore,
+      ));
     } catch (e) {
       emit(EbdError(message: 'Erro ao carregar turmas: $e'));
     }
@@ -174,14 +197,23 @@ class EbdBloc extends Bloc<EbdEvent, EbdState> {
   // ==========================================
 
   Future<void> _onLessonsLoad(EbdLessonsLoadRequested event, Emitter<EbdState> emit) async {
-    emit(const EbdLoading());
+    final isLoadMore = event.page > 1;
+    if (!isLoadMore) emit(const EbdLoading());
     try {
-      final lessons = await repository.getLessons(
+      final (newLessons, meta) = await repository.getLessons(
         classId: event.classId,
         dateFrom: event.dateFrom,
         dateTo: event.dateTo,
+        page: event.page,
       );
-      emit(EbdLessonsLoaded(lessons: lessons));
+      final existing = isLoadMore && state is EbdLessonsLoaded
+          ? (state as EbdLessonsLoaded).lessons
+          : <EbdLessonSummary>[];
+      emit(EbdLessonsLoaded(
+        lessons: [...existing, ...newLessons],
+        currentPage: meta.page,
+        hasMore: meta.hasMore,
+      ));
     } catch (e) {
       emit(EbdError(message: 'Erro ao carregar aulas: $e'));
     }
@@ -295,8 +327,18 @@ class EbdBloc extends Bloc<EbdEvent, EbdState> {
       EbdLessonActivitiesLoadRequested event, Emitter<EbdState> emit) async {
     emit(const EbdLoading());
     try {
-      await repository.getLessonActivities(event.lessonId);
-      emit(EbdLessonsLoaded(lessons: const [])); // placeholder - use specific state
+      final lesson = await repository.getLesson(event.lessonId);
+      final contents = await repository.getLessonContents(event.lessonId);
+      final activities = await repository.getLessonActivities(event.lessonId);
+      final materials = await repository.getLessonMaterials(event.lessonId);
+      final attendance = await repository.getLessonAttendance(event.lessonId);
+      emit(EbdLessonFullLoaded(
+        lesson: lesson,
+        contents: contents,
+        activities: activities,
+        materials: materials,
+        attendance: attendance,
+      ));
     } catch (e) {
       emit(EbdError(message: 'Erro ao carregar atividades: $e'));
     }
@@ -324,19 +366,65 @@ class EbdBloc extends Bloc<EbdEvent, EbdState> {
     }
   }
 
+  Future<void> _onLessonActivityUpdate(
+      EbdLessonActivityUpdateRequested event, Emitter<EbdState> emit) async {
+    emit(const EbdLoading());
+    try {
+      await repository.updateLessonActivity(event.lessonId, event.activityId, event.data);
+      emit(const EbdSaved(message: 'Atividade atualizada com sucesso'));
+    } catch (e) {
+      emit(EbdError(message: 'Erro ao atualizar atividade: $e'));
+    }
+  }
+
+  // ==========================================
+  // Activity Responses (E2)
+  // ==========================================
+
+  Future<void> _onActivityResponsesLoad(
+      EbdActivityResponsesLoadRequested event, Emitter<EbdState> emit) async {
+    emit(const EbdLoading());
+    try {
+      final responses = await repository.getActivityResponses(event.activityId);
+      emit(EbdActivityResponsesLoaded(activityId: event.activityId, responses: responses));
+    } catch (e) {
+      emit(EbdError(message: 'Erro ao carregar respostas: $e'));
+    }
+  }
+
+  Future<void> _onActivityResponsesRecord(
+      EbdActivityResponsesRecordRequested event, Emitter<EbdState> emit) async {
+    emit(const EbdLoading());
+    try {
+      await repository.recordActivityResponses(event.activityId, {'responses': event.responses});
+      emit(const EbdSaved(message: 'Respostas registradas com sucesso'));
+    } catch (e) {
+      emit(EbdError(message: 'Erro ao registrar respostas: $e'));
+    }
+  }
+
   // ==========================================
   // Students (E3)
   // ==========================================
 
   Future<void> _onStudentsLoad(EbdStudentsLoadRequested event, Emitter<EbdState> emit) async {
-    emit(const EbdLoading());
+    final isLoadMore = event.page > 1;
+    if (!isLoadMore) emit(const EbdLoading());
     try {
-      final students = await repository.getEbdStudents(
+      final (newStudents, meta) = await repository.getEbdStudents(
         termId: event.termId,
         classId: event.classId,
         search: event.search,
+        page: event.page,
       );
-      emit(EbdStudentsLoaded(students: students));
+      final existing = isLoadMore && state is EbdStudentsLoaded
+          ? (state as EbdStudentsLoaded).students
+          : <EbdStudentSummary>[];
+      emit(EbdStudentsLoaded(
+        students: [...existing, ...newStudents],
+        currentPage: meta.page,
+        hasMore: meta.hasMore,
+      ));
     } catch (e) {
       emit(EbdError(message: 'Erro ao carregar alunos: $e'));
     }
@@ -346,7 +434,7 @@ class EbdBloc extends Bloc<EbdEvent, EbdState> {
       EbdStudentProfileLoadRequested event, Emitter<EbdState> emit) async {
     emit(const EbdLoading());
     try {
-      final students = await repository.getEbdStudents();
+      final (students, _) = await repository.getEbdStudents();
       final summary = students.firstWhere(
         (s) => s.memberId == event.memberId,
         orElse: () => EbdStudentSummary(memberId: event.memberId, fullName: 'Aluno'),
@@ -386,6 +474,61 @@ class EbdBloc extends Bloc<EbdEvent, EbdState> {
       emit(const EbdSaved(message: 'Anotação removida com sucesso'));
     } catch (e) {
       emit(EbdError(message: 'Erro ao remover anotação: $e'));
+    }
+  }
+
+  Future<void> _onStudentNoteUpdate(
+      EbdStudentNoteUpdateRequested event, Emitter<EbdState> emit) async {
+    emit(const EbdLoading());
+    try {
+      await repository.updateStudentNote(event.memberId, event.noteId, event.data);
+      emit(const EbdSaved(message: 'Anotação atualizada com sucesso'));
+    } catch (e) {
+      emit(EbdError(message: 'Erro ao atualizar anotação: $e'));
+    }
+  }
+
+  // ==========================================
+  // Clone Classes (E7)
+  // ==========================================
+
+  Future<void> _onCloneClasses(
+      EbdCloneClassesRequested event, Emitter<EbdState> emit) async {
+    emit(const EbdLoading());
+    try {
+      await repository.cloneClasses(event.termId, {
+        'source_term_id': event.sourceTermId,
+        'include_enrollments': event.includeEnrollments,
+      });
+      emit(const EbdSaved(message: 'Turmas clonadas com sucesso'));
+    } catch (e) {
+      emit(EbdError(message: 'Erro ao clonar turmas: $e'));
+    }
+  }
+
+  // ==========================================
+  // Delete Terms/Classes (F1.10)
+  // ==========================================
+
+  Future<void> _onTermDelete(
+      EbdTermDeleteRequested event, Emitter<EbdState> emit) async {
+    emit(const EbdLoading());
+    try {
+      await repository.deleteTerm(event.termId);
+      emit(const EbdSaved(message: 'Trimestre excluído com sucesso'));
+    } catch (e) {
+      emit(EbdError(message: 'Erro ao excluir trimestre: $e'));
+    }
+  }
+
+  Future<void> _onClassDelete(
+      EbdClassDeleteRequested event, Emitter<EbdState> emit) async {
+    emit(const EbdLoading());
+    try {
+      await repository.deleteClass(event.classId);
+      emit(const EbdSaved(message: 'Turma excluída com sucesso'));
+    } catch (e) {
+      emit(EbdError(message: 'Erro ao excluir turma: $e'));
     }
   }
 
@@ -431,6 +574,49 @@ class EbdBloc extends Bloc<EbdEvent, EbdState> {
       emit(EbdClassReportLoaded(report: report));
     } catch (e) {
       emit(EbdError(message: 'Erro ao carregar relatório: $e'));
+    }
+  }
+
+  // ==========================================
+  // Reports (E6)
+  // ==========================================
+
+  Future<void> _onTermReportLoad(
+      EbdTermReportLoadRequested event, Emitter<EbdState> emit) async {
+    emit(const EbdLoading());
+    try {
+      final results = await Future.wait([
+        repository.getTermReport(event.termId),
+        repository.getTermRanking(event.termId),
+      ]);
+      emit(EbdTermReportLoaded(
+        report: results[0] as Map<String, dynamic>,
+        ranking: results[1] as List<Map<String, dynamic>>,
+      ));
+    } catch (e) {
+      emit(EbdError(message: 'Erro ao carregar relatório do período: $e'));
+    }
+  }
+
+  Future<void> _onTermRankingLoad(
+      EbdTermRankingLoadRequested event, Emitter<EbdState> emit) async {
+    emit(const EbdLoading());
+    try {
+      final ranking = await repository.getTermRanking(event.termId);
+      emit(EbdTermReportLoaded(report: const {}, ranking: ranking));
+    } catch (e) {
+      emit(EbdError(message: 'Erro ao carregar ranking: $e'));
+    }
+  }
+
+  Future<void> _onAbsentStudentsLoad(
+      EbdAbsentStudentsLoadRequested event, Emitter<EbdState> emit) async {
+    emit(const EbdLoading());
+    try {
+      final students = await repository.getAbsentStudents();
+      emit(EbdAbsentStudentsLoaded(students: students));
+    } catch (e) {
+      emit(EbdError(message: 'Erro ao carregar alunos faltosos: $e'));
     }
   }
 }

@@ -114,20 +114,60 @@ use crate::infrastructure::cache::CacheService;
         ebd_handler::get_ebd_term,
         ebd_handler::create_ebd_term,
         ebd_handler::update_ebd_term,
+        ebd_handler::delete_ebd_term,
         ebd_handler::list_ebd_classes,
         ebd_handler::get_ebd_class,
         ebd_handler::create_ebd_class,
         ebd_handler::update_ebd_class,
+        ebd_handler::delete_ebd_class,
         ebd_handler::list_class_enrollments,
         ebd_handler::enroll_member,
         ebd_handler::remove_enrollment,
         ebd_handler::list_ebd_lessons,
         ebd_handler::get_ebd_lesson,
         ebd_handler::create_ebd_lesson,
+        ebd_handler::update_ebd_lesson,
+        ebd_handler::delete_ebd_lesson,
         ebd_handler::record_attendance,
         ebd_handler::get_lesson_attendance,
         ebd_handler::get_class_report,
         ebd_handler::ebd_stats,
+        // EBD — Lesson Contents
+        ebd_handler::list_lesson_contents,
+        ebd_handler::create_lesson_content,
+        ebd_handler::update_lesson_content,
+        ebd_handler::delete_lesson_content,
+        ebd_handler::reorder_lesson_contents,
+        // EBD — Lesson Activities
+        ebd_handler::list_lesson_activities,
+        ebd_handler::create_lesson_activity,
+        ebd_handler::update_lesson_activity,
+        ebd_handler::delete_lesson_activity,
+        // EBD — Activity Responses
+        ebd_handler::list_activity_responses,
+        ebd_handler::record_activity_responses,
+        ebd_handler::update_activity_response,
+        // EBD — Lesson Materials
+        ebd_handler::list_lesson_materials,
+        ebd_handler::create_lesson_material,
+        ebd_handler::delete_lesson_material,
+        // EBD — Students
+        ebd_handler::list_ebd_students,
+        ebd_handler::get_student_profile,
+        ebd_handler::get_student_history,
+        ebd_handler::get_student_activities,
+        // EBD — Student Notes
+        ebd_handler::list_student_notes,
+        ebd_handler::create_student_note,
+        ebd_handler::update_student_note,
+        ebd_handler::delete_student_note,
+        // EBD — Clone Classes
+        ebd_handler::clone_classes,
+        // EBD — Advanced Reports (E6)
+        ebd_handler::get_term_report,
+        ebd_handler::get_term_ranking,
+        ebd_handler::get_term_comparison,
+        ebd_handler::get_absent_students,
     ),
     components(schemas(
         crate::api::response::ApiResponse<serde_json::Value>,
@@ -326,11 +366,13 @@ async fn main() -> std::io::Result<()> {
             .service(ebd_handler::get_ebd_term)
             .service(ebd_handler::create_ebd_term)
             .service(ebd_handler::update_ebd_term)
+            .service(ebd_handler::delete_ebd_term)
             // EBD — Classes
             .service(ebd_handler::list_ebd_classes)
             .service(ebd_handler::get_ebd_class)
             .service(ebd_handler::create_ebd_class)
             .service(ebd_handler::update_ebd_class)
+            .service(ebd_handler::delete_ebd_class)
             // EBD — Enrollments
             .service(ebd_handler::list_class_enrollments)
             .service(ebd_handler::enroll_member)
@@ -339,10 +381,48 @@ async fn main() -> std::io::Result<()> {
             .service(ebd_handler::list_ebd_lessons)
             .service(ebd_handler::get_ebd_lesson)
             .service(ebd_handler::create_ebd_lesson)
+            .service(ebd_handler::update_ebd_lesson)
+            .service(ebd_handler::delete_ebd_lesson)
             // EBD — Attendance
             .service(ebd_handler::record_attendance)
             .service(ebd_handler::get_lesson_attendance)
             .service(ebd_handler::get_class_report)
+            // EBD — Lesson Contents (E1)
+            .service(ebd_handler::list_lesson_contents)
+            .service(ebd_handler::create_lesson_content)
+            .service(ebd_handler::update_lesson_content)
+            .service(ebd_handler::delete_lesson_content)
+            .service(ebd_handler::reorder_lesson_contents)
+            // EBD — Lesson Activities (E2)
+            .service(ebd_handler::list_lesson_activities)
+            .service(ebd_handler::create_lesson_activity)
+            .service(ebd_handler::update_lesson_activity)
+            .service(ebd_handler::delete_lesson_activity)
+            // EBD — Activity Responses (E2)
+            .service(ebd_handler::list_activity_responses)
+            .service(ebd_handler::record_activity_responses)
+            .service(ebd_handler::update_activity_response)
+            // EBD — Lesson Materials (E4)
+            .service(ebd_handler::list_lesson_materials)
+            .service(ebd_handler::create_lesson_material)
+            .service(ebd_handler::delete_lesson_material)
+            // EBD — Students (E3)
+            .service(ebd_handler::list_ebd_students)
+            .service(ebd_handler::get_student_profile)
+            .service(ebd_handler::get_student_history)
+            .service(ebd_handler::get_student_activities)
+            // EBD — Student Notes (E5)
+            .service(ebd_handler::list_student_notes)
+            .service(ebd_handler::create_student_note)
+            .service(ebd_handler::update_student_note)
+            .service(ebd_handler::delete_student_note)
+            // EBD — Clone Classes (E7)
+            .service(ebd_handler::clone_classes)
+            // EBD — Advanced Reports (E6)
+            .service(ebd_handler::get_term_report)
+            .service(ebd_handler::get_term_ranking)
+            .service(ebd_handler::get_term_comparison)
+            .service(ebd_handler::get_absent_students)
             // Swagger UI
             .service(
                 SwaggerUi::new("/swagger-ui/{_:.*}")

@@ -1,6 +1,35 @@
 import '../../../core/network/api_client.dart';
 import 'models/ebd_models.dart';
 
+/// Pagination metadata from API responses.
+class PaginationMeta {
+  final int page;
+  final int perPage;
+  final int total;
+  final int totalPages;
+
+  const PaginationMeta({
+    required this.page,
+    required this.perPage,
+    required this.total,
+    required this.totalPages,
+  });
+
+  factory PaginationMeta.fromJson(Map<String, dynamic>? json) {
+    if (json == null) {
+      return const PaginationMeta(page: 1, perPage: 20, total: 0, totalPages: 0);
+    }
+    return PaginationMeta(
+      page: json['page'] as int? ?? 1,
+      perPage: json['per_page'] as int? ?? 20,
+      total: json['total'] as int? ?? 0,
+      totalPages: json['total_pages'] as int? ?? 0,
+    );
+  }
+
+  bool get hasMore => page < totalPages;
+}
+
 class EbdRepository {
   final ApiClient _apiClient;
 
@@ -32,11 +61,15 @@ class EbdRepository {
     await _apiClient.dio.put('/v1/ebd/terms/$termId', data: data);
   }
 
+  Future<void> deleteTerm(String termId) async {
+    await _apiClient.dio.delete('/v1/ebd/terms/$termId');
+  }
+
   // ==========================================
   // Classes (Turmas)
   // ==========================================
 
-  Future<List<EbdClassSummary>> getClasses({
+  Future<(List<EbdClassSummary>, PaginationMeta)> getClasses({
     String? termId,
     bool? isActive,
     String? teacherId,
@@ -53,7 +86,9 @@ class EbdRepository {
       queryParameters: params,
     );
     final list = response.data['data'] as List? ?? [];
-    return list.map((e) => EbdClassSummary.fromJson(e as Map<String, dynamic>)).toList();
+    final meta = PaginationMeta.fromJson(response.data['meta'] as Map<String, dynamic>?);
+    final classes = list.map((e) => EbdClassSummary.fromJson(e as Map<String, dynamic>)).toList();
+    return (classes, meta);
   }
 
   Future<EbdClass> getClass(String classId) async {
@@ -67,6 +102,10 @@ class EbdRepository {
 
   Future<void> updateClass(String classId, Map<String, dynamic> data) async {
     await _apiClient.dio.put('/v1/ebd/classes/$classId', data: data);
+  }
+
+  Future<void> deleteClass(String classId) async {
+    await _apiClient.dio.delete('/v1/ebd/classes/$classId');
   }
 
   // ==========================================
@@ -91,7 +130,7 @@ class EbdRepository {
   // Lessons (Aulas)
   // ==========================================
 
-  Future<List<EbdLessonSummary>> getLessons({
+  Future<(List<EbdLessonSummary>, PaginationMeta)> getLessons({
     String? classId,
     String? dateFrom,
     String? dateTo,
@@ -108,7 +147,9 @@ class EbdRepository {
       queryParameters: params,
     );
     final list = response.data['data'] as List? ?? [];
-    return list.map((e) => EbdLessonSummary.fromJson(e as Map<String, dynamic>)).toList();
+    final meta = PaginationMeta.fromJson(response.data['meta'] as Map<String, dynamic>?);
+    final lessons = list.map((e) => EbdLessonSummary.fromJson(e as Map<String, dynamic>)).toList();
+    return (lessons, meta);
   }
 
   Future<EbdLesson> getLesson(String lessonId) async {
@@ -256,7 +297,7 @@ class EbdRepository {
   // Student Profile (E3)
   // ==========================================
 
-  Future<List<EbdStudentSummary>> getEbdStudents({
+  Future<(List<EbdStudentSummary>, PaginationMeta)> getEbdStudents({
     String? termId,
     String? classId,
     String? search,
@@ -273,7 +314,9 @@ class EbdRepository {
       queryParameters: params,
     );
     final list = response.data['data'] as List? ?? [];
-    return list.map((e) => EbdStudentSummary.fromJson(e as Map<String, dynamic>)).toList();
+    final meta = PaginationMeta.fromJson(response.data['meta'] as Map<String, dynamic>?);
+    final students = list.map((e) => EbdStudentSummary.fromJson(e as Map<String, dynamic>)).toList();
+    return (students, meta);
   }
 
   Future<Map<String, dynamic>> getStudentProfile(String memberId) async {
@@ -327,5 +370,35 @@ class EbdRepository {
 
   Future<void> cloneClasses(String termId, Map<String, dynamic> data) async {
     await _apiClient.dio.post('/v1/ebd/terms/$termId/clone-classes', data: data);
+  }
+
+  // ==========================================
+  // Reports (E6)
+  // ==========================================
+
+  Future<Map<String, dynamic>> getTermReport(String termId) async {
+    final response = await _apiClient.dio.get('/v1/ebd/reports/term/$termId');
+    return response.data['data'] as Map<String, dynamic>? ?? {};
+  }
+
+  Future<List<Map<String, dynamic>>> getTermRanking(String termId) async {
+    final response = await _apiClient.dio.get('/v1/ebd/reports/term/$termId/ranking');
+    final list = response.data['data'] as List? ?? [];
+    return list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+  }
+
+  Future<List<Map<String, dynamic>>> getTermComparison(List<String> termIds) async {
+    final response = await _apiClient.dio.get(
+      '/v1/ebd/reports/comparison',
+      queryParameters: {'term_ids': termIds.join(',')},
+    );
+    final list = response.data['data'] as List? ?? [];
+    return list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+  }
+
+  Future<List<Map<String, dynamic>>> getAbsentStudents() async {
+    final response = await _apiClient.dio.get('/v1/ebd/reports/students/attendance');
+    final list = response.data['data'] as List? ?? [];
+    return list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
   }
 }

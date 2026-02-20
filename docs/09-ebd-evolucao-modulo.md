@@ -1,8 +1,9 @@
 # 📖 Evolução do Módulo EBD — Igreja Manager
 
 > **Data de criação:** 19 de fevereiro de 2026  
-> **Versão do documento:** 1.0  
-> **Status:** Proposta de Evolução  
+> **Versão do documento:** 1.3  
+> **Última atualização:** 19 de fevereiro de 2026  
+> **Status:** Backend ~98% — Frontend ~95% (E1–E7 + F1 implementados, apenas uploads pendentes)  
 > **Módulo afetado:** EBD (Escola Bíblica Dominical)
 
 ---
@@ -45,28 +46,38 @@ Porém, ao usar o sistema na prática, identificou-se que:
 
 | Funcionalidade | Backend | Frontend | Observações |
 |----------------|:-------:|:--------:|-------------|
-| CRUD de Trimestres | ✅ 4 endpoints | ✅ Lista + criação | Falta edição na UI |
-| CRUD de Turmas | ✅ 4 endpoints | ✅ Lista + detalhe | Falta edição na UI |
+| CRUD de Trimestres | ✅ 4 endpoints | ✅ Lista + criação + edição | ✅ Completo |
+| CRUD de Turmas | ✅ 4 endpoints | ✅ Lista + detalhe + edição | ✅ Completo |
 | Matrículas | ✅ 3 endpoints | ✅ Matricular/remover | Funcional com busca de membros |
-| Criação de Aulas | ✅ 3 endpoints | ✅ Lista + criação | **Sem update/delete** |
-| Frequência | ✅ 3 endpoints | ✅ P/A/J + Bíblia/Revista | Campo oferta sem UI |
-| Relatório Turma | ✅ 1 endpoint | ❌ Sem tela | Repo implementado, sem tela |
+| CRUD de Aulas | ✅ 5 endpoints | ✅ Lista + criação + update/delete | ✅ Completo (F1.2) |
+| Frequência | ✅ 3 endpoints | ✅ P/A/J + Bíblia/Revista + Oferta + Notas | ✅ Bug #1 corrigido, oferta e notas adicionados |
+| Relatório Turma | ✅ 1 endpoint | ✅ Tela com estatísticas e tabela por aluno | ✅ Completo (F1.9) |
 | Stats (Overview) | ✅ 1 endpoint (cached) | ✅ Wired via API | Funcional |
+| Conteúdo de Lições (E1) | ✅ 5 endpoints | ✅ Aba "Conteúdo" no detalhe da lição | Falta upload de imagem |
+| Atividades por Lição (E2) | ✅ 7 endpoints | ✅ Aba "Atividades" + Tela de respostas | ✅ Completo |
+| Perfil do Aluno (E3) | ✅ 4 endpoints | ✅ Lista de alunos + Perfil completo | ✅ Completo |
+| Materiais da Lição (E4) | ✅ 3 endpoints | ✅ Aba "Materiais" no detalhe da lição | Falta upload de arquivo |
+| Notas do Professor (E5) | ✅ 4 endpoints | ✅ Seção no perfil + edição de nota | ✅ Completo |
+| Relatórios Avançados (E6) | ✅ 4 endpoints | ✅ Tela com 3 abas (Resumo/Ranking/Ausentes) | ✅ Completo |
+| Clonagem de Turmas (E7) | ✅ 1 endpoint | ✅ Botão + dialog de confirmação | ✅ Completo |
+| Delete de Termos/Turmas (F1.10) | ✅ 2 endpoints | ✅ Botões + dialogs de confirmação | ✅ Completo |
+| Audit Logging EBD (F1.7) | ✅ 13 handlers | — | ✅ AuditService integrado |
+| Paginação nas Listas (F1.8) | — | ✅ "Carregar mais" em 3 listas | ✅ Completo |
 
 ### 2.2 Problemas Identificados
 
 | # | Problema | Impacto | Severidade |
 |---|----------|---------|:----------:|
-| 1 | **Status de frequência em inglês no frontend** | Attendance screen envia `present`/`absent`/`justified`, backend espera `presente`/`ausente`/`justificado` — gera erro 400 | 🔴 Bug crítico |
-| 2 | **Sem update/delete de aulas** | Professor não pode corrigir dados de uma aula criada | 🟡 Médio |
-| 3 | **Sem edição de trimestres na UI** | Só é possível criar, não editar nome/datas/tema | 🟡 Médio |
-| 4 | **Sem edição de turmas na UI** | Só é possível criar, não editar turma | 🟡 Médio |
-| 5 | **Valor de oferta sem input na UI** | Campo `offering_amount` existe no modelo mas não há campo de entrada na tela de frequência | 🟡 Médio |
-| 6 | **Campo `notes` em attendance não exposto** | DTO `AttendanceRecord` não inclui `notes` — nunca é salvo | 🟢 Baixo |
-| 7 | **Sem audit logging para EBD** | Outros módulos têm `AuditService`, EBD não | 🟢 Baixo |
-| 8 | **Sem paginação nas listas** | Todas as listas carregam apenas page 1 | 🟢 Baixo |
-| 9 | **Tela de relatório da turma inexistente** | `EbdClassReportLoaded` state existe mas sem screen | 🟡 Médio |
-| 10 | **Sem delete de trimestres/turmas** | Backend não implementa exclusão | 🟢 Baixo |
+| 1 | **Status de frequência em inglês no frontend** | Attendance screen envia `present`/`absent`/`justified`, backend espera `presente`/`ausente`/`justificado` — gera erro 400 | ~~🔴 Bug crítico~~ ✅ **Resolvido** — SegmentedButton agora usa valores em PT |
+| 2 | **Sem update/delete de aulas** | Professor não pode corrigir dados de uma aula criada | ~~🟡 Médio~~ ✅ **Resolvido (F1.2)** — Backend + Frontend completos |
+| 3 | **Sem edição de trimestres na UI** | Só é possível criar, não editar nome/datas/tema | ~~🟡 Médio~~ ✅ **Resolvido** — Botão de editar com dialog pré-preenchido |
+| 4 | **Sem edição de turmas na UI** | Só é possível criar, não editar turma | ~~🟡 Médio~~ ✅ **Resolvido** — Botão de editar no AppBar da tela de detalhe |
+| 5 | **Valor de oferta sem input na UI** | Campo `offering_amount` existe no modelo mas não há campo de entrada na tela de frequência | ~~🟡 Médio~~ ✅ **Resolvido** — Campo `R$` adicionado na tela de frequência |
+| 6 | **Campo `notes` em attendance não exposto** | DTO `AttendanceRecord` não inclui `notes` — nunca é salvo | ~~🟢 Baixo~~ ✅ **Resolvido (F1.5)** — Campo de observações adicionado |
+| 7 | **Sem audit logging para EBD** | Outros módulos têm `AuditService`, EBD não | ~~🟢 Baixo~~ ✅ **Resolvido (F1.7)** — `AuditService::log_action()` em 13 write handlers |
+| 8 | **Sem paginação nas listas** | Todas as listas carregam apenas page 1 | ~~🟢 Baixo~~ ✅ **Resolvido (F1.8)** — "Carregar mais" em listas de turmas, aulas e alunos |
+| 9 | **Tela de relatório da turma inexistente** | `EbdClassReportLoaded` state existe mas sem screen | ~~🟡 Médio~~ ✅ **Resolvido** — `EbdClassReportScreen` criada com estatísticas |
+| 10 | **Sem delete de trimestres/turmas** | Backend não implementa exclusão | ~~🟢 Baixo~~ ✅ **Resolvido (F1.10)** — DELETE endpoints + botões/dialogs na UI |
 
 ### 2.3 Tabelas e Campos Atuais (Referência)
 
@@ -84,16 +95,16 @@ ebd_attendances: id, lesson_id, member_id, status, brought_bible, brought_magazi
 
 ### 3.1 Visão Geral das Evoluções
 
-| # | Funcionalidade | Prioridade | Complexidade | Novas Tabelas |
-|---|----------------|:----------:|:------------:|:-------------:|
-| E1 | Conteúdo Enriquecido de Lições (imagens + texto) | 🔴 Alta | Alta | `ebd_lesson_contents` |
-| E2 | Atividades por Lição | 🔴 Alta | Alta | `ebd_lesson_activities`, `ebd_activity_responses` |
-| E3 | Perfil Unificado do Aluno EBD | 🔴 Alta | Média | View `vw_ebd_student_profile` |
-| E4 | Materiais e Recursos da Lição | 🟡 Média | Média | `ebd_lesson_materials` |
-| E5 | Anotações do Professor por Aluno | 🟡 Média | Baixa | `ebd_student_notes` |
-| E6 | Relatórios Avançados da EBD | 🟡 Média | Média | — |
-| E7 | Clonagem de Turmas entre Trimestres | 🟡 Média | Baixa | — |
-| F1 | Correções e melhorias no código existente | 🔴 Alta | Baixa | — |
+| # | Funcionalidade | Prioridade | Complexidade | Novas Tabelas | Backend | Frontend |
+|---|----------------|:----------:|:------------:|:-------------:|:-------:|:--------:|
+| E1 | Conteúdo Enriquecido de Lições (imagens + texto) | 🔴 Alta | Alta | `ebd_lesson_contents` | ✅ 5 endpoints | ✅ Aba no detalhe da lição (falta upload imagem) |
+| E2 | Atividades por Lição | 🔴 Alta | Alta | `ebd_lesson_activities`, `ebd_activity_responses` | ✅ 7 endpoints | ⚠️ Aba de atividades (falta UI de respostas) |
+| E3 | Perfil Unificado do Aluno EBD | 🔴 Alta | Média | View `vw_ebd_student_profile` | ✅ 4 endpoints | ✅ Lista + Perfil completo |
+| E4 | Materiais e Recursos da Lição | 🟡 Média | Média | `ebd_lesson_materials` | ✅ 3 endpoints | ✅ Aba no detalhe da lição (falta upload arquivo) |
+| E5 | Anotações do Professor por Aluno | 🟡 Média | Baixa | `ebd_student_notes` | ✅ 4 endpoints | ✅ Seção no perfil + edição de nota |
+| E6 | Relatórios Avançados da EBD | 🟡 Média | Média | — | ✅ 4 endpoints | ✅ Tela com 3 abas |
+| E7 | Clonagem de Turmas entre Trimestres | 🟡 Média | Baixa | — | ✅ 1 endpoint | ✅ Botão + dialog |
+| F1 | Correções e melhorias no código existente | 🔴 Alta | Baixa | — | ✅ F1.2 + F1.5 + F1.7 + F1.10 | ✅ Bugs #1–#10 resolvidos + paginação |
 
 ---
 
@@ -1386,4 +1397,146 @@ Regras adicionais para as novas funcionalidades. As regras existentes (RN-EBD-00
 
 > **Nota:** Este documento complementa a documentação existente (docs 01-08) e deve ser referenciado junto ao `07-andamento-do-projeto.md` durante a implementação. As estimativas de esforço pressupõem familiaridade com o codebase e os padrões já estabelecidos.
 
-*Documento de evolução — versão 1.0*
+---
+
+## 13. Registro de Implementação (Backend)
+
+> **Data de implementação:** 20 de fevereiro de 2026  
+> **Status:** Backend completo — Frontend pendente
+
+### 13.1 Artefatos Criados
+
+| Tipo | Arquivo | Funcionalidade |
+|------|---------|----------------|
+| Migration | `20250219100000_ebd_evolution.sql` (143 linhas) | 5 tabelas + 1 view + índices + triggers |
+| Entity | `ebd_lesson_content.rs` | EbdLessonContent |
+| Entity | `ebd_lesson_activity.rs` | EbdLessonActivity |
+| Entity | `ebd_activity_response.rs` | EbdActivityResponse |
+| Entity | `ebd_lesson_material.rs` | EbdLessonMaterial |
+| Entity | `ebd_student_note.rs` | EbdStudentNote |
+| Entity | `ebd_student_profile.rs` | EbdStudentProfile (view) |
+| Service | `ebd_lesson_content_service.rs` | CRUD + reorder (E1) |
+| Service | `ebd_lesson_activity_service.rs` | CRUD atividades + respostas (E2) |
+| Service | `ebd_lesson_material_service.rs` | List/Create/Delete (E4) |
+| Service | `ebd_student_note_service.rs` | CRUD anotações (E5) |
+| Service | `ebd_student_service.rs` | Perfil + histórico + atividades (E3) |
+| DTOs | `ebd_dto.rs` (16 DTOs novos) | Request/Response para E1-E7 |
+
+### 13.2 Artefatos Modificados
+
+| Arquivo | Mudança |
+|---------|---------|
+| `ebd_lesson_service.rs` | Adicionados `update()` e `delete()` — F1.2 |
+| `ebd_attendance_service.rs` | Campo `notes` agora aceito e salvo — F1.5 |
+| `ebd_attendance.rs` (entity) | `EbdAttendanceDetail` inclui campo `notes` |
+| `ebd_class_service.rs` | Adicionado `clone_classes()` — E7 |
+| `ebd_handler.rs` | 26 novos endpoints (total: 44) |
+| `main.rs` | Registradas 26 novas rotas EBD |
+| `entities/mod.rs` | 6 novos pub mod |
+| `services/mod.rs` | 5 novos pub mod |
+
+### 13.3 Resumo de Endpoints por Funcionalidade
+
+| Funcionalidade | Endpoints | Status |
+|----------------|:---------:|:------:|
+| F1.2 — Update/Delete aulas | 2 | ✅ |
+| F1.5 — Notes em attendance | — (campo adicionado) | ✅ |
+| E1 — Conteúdo enriquecido | 5 | ✅ |
+| E2 — Atividades + respostas | 7 | ✅ |
+| E3 — Perfil do aluno | 4 | ✅ |
+| E4 — Materiais | 3 | ✅ |
+| E5 — Anotações do professor | 4 | ✅ |
+| E6 — Relatórios avançados | 4 | ✅ |
+| E7 — Clonagem de turmas | 1 | ✅ |
+| F1.10 — Delete termos/turmas | 2 | ✅ |
+| **Total novos** | **28** | |
+
+### 13.4 O que Falta (Atualizado em 19/02/2026)
+
+| Item | Tipo | Prioridade | Descrição |
+|------|:----:|:----------:|-----------|
+| E1 — Upload de imagem | Backend | 🟢 Baixa | Endpoint `POST .../contents/upload` (multipart) para upload de imagens em blocos de conteúdo |
+| E4 — Upload de arquivo | Backend | 🟢 Baixa | Endpoint `POST .../materials/upload` (multipart) para upload de materiais anexados |
+| Testes automatizados | Backend + Frontend | 🟢 Baixa | Unit tests para services, widget tests para telas |
+
+### 13.5 O que Foi Implementado (Frontend — Sessão de 19/02/2026)
+
+**Arquivos criados:**
+- `ebd_lesson_detail_screen.dart` — Tela de detalhe da lição com 4 abas: Conteúdo (E1), Atividades (E2), Materiais (E4), Frequência
+- `ebd_student_list_screen.dart` — Lista de alunos EBD com busca e badge de frequência (E3)
+- `ebd_student_profile_screen.dart` — Perfil completo do aluno com estatísticas, histórico, notas (E3+E5)
+- `ebd_class_report_screen.dart` — Relatório de frequência da turma com tabela por aluno (F1.9)
+
+**Arquivos modificados:**
+- `ebd_models.dart` — Adicionados 8 modelos: `EbdLessonContent`, `EbdLessonActivity`, `EbdActivityResponse`, `EbdLessonMaterial`, `EbdStudentNote`, `EbdStudentSummary`, `EbdEnrollmentHistory`
+- `ebd_repository.dart` — Adicionados 20+ métodos para E1–E7 (contents, activities, responses, materials, students, notes, clone)
+- `ebd_event_state.dart` — Adicionados ~12 novos eventos e 3 novos estados compostos
+- `ebd_bloc.dart` — Adicionados 12 novos handlers
+- `ebd_attendance_screen.dart` — **Bug #1 corrigido** (status PT), campos de oferta (R$) e notas adicionados
+- `ebd_lesson_list_screen.dart` — Navegação para detalhe da lição ao tocar
+- `ebd_class_detail_screen.dart` — Botão de relatório no AppBar
+- `ebd_overview_screen.dart` — Card "Alunos" no acesso rápido
+- `app_router.dart` — 4 novas rotas: `/ebd/lessons/:lessonId`, `/ebd/students`, `/ebd/students/:memberId`, `/ebd/classes/:id/report`
+
+**Análise:** `dart analyze` → 0 erros (apenas infos de estilo)
+
+### 13.6 O que Foi Implementado (Sessão 2 — 19/02/2026)
+
+**Arquivos criados:**
+- `ebd_report_service.rs` — Service de relatórios avançados (4 métodos: term_report, term_ranking, term_comparison, absent_students) — 449 linhas
+- `ebd_report_screen.dart` — Tela de relatórios com 3 abas: Resumo + Ranking + Alunos Ausentes (~530 linhas)
+- `ebd_activity_responses_screen.dart` — Tela de respostas dos alunos nas atividades (~280 linhas)
+
+**Backend — Novos endpoints (6):**
+- `DELETE /ebd/terms/{id}` — Exclusão de trimestre (transacional: aulas → turmas → notas → período)
+- `DELETE /ebd/classes/{id}` — Exclusão de turma (transacional: aulas → turma)
+- `GET /ebd/reports/term/{id}` — Relatório resumo do trimestre
+- `GET /ebd/reports/term/{id}/ranking` — Ranking de alunos
+- `GET /ebd/reports/comparison` — Comparativo entre trimestres
+- `GET /ebd/reports/absent-students` — Alunos ausentes
+
+**Backend — Audit logging (F1.7):**
+- `AuditService::log_action()` integrado em 13 handlers de escrita do EBD (create/update/delete de termos, turmas, matrículas, aulas, frequência, conteúdo, atividades, respostas, materiais, notas, clone)
+
+**Frontend — Novos recursos:**
+- **E2 Respostas:** BLoC events (`EbdActivityResponsesLoadRequested`, `EbdActivityResponsesRecordRequested`) + handler + tela + rota `/ebd/activities/:activityId/responses`
+- **E5 Edição de nota:** BLoC event `EbdStudentNoteUpdateRequested` + handler + dialog de edição no perfil do aluno
+- **E6 Relatórios:** BLoC events (`EbdTermReportLoadRequested`, `EbdTermRankingLoadRequested`, `EbdAbsentStudentsLoadRequested`) + handlers + tela com 3 abas + rota `/ebd/reports` + card "Relatórios" na overview
+- **E7 Clone UI:** BLoC event `EbdCloneClassesRequested` + handler + PopupMenuButton no term_list com dialog de clonagem
+- **F1.8 Paginação:** `PaginationMeta` class + retornos em tupla `(List<T>, PaginationMeta)` + parâmetro `page` nos events + lógica load-more no BLoC + botão "Carregar mais" em listas de turmas, aulas e alunos
+- **F1.10 Delete UI:** Botão delete na AppBar de class_detail + PopupMenuItem "Excluir" no term_list + dialogs de confirmação
+
+**Arquivos modificados:**
+- `ebd_handler.rs` — +6 handlers novos + audit logging em 13 handlers (~1800 linhas)
+- `ebd_term_service.rs` — +método `delete()` transacional
+- `ebd_class_service.rs` — +método `delete()` transacional
+- `ebd_dto.rs` — +`TermComparisonQuery` DTO
+- `main.rs` — +6 rotas registradas (paths utoipa + .service())
+- `ebd_event_state.dart` — +10 eventos, +3 estados, +campos de paginação
+- `ebd_bloc.dart` — +10 handlers, lógica load-more (~623 linhas)
+- `ebd_repository.dart` — +`PaginationMeta`, retorno em tupla para 3 métodos, +6 novos métodos (~401 linhas)
+- `ebd_overview_screen.dart` — +card "Relatórios"
+- `ebd_term_list_screen.dart` — +PopupMenuButton (editar/clonar/excluir) + dialogs
+- `ebd_class_detail_screen.dart` — +botão delete + dialog
+- `ebd_lesson_detail_screen.dart` — +botão "Respostas dos Alunos" no card de atividade
+- `ebd_student_profile_screen.dart` — +botão editar + dialog de edição de nota
+- `ebd_class_list_screen.dart`, `ebd_lesson_list_screen.dart`, `ebd_student_list_screen.dart` — +botão "Carregar mais"
+- `app_router.dart` — +2 rotas (`/ebd/activities/:activityId/responses`, `/ebd/reports`)
+
+**Análise:** `dart analyze` → 0 erros, 0 warnings (44 info)
+
+### 13.7 Compilação
+
+```
+SQLX_OFFLINE=true cargo check
+→ 0 errors, 0 warnings
+
+dart analyze lib/features/ebd/
+→ 0 errors, 0 warnings, 44 info
+```
+
+### 13.8 Resumo Final de Endpoints EBD
+
+Total: **48+ endpoints** (44 anteriores + 4 relatórios + 2 deletes)
+
+*Documento de evolução — versão 1.3*

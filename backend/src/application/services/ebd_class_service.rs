@@ -1,4 +1,4 @@
-use crate::application::dto::{CreateEbdClassRequest, CreateEbdEnrollmentRequest, EbdClassFilter, UpdateEbdClassRequest};
+use crate::application::dto::{CloneClassesRequest, CreateEbdClassRequest, CreateEbdEnrollmentRequest, EbdClassFilter, UpdateEbdClassRequest};
 use crate::domain::entities::{EbdClass, EbdClassSummary, EbdEnrollment, EbdEnrollmentDetail};
 use crate::errors::AppError;
 use sqlx::PgPool;
@@ -361,6 +361,128 @@ impl EbdClassService {
             return Err(AppError::not_found("Matrícula"));
         }
 
+        Ok(())
+    }
+
+    /// Clone classes from one term to another (E7)
+    pub async fn clone_classes(
+        pool: &PgPool,
+        church_id: Uuid,
+        target_term_id: Uuid,
+        body: &CloneClassesRequest,
+    ) -> Result<Vec<EbdClass>, AppError> {
+        let include_enrollments = body.include_enrollments.unwrap_or(false);
+
+        // Validate source term belongs to church
+        let source_exists = sqlx::query_scalar::<_, i64>(
+            "SELECT COUNT(*) FROM ebd_terms WHERE id = $1 AND church_id = $2",
+        )
+        .bind(body.source_term_id)
+        .bind(church_id)
+        .fetch_one(pool)
+        .await?;
+
+        if source_exists == 0 {
+            return Err(AppError::not_found("Período de origem"));
+        }
+
+        // Validate target term belongs to church
+        let target_exists = sqlx::query_scalar::<_, i64>(
+            "SELECT COUNT(*) FROM ebd_terms WHERE id = $1 AND church_id = $2",
+        )
+        .bind(target_term_id)
+        .bind(church_id)
+        .fetch_one(pool)
+        .await?;
+
+        if target_exists == 0 {
+            return Err(AppError::not_found("Período de destino"));
+        }
+
+        // Get source classes
+        let source_classes = sqlx::query_as::<_, EbdClass>(
+            "SELECT * FROM ebd_classes WHERE term_id = $1 AND church_id = $2",
+        )
+        .bind(body.source_term_id)
+        .bind(church_id)
+        .fetch_all(pool)
+        .await?;
+
+        if source_classes.is_empty() {
+            return Err(AppError::validation("Nenhuma turma encontrada no período de origem"));
+        }
+
+        let mut created_classes = Vec::new();
+
+        for source in &source_classes {
+            // Create cloned class
+            let new_class = sqlx::query_as::<_, EbdClass>(
+                r#"
+                INSERT INTO ebd_classes (church_id, term_id, name, age_range_start, age_range_end, room, max_capacity, teacher_id, aux_teacher_id, is_active)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, TRUE)
+                RETURNING *
+                "#,
+            )
+            .bind(church_id)
+            .bind(target_term_id)
+            .bind(&source.name)
+            .bind(source.age_range_start)
+            .bind(source.age_range_end)
+            .bind(&source.room)
+            .bind(source.max_capacity)
+            .bind(source.teacher_id)
+            .bind(source.aux_teacher_id)
+            .fetch_one(pool)
+            .await?;
+
+            if include_enrollments {
+                // Clone active enrollments
+                sqlx::query(
+                    r#"
+                    INSERT INTO ebd_enrollments (class_id, member_id, role, is_active, joined_at)
+                    SELECT $1, member_id, role, TRUE, CURRENT_DATE
+                    FROM ebd_enrollments
+                    WHERE class_id = $2 AND is_active = TRUE
+                    "#,
+                )
+                .bind(new_class.id)
+                .bind(source.id)
+                .execute(pool)
+                .await?;
+            }
+
+            created_classes.push(new_class);
+        }
+
+        Ok(created_classes)
+    }
+
+    /// Delete an EBD class and all related data (lessons, enrollments, etc.)
+    pub async fn delete(
+        pool: &PgPool,
+        church_id: Uuid,
+        class_id: Uuid,
+    ) -> Result<(), AppError> {
+        // Verify class exists and belongs to church
+        Self::get_by_id(pool, church_id, class_id).await?;
+
+        let mut tx = pool.begin().await?;
+
+        // 1. Delete lessons (cascades: attendances, contents, activities, responses, materials)
+        sqlx::query("DELETE FROM ebd_lessons WHERE class_id = $1 AND church_id = $2")
+            .bind(class_id)
+            .bind(church_id)
+            .execute(&mut *tx)
+            .await?;
+
+        // 2. Delete the class (cascades: enrollments)
+        sqlx::query("DELETE FROM ebd_classes WHERE id = $1 AND church_id = $2")
+            .bind(class_id)
+            .bind(church_id)
+            .execute(&mut *tx)
+            .await?;
+
+        tx.commit().await?;
         Ok(())
     }
 }

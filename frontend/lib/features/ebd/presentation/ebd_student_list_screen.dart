@@ -137,11 +137,26 @@ class _StudentListViewState extends State<_StudentListView> {
                   return ListView.separated(
                     padding: const EdgeInsets.fromLTRB(
                         AppSpacing.lg, AppSpacing.sm, AppSpacing.lg, 24),
-                    itemCount: state.students.length,
+                    itemCount: state.students.length + (state.hasMore ? 1 : 0),
                     separatorBuilder: (_, __) =>
                         const SizedBox(height: AppSpacing.sm),
-                    itemBuilder: (ctx, i) =>
-                        _StudentTile(student: state.students[i]),
+                    itemBuilder: (ctx, i) {
+                      if (i == state.students.length) {
+                        return Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(AppSpacing.md),
+                            child: OutlinedButton.icon(
+                              icon: const Icon(Icons.expand_more),
+                              label: const Text('Carregar mais'),
+                              onPressed: () => context.read<EbdBloc>().add(
+                                    EbdStudentsLoadRequested(page: state.currentPage + 1),
+                                  ),
+                            ),
+                          ),
+                        );
+                      }
+                      return _StudentTile(student: state.students[i]);
+                    },
                   );
                 }
                 if (state is EbdError) {

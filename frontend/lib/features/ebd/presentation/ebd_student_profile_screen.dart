@@ -600,6 +600,13 @@ class _NoteCard extends StatelessWidget {
                       style: AppTypography.bodySmall
                           .copyWith(color: AppColors.textMuted, fontSize: 10)),
                 IconButton(
+                  icon: const Icon(Icons.edit_outlined, size: 16),
+                  color: AppColors.accent,
+                  visualDensity: VisualDensity.compact,
+                  tooltip: 'Editar',
+                  onPressed: () => _showEditNoteDialog(context),
+                ),
+                IconButton(
                   icon: const Icon(Icons.delete_outline, size: 16),
                   color: AppColors.error,
                   visualDensity: VisualDensity.compact,
@@ -626,6 +633,85 @@ class _NoteCard extends StatelessWidget {
                   style: AppTypography.bodySmall
                       .copyWith(color: AppColors.textMuted, fontSize: 10)),
             ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showEditNoteDialog(BuildContext context) {
+    String selectedType = note.noteType;
+    final titleCtrl = TextEditingController(text: note.title);
+    final contentCtrl = TextEditingController(text: note.content);
+    bool isPrivate = note.isPrivate;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: const Text('Editar Anotação'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                DropdownButtonFormField<String>(
+                  value: selectedType,
+                  decoration: const InputDecoration(labelText: 'Tipo'),
+                  items: const [
+                    DropdownMenuItem(value: 'observation', child: Text('Observação')),
+                    DropdownMenuItem(value: 'behavior', child: Text('Comportamento')),
+                    DropdownMenuItem(value: 'progress', child: Text('Progresso')),
+                    DropdownMenuItem(value: 'special_need', child: Text('Necessidade Especial')),
+                    DropdownMenuItem(value: 'praise', child: Text('Elogio')),
+                    DropdownMenuItem(value: 'concern', child: Text('Preocupação')),
+                  ],
+                  onChanged: (v) => setDialogState(() => selectedType = v ?? 'observation'),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                TextField(
+                  controller: titleCtrl,
+                  decoration: const InputDecoration(labelText: 'Título *'),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                TextField(
+                  controller: contentCtrl,
+                  decoration: const InputDecoration(labelText: 'Conteúdo *'),
+                  maxLines: 4,
+                ),
+                const SizedBox(height: AppSpacing.md),
+                SwitchListTile(
+                  title: const Text('Nota privada'),
+                  subtitle: Text(isPrivate ? 'Visível apenas para você' : 'Visível para outros professores',
+                      style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary)),
+                  value: isPrivate,
+                  onChanged: (v) => setDialogState(() => isPrivate = v),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: () {
+                if (titleCtrl.text.trim().isEmpty || contentCtrl.text.trim().isEmpty) return;
+                context.read<EbdBloc>().add(EbdStudentNoteUpdateRequested(
+                  memberId: memberId,
+                  noteId: note.id,
+                  data: {
+                    'note_type': selectedType,
+                    'title': titleCtrl.text.trim(),
+                    'content': contentCtrl.text.trim(),
+                    'is_private': isPrivate,
+                  },
+                ));
+                Navigator.pop(ctx);
+              },
+              child: const Text('Salvar'),
+            ),
           ],
         ),
       ),

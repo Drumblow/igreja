@@ -60,6 +60,12 @@ class _ClassDetailView extends StatelessWidget {
             tooltip: 'Relatório da Turma',
             onPressed: () => context.go('/ebd/classes/$classId/report'),
           ),
+          IconButton(
+            icon: const Icon(Icons.delete_outline),
+            tooltip: 'Excluir Turma',
+            color: AppColors.error,
+            onPressed: () => _showDeleteClassDialog(context),
+          ),
         ],
       ),
       body: BlocConsumer<EbdBloc, EbdState>(
@@ -219,6 +225,37 @@ class _ClassDetailView extends StatelessWidget {
                   enrollment: e,
                   classId: classId,
                 )),
+        ],
+      ),
+    );
+  }
+
+  void _showDeleteClassDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Excluir Turma'),
+        content: const Text(
+          'Tem certeza que deseja excluir esta turma?\n\n'
+          'Todas as matrículas, aulas e frequências vinculadas serão removidas. '
+          'Esta ação não pode ser desfeita.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppColors.error),
+            onPressed: () {
+              context.read<EbdBloc>().add(
+                    EbdClassDeleteRequested(classId: classId),
+                  );
+              Navigator.pop(ctx);
+              context.go('/ebd/classes');
+            },
+            child: const Text('Excluir'),
+          ),
         ],
       ),
     );

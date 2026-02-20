@@ -205,6 +205,12 @@ class _EbdOverviewScreenState extends State<EbdOverviewScreen> {
                         subtitle: 'Perfil e frequência',
                         onTap: () => context.go('/ebd/students'),
                       ),
+                      _QuickActionCard(
+                        icon: Icons.bar_chart_outlined,
+                        title: 'Relatórios',
+                        subtitle: 'Análises e ranking',
+                        onTap: () => context.go('/ebd/reports'),
+                      ),
                     ],
                   );
                 },

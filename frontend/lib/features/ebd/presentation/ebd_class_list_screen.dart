@@ -83,11 +83,26 @@ class _ClassListView extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(
                 AppSpacing.lg, AppSpacing.md, AppSpacing.lg, 100,
               ),
-              itemCount: state.classes.length,
+              itemCount: state.classes.length + (state.hasMore ? 1 : 0),
               separatorBuilder: (_, __) =>
                   const SizedBox(height: AppSpacing.sm),
-              itemBuilder: (ctx, i) =>
-                  _ClassTile(classSummary: state.classes[i]),
+              itemBuilder: (ctx, i) {
+                if (i == state.classes.length) {
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(AppSpacing.md),
+                      child: OutlinedButton.icon(
+                        icon: const Icon(Icons.expand_more),
+                        label: const Text('Carregar mais'),
+                        onPressed: () => context.read<EbdBloc>().add(
+                              EbdClassesLoadRequested(page: state.currentPage + 1),
+                            ),
+                      ),
+                    ),
+                  );
+                }
+                return _ClassTile(classSummary: state.classes[i]);
+              },
             );
           }
           if (state is EbdError) {
