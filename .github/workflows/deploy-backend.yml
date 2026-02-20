@@ -14,7 +14,13 @@ on:
       - 'database/**'
       - 'docker-compose.prod.yml'
       - '.github/workflows/deploy-backend.yml'
-  workflow_dispatch: # Allow manual trigger
+  workflow_dispatch:
+    inputs:
+      reset_database:
+        description: 'Apagar banco de dados e recriar do zero (⚠️ PERDE TODOS OS DADOS!)'
+        required: false
+        type: boolean
+        default: false
 
 jobs:
   deploy:
@@ -66,14 +72,16 @@ jobs:
             ${{ secrets.ORACLE_SSH_USER }}@${{ secrets.ORACLE_SERVER_IP }}:/tmp/
 
       - name: Deploy on server
+        env:
+          RESET_DB: ${{ github.event.inputs.reset_database || 'false' }}
         run: |
           ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
-            ${{ secrets.ORACLE_SSH_USER }}@${{ secrets.ORACLE_SERVER_IP }} << 'REMOTE_SCRIPT'
+            ${{ secrets.ORACLE_SSH_USER }}@${{ secrets.ORACLE_SERVER_IP }} << REMOTE_SCRIPT
           set -euo pipefail
           REMOTE_DIR="/opt/igreja-manager"
 
-          mkdir -p $REMOTE_DIR
-          cd $REMOTE_DIR
+          mkdir -p \$REMOTE_DIR
+          cd \$REMOTE_DIR
 
           # Extract config
           tar xzf /tmp/igreja-config.tar.gz
@@ -85,27 +93,35 @@ jobs:
           rm /tmp/igreja-backend.tar.gz
           echo "Docker image loaded."
 
+          # Database reset (only when explicitly requested)
+          if [ "${RESET_DB}" = "true" ]; then
+            echo "⚠️ DATABASE RESET REQUESTED — dropping all data..."
+            docker compose -f docker-compose.prod.yml down -v 2>/dev/null || true
+            echo "✓ Volumes removed. Database will be recreated from scratch."
+          else
+            docker compose -f docker-compose.prod.yml down 2>/dev/null || true
+          fi
+
           # Deploy with docker compose
-          docker compose -f docker-compose.prod.yml down 2>/dev/null || true
           docker compose -f docker-compose.prod.yml up -d
 
           # Wait for services
           echo "Waiting for services to start..."
-          sleep 15
+          sleep 20
 
-          # Health check
+          # Health check (with more time for migrations)
           echo "Running health check..."
-          for i in {1..5}; do
+          for i in {1..10}; do
             if curl -sf http://localhost/api/v1/health > /dev/null 2>&1; then
               echo "Health check passed!"
               exit 0
             fi
-            echo "Attempt $i/5 failed, retrying in 5s..."
+            echo "Attempt \$i/10 failed, retrying in 5s..."
             sleep 5
           done
 
-          echo "Health check failed after 5 attempts"
-          docker compose -f docker-compose.prod.yml logs --tail=50 backend
+          echo "Health check failed after 10 attempts"
+          docker compose -f docker-compose.prod.yml logs --tail=80 backend
           exit 1
           REMOTE_SCRIPT
 

@@ -4,6 +4,9 @@
 -- 2. Remove CHECK constraint on role_position
 -- 3. Drop rg column
 -- 4. Add marriage_date column
+--
+-- ⚠️  REGRA DE OURO: NUNCA modifique uma migration já aplicada!
+--     Todas as alterações devem ir em novas migrations.
 -- ============================================
 
 -- ============================

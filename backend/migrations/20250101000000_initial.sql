@@ -2,6 +2,10 @@
 -- Igreja Manager — Migration 001
 -- Core tables: churches, roles, users, refresh_tokens, audit_logs,
 --              members, families, ministries, financial, assets, EBD
+--
+-- ⚠️  REGRA DE OURO: NUNCA modifique uma migration já aplicada!
+--     Todas as alterações devem ir em novas migrations.
+--     Esta migration é idempotente (IF NOT EXISTS) por segurança.
 -- ============================================
 
 -- Extensões necessárias
@@ -28,7 +32,7 @@ $$ LANGUAGE plpgsql;
 -- ============================
 
 -- Igrejas/Congregações
-CREATE TABLE churches (
+CREATE TABLE IF NOT EXISTS churches (
     id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     name            VARCHAR(200) NOT NULL,
     legal_name      VARCHAR(200),
@@ -53,11 +57,11 @@ CREATE TABLE churches (
     updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_churches_cnpj ON churches(cnpj) WHERE cnpj IS NOT NULL;
-CREATE INDEX idx_churches_active ON churches(is_active);
+CREATE INDEX IF NOT EXISTS idx_churches_cnpj ON churches(cnpj) WHERE cnpj IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_churches_active ON churches(is_active);
 
 -- Papéis de Acesso
-CREATE TABLE roles (
+CREATE TABLE IF NOT EXISTS roles (
     id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     name            VARCHAR(50) NOT NULL UNIQUE,
     display_name    VARCHAR(100) NOT NULL,
@@ -68,7 +72,7 @@ CREATE TABLE roles (
     updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Roles padrão
+-- Roles padrão (ON CONFLICT para idempotência)
 INSERT INTO roles (name, display_name, permissions, is_system) VALUES
 ('super_admin', 'Super Administrador', '["*"]', TRUE),
 ('pastor', 'Pastor/Líder', '["members:*", "financial:read", "financial:write", "assets:*", "ebd:*", "reports:*", "settings:read"]', TRUE),
@@ -76,10 +80,11 @@ INSERT INTO roles (name, display_name, permissions, is_system) VALUES
 ('treasurer', 'Tesoureiro(a)', '["financial:*", "reports:financial"]', TRUE),
 ('asset_manager', 'Gestor de Patrimônio', '["assets:*", "reports:assets"]', TRUE),
 ('ebd_teacher', 'Professor(a) EBD', '["ebd:read", "ebd:attendance"]', TRUE),
-('member', 'Membro', '["profile:read", "profile:write"]', TRUE);
+('member', 'Membro', '["profile:read", "profile:write"]', TRUE)
+ON CONFLICT (name) DO NOTHING;
 
 -- Usuários do Sistema
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
     id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     church_id       UUID NOT NULL REFERENCES churches(id),
     member_id       UUID,
@@ -96,12 +101,12 @@ CREATE TABLE users (
     UNIQUE(email, church_id)
 );
 
-CREATE INDEX idx_users_church ON users(church_id);
-CREATE INDEX idx_users_email ON users(email);
-CREATE INDEX idx_users_role ON users(role_id);
+CREATE INDEX IF NOT EXISTS idx_users_church ON users(church_id);
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+CREATE INDEX IF NOT EXISTS idx_users_role ON users(role_id);
 
 -- Tokens de Refresh
-CREATE TABLE refresh_tokens (
+CREATE TABLE IF NOT EXISTS refresh_tokens (
     id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id         UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     token_hash      VARCHAR(255) NOT NULL,
@@ -110,11 +115,11 @@ CREATE TABLE refresh_tokens (
     created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_refresh_tokens_user ON refresh_tokens(user_id);
-CREATE INDEX idx_refresh_tokens_expires ON refresh_tokens(expires_at);
+CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user ON refresh_tokens(user_id);
+CREATE INDEX IF NOT EXISTS idx_refresh_tokens_expires ON refresh_tokens(expires_at);
 
 -- Logs de Auditoria
-CREATE TABLE audit_logs (
+CREATE TABLE IF NOT EXISTS audit_logs (
     id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     church_id       UUID NOT NULL REFERENCES churches(id),
     user_id         UUID REFERENCES users(id),
@@ -128,16 +133,16 @@ CREATE TABLE audit_logs (
     created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_audit_logs_church ON audit_logs(church_id);
-CREATE INDEX idx_audit_logs_entity ON audit_logs(entity_type, entity_id);
-CREATE INDEX idx_audit_logs_user ON audit_logs(user_id);
-CREATE INDEX idx_audit_logs_created ON audit_logs(created_at);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_church ON audit_logs(church_id);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_entity ON audit_logs(entity_type, entity_id);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_user ON audit_logs(user_id);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_created ON audit_logs(created_at);
 
 -- ============================
 -- 2. MÓDULO DE MEMBROS
 -- ============================
 
-CREATE TABLE members (
+CREATE TABLE IF NOT EXISTS members (
     id                  UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     church_id           UUID NOT NULL REFERENCES churches(id),
     family_id           UUID,
@@ -183,17 +188,17 @@ CREATE TABLE members (
     deleted_at          TIMESTAMPTZ
 );
 
-CREATE INDEX idx_members_church ON members(church_id);
-CREATE INDEX idx_members_status ON members(church_id, status);
-CREATE INDEX idx_members_name ON members(church_id, full_name);
-CREATE INDEX idx_members_birth ON members(church_id, birth_date);
-CREATE INDEX idx_members_entry_date ON members(church_id, entry_date);
-CREATE INDEX idx_members_role ON members(church_id, role_position);
-CREATE INDEX idx_members_deleted ON members(deleted_at) WHERE deleted_at IS NULL;
-CREATE INDEX idx_members_name_search ON members(church_id, (immutable_unaccent(lower(full_name))));
+CREATE INDEX IF NOT EXISTS idx_members_church ON members(church_id);
+CREATE INDEX IF NOT EXISTS idx_members_status ON members(church_id, status);
+CREATE INDEX IF NOT EXISTS idx_members_name ON members(church_id, full_name);
+CREATE INDEX IF NOT EXISTS idx_members_birth ON members(church_id, birth_date);
+CREATE INDEX IF NOT EXISTS idx_members_entry_date ON members(church_id, entry_date);
+CREATE INDEX IF NOT EXISTS idx_members_role ON members(church_id, role_position);
+CREATE INDEX IF NOT EXISTS idx_members_deleted ON members(deleted_at) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_members_name_search ON members(church_id, (immutable_unaccent(lower(full_name))));
 
 -- Famílias
-CREATE TABLE families (
+CREATE TABLE IF NOT EXISTS families (
     id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     church_id       UUID NOT NULL REFERENCES churches(id),
     name            VARCHAR(100) NOT NULL,
@@ -210,14 +215,22 @@ CREATE TABLE families (
     updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-ALTER TABLE members ADD CONSTRAINT fk_members_family
-    FOREIGN KEY (family_id) REFERENCES families(id) ON DELETE SET NULL;
+-- Foreign key members → families (segura para re-execução)
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'fk_members_family'
+    ) THEN
+        ALTER TABLE members ADD CONSTRAINT fk_members_family
+            FOREIGN KEY (family_id) REFERENCES families(id) ON DELETE SET NULL;
+    END IF;
+END $$;
 
-CREATE INDEX idx_families_church ON families(church_id);
-CREATE INDEX idx_members_family ON members(family_id) WHERE family_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_families_church ON families(church_id);
+CREATE INDEX IF NOT EXISTS idx_members_family ON members(family_id) WHERE family_id IS NOT NULL;
 
 -- Relacionamentos Familiares
-CREATE TABLE family_relationships (
+CREATE TABLE IF NOT EXISTS family_relationships (
     id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     family_id       UUID NOT NULL REFERENCES families(id) ON DELETE CASCADE,
     member_id       UUID NOT NULL REFERENCES members(id),
@@ -230,11 +243,11 @@ CREATE TABLE family_relationships (
     UNIQUE(family_id, member_id)
 );
 
-CREATE INDEX idx_family_rel_family ON family_relationships(family_id);
-CREATE INDEX idx_family_rel_member ON family_relationships(member_id);
+CREATE INDEX IF NOT EXISTS idx_family_rel_family ON family_relationships(family_id);
+CREATE INDEX IF NOT EXISTS idx_family_rel_member ON family_relationships(member_id);
 
 -- Ministérios
-CREATE TABLE ministries (
+CREATE TABLE IF NOT EXISTS ministries (
     id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     church_id       UUID NOT NULL REFERENCES churches(id),
     name            VARCHAR(100) NOT NULL,
@@ -245,10 +258,10 @@ CREATE TABLE ministries (
     updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_ministries_church ON ministries(church_id);
+CREATE INDEX IF NOT EXISTS idx_ministries_church ON ministries(church_id);
 
 -- Vínculo Membro-Ministério
-CREATE TABLE member_ministries (
+CREATE TABLE IF NOT EXISTS member_ministries (
     id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     member_id       UUID NOT NULL REFERENCES members(id) ON DELETE CASCADE,
     ministry_id     UUID NOT NULL REFERENCES ministries(id) ON DELETE CASCADE,
@@ -260,11 +273,11 @@ CREATE TABLE member_ministries (
     UNIQUE(member_id, ministry_id, joined_at)
 );
 
-CREATE INDEX idx_member_ministries_member ON member_ministries(member_id);
-CREATE INDEX idx_member_ministries_ministry ON member_ministries(ministry_id);
+CREATE INDEX IF NOT EXISTS idx_member_ministries_member ON member_ministries(member_id);
+CREATE INDEX IF NOT EXISTS idx_member_ministries_ministry ON member_ministries(ministry_id);
 
 -- Histórico de Eventos do Membro
-CREATE TABLE member_history (
+CREATE TABLE IF NOT EXISTS member_history (
     id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     church_id       UUID NOT NULL REFERENCES churches(id),
     member_id       UUID NOT NULL REFERENCES members(id) ON DELETE CASCADE,
@@ -283,16 +296,16 @@ CREATE TABLE member_history (
     created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_member_history_member ON member_history(member_id);
-CREATE INDEX idx_member_history_church ON member_history(church_id);
-CREATE INDEX idx_member_history_date ON member_history(event_date);
+CREATE INDEX IF NOT EXISTS idx_member_history_member ON member_history(member_id);
+CREATE INDEX IF NOT EXISTS idx_member_history_church ON member_history(church_id);
+CREATE INDEX IF NOT EXISTS idx_member_history_date ON member_history(event_date);
 
 -- ============================
 -- 3. MÓDULO FINANCEIRO
 -- ============================
 
 -- Plano de Contas
-CREATE TABLE account_plans (
+CREATE TABLE IF NOT EXISTS account_plans (
     id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     church_id       UUID NOT NULL REFERENCES churches(id),
     parent_id       UUID REFERENCES account_plans(id),
@@ -306,12 +319,12 @@ CREATE TABLE account_plans (
     UNIQUE(church_id, code)
 );
 
-CREATE INDEX idx_account_plans_church ON account_plans(church_id);
-CREATE INDEX idx_account_plans_parent ON account_plans(parent_id);
-CREATE INDEX idx_account_plans_type ON account_plans(church_id, type);
+CREATE INDEX IF NOT EXISTS idx_account_plans_church ON account_plans(church_id);
+CREATE INDEX IF NOT EXISTS idx_account_plans_parent ON account_plans(parent_id);
+CREATE INDEX IF NOT EXISTS idx_account_plans_type ON account_plans(church_id, type);
 
 -- Contas Bancárias/Caixas
-CREATE TABLE bank_accounts (
+CREATE TABLE IF NOT EXISTS bank_accounts (
     id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     church_id       UUID NOT NULL REFERENCES churches(id),
     name            VARCHAR(100) NOT NULL,
@@ -326,10 +339,10 @@ CREATE TABLE bank_accounts (
     updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_bank_accounts_church ON bank_accounts(church_id);
+CREATE INDEX IF NOT EXISTS idx_bank_accounts_church ON bank_accounts(church_id);
 
 -- Campanhas Financeiras
-CREATE TABLE campaigns (
+CREATE TABLE IF NOT EXISTS campaigns (
     id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     church_id       UUID NOT NULL REFERENCES churches(id),
     name            VARCHAR(150) NOT NULL,
@@ -343,11 +356,11 @@ CREATE TABLE campaigns (
     updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_campaigns_church ON campaigns(church_id);
-CREATE INDEX idx_campaigns_status ON campaigns(church_id, status);
+CREATE INDEX IF NOT EXISTS idx_campaigns_church ON campaigns(church_id);
+CREATE INDEX IF NOT EXISTS idx_campaigns_status ON campaigns(church_id, status);
 
 -- Lançamentos Financeiros
-CREATE TABLE financial_entries (
+CREATE TABLE IF NOT EXISTS financial_entries (
     id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     church_id       UUID NOT NULL REFERENCES churches(id),
     type            VARCHAR(10) NOT NULL CHECK (type IN ('receita', 'despesa')),
@@ -381,18 +394,18 @@ CREATE TABLE financial_entries (
     deleted_at      TIMESTAMPTZ
 );
 
-CREATE INDEX idx_fin_entries_church ON financial_entries(church_id);
-CREATE INDEX idx_fin_entries_type ON financial_entries(church_id, type);
-CREATE INDEX idx_fin_entries_date ON financial_entries(church_id, entry_date);
-CREATE INDEX idx_fin_entries_account ON financial_entries(account_plan_id);
-CREATE INDEX idx_fin_entries_bank ON financial_entries(bank_account_id);
-CREATE INDEX idx_fin_entries_member ON financial_entries(member_id) WHERE member_id IS NOT NULL;
-CREATE INDEX idx_fin_entries_campaign ON financial_entries(campaign_id) WHERE campaign_id IS NOT NULL;
-CREATE INDEX idx_fin_entries_status ON financial_entries(church_id, status);
-CREATE INDEX idx_fin_entries_deleted ON financial_entries(deleted_at) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_fin_entries_church ON financial_entries(church_id);
+CREATE INDEX IF NOT EXISTS idx_fin_entries_type ON financial_entries(church_id, type);
+CREATE INDEX IF NOT EXISTS idx_fin_entries_date ON financial_entries(church_id, entry_date);
+CREATE INDEX IF NOT EXISTS idx_fin_entries_account ON financial_entries(account_plan_id);
+CREATE INDEX IF NOT EXISTS idx_fin_entries_bank ON financial_entries(bank_account_id);
+CREATE INDEX IF NOT EXISTS idx_fin_entries_member ON financial_entries(member_id) WHERE member_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_fin_entries_campaign ON financial_entries(campaign_id) WHERE campaign_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_fin_entries_status ON financial_entries(church_id, status);
+CREATE INDEX IF NOT EXISTS idx_fin_entries_deleted ON financial_entries(deleted_at) WHERE deleted_at IS NULL;
 
 -- Fechamentos Mensais
-CREATE TABLE monthly_closings (
+CREATE TABLE IF NOT EXISTS monthly_closings (
     id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     church_id       UUID NOT NULL REFERENCES churches(id),
     reference_month DATE NOT NULL,
@@ -407,14 +420,14 @@ CREATE TABLE monthly_closings (
     UNIQUE(church_id, reference_month)
 );
 
-CREATE INDEX idx_monthly_closings_church ON monthly_closings(church_id);
+CREATE INDEX IF NOT EXISTS idx_monthly_closings_church ON monthly_closings(church_id);
 
 -- ============================
 -- 4. MÓDULO DE PATRIMÔNIO
 -- ============================
 
 -- Categorias de Bens
-CREATE TABLE asset_categories (
+CREATE TABLE IF NOT EXISTS asset_categories (
     id                  UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     church_id           UUID NOT NULL REFERENCES churches(id),
     parent_id           UUID REFERENCES asset_categories(id),
@@ -426,10 +439,10 @@ CREATE TABLE asset_categories (
     UNIQUE(church_id, name)
 );
 
-CREATE INDEX idx_asset_categories_church ON asset_categories(church_id);
+CREATE INDEX IF NOT EXISTS idx_asset_categories_church ON asset_categories(church_id);
 
 -- Bens Patrimoniais
-CREATE TABLE assets (
+CREATE TABLE IF NOT EXISTS assets (
     id                      UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     church_id               UUID NOT NULL REFERENCES churches(id),
     category_id             UUID NOT NULL REFERENCES asset_categories(id),
@@ -462,13 +475,13 @@ CREATE TABLE assets (
     UNIQUE(church_id, asset_code)
 );
 
-CREATE INDEX idx_assets_church ON assets(church_id);
-CREATE INDEX idx_assets_category ON assets(category_id);
-CREATE INDEX idx_assets_status ON assets(church_id, status);
-CREATE INDEX idx_assets_code ON assets(church_id, asset_code);
+CREATE INDEX IF NOT EXISTS idx_assets_church ON assets(church_id);
+CREATE INDEX IF NOT EXISTS idx_assets_category ON assets(category_id);
+CREATE INDEX IF NOT EXISTS idx_assets_status ON assets(church_id, status);
+CREATE INDEX IF NOT EXISTS idx_assets_code ON assets(church_id, asset_code);
 
 -- Fotos dos Bens
-CREATE TABLE asset_photos (
+CREATE TABLE IF NOT EXISTS asset_photos (
     id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     asset_id        UUID NOT NULL REFERENCES assets(id) ON DELETE CASCADE,
     photo_url       VARCHAR(500) NOT NULL,
@@ -477,10 +490,10 @@ CREATE TABLE asset_photos (
     uploaded_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_asset_photos_asset ON asset_photos(asset_id);
+CREATE INDEX IF NOT EXISTS idx_asset_photos_asset ON asset_photos(asset_id);
 
 -- Manutenções
-CREATE TABLE maintenances (
+CREATE TABLE IF NOT EXISTS maintenances (
     id                      UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     church_id               UUID NOT NULL REFERENCES churches(id),
     asset_id                UUID NOT NULL REFERENCES assets(id),
@@ -499,12 +512,12 @@ CREATE TABLE maintenances (
     updated_at              TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_maintenances_church ON maintenances(church_id);
-CREATE INDEX idx_maintenances_asset ON maintenances(asset_id);
-CREATE INDEX idx_maintenances_status ON maintenances(church_id, status);
+CREATE INDEX IF NOT EXISTS idx_maintenances_church ON maintenances(church_id);
+CREATE INDEX IF NOT EXISTS idx_maintenances_asset ON maintenances(asset_id);
+CREATE INDEX IF NOT EXISTS idx_maintenances_status ON maintenances(church_id, status);
 
 -- Inventários
-CREATE TABLE inventories (
+CREATE TABLE IF NOT EXISTS inventories (
     id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     church_id       UUID NOT NULL REFERENCES churches(id),
     name            VARCHAR(100) NOT NULL,
@@ -522,10 +535,10 @@ CREATE TABLE inventories (
     updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_inventories_church ON inventories(church_id);
+CREATE INDEX IF NOT EXISTS idx_inventories_church ON inventories(church_id);
 
 -- Itens do Inventário
-CREATE TABLE inventory_items (
+CREATE TABLE IF NOT EXISTS inventory_items (
     id                  UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     inventory_id        UUID NOT NULL REFERENCES inventories(id) ON DELETE CASCADE,
     asset_id            UUID NOT NULL REFERENCES assets(id),
@@ -539,10 +552,10 @@ CREATE TABLE inventory_items (
     UNIQUE(inventory_id, asset_id)
 );
 
-CREATE INDEX idx_inventory_items_inventory ON inventory_items(inventory_id);
+CREATE INDEX IF NOT EXISTS idx_inventory_items_inventory ON inventory_items(inventory_id);
 
 -- Empréstimos de Bens
-CREATE TABLE asset_loans (
+CREATE TABLE IF NOT EXISTS asset_loans (
     id                  UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     church_id           UUID NOT NULL REFERENCES churches(id),
     asset_id            UUID NOT NULL REFERENCES assets(id),
@@ -557,16 +570,16 @@ CREATE TABLE asset_loans (
     updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_asset_loans_church ON asset_loans(church_id);
-CREATE INDEX idx_asset_loans_asset ON asset_loans(asset_id);
-CREATE INDEX idx_asset_loans_borrower ON asset_loans(borrower_member_id);
+CREATE INDEX IF NOT EXISTS idx_asset_loans_church ON asset_loans(church_id);
+CREATE INDEX IF NOT EXISTS idx_asset_loans_asset ON asset_loans(asset_id);
+CREATE INDEX IF NOT EXISTS idx_asset_loans_borrower ON asset_loans(borrower_member_id);
 
 -- ============================
 -- 5. MÓDULO EBD
 -- ============================
 
 -- Períodos/Trimestres
-CREATE TABLE ebd_terms (
+CREATE TABLE IF NOT EXISTS ebd_terms (
     id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     church_id       UUID NOT NULL REFERENCES churches(id),
     name            VARCHAR(100) NOT NULL,
@@ -579,11 +592,11 @@ CREATE TABLE ebd_terms (
     updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_ebd_terms_church ON ebd_terms(church_id);
-CREATE INDEX idx_ebd_terms_active ON ebd_terms(church_id, is_active);
+CREATE INDEX IF NOT EXISTS idx_ebd_terms_church ON ebd_terms(church_id);
+CREATE INDEX IF NOT EXISTS idx_ebd_terms_active ON ebd_terms(church_id, is_active);
 
 -- Turmas da EBD
-CREATE TABLE ebd_classes (
+CREATE TABLE IF NOT EXISTS ebd_classes (
     id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     church_id       UUID NOT NULL REFERENCES churches(id),
     term_id         UUID NOT NULL REFERENCES ebd_terms(id),
@@ -599,12 +612,12 @@ CREATE TABLE ebd_classes (
     updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_ebd_classes_church ON ebd_classes(church_id);
-CREATE INDEX idx_ebd_classes_term ON ebd_classes(term_id);
-CREATE INDEX idx_ebd_classes_teacher ON ebd_classes(teacher_id);
+CREATE INDEX IF NOT EXISTS idx_ebd_classes_church ON ebd_classes(church_id);
+CREATE INDEX IF NOT EXISTS idx_ebd_classes_term ON ebd_classes(term_id);
+CREATE INDEX IF NOT EXISTS idx_ebd_classes_teacher ON ebd_classes(teacher_id);
 
 -- Matrículas na EBD
-CREATE TABLE ebd_enrollments (
+CREATE TABLE IF NOT EXISTS ebd_enrollments (
     id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     class_id        UUID NOT NULL REFERENCES ebd_classes(id) ON DELETE CASCADE,
     member_id       UUID NOT NULL REFERENCES members(id),
@@ -616,11 +629,11 @@ CREATE TABLE ebd_enrollments (
     UNIQUE(class_id, member_id)
 );
 
-CREATE INDEX idx_ebd_enrollments_class ON ebd_enrollments(class_id);
-CREATE INDEX idx_ebd_enrollments_member ON ebd_enrollments(member_id);
+CREATE INDEX IF NOT EXISTS idx_ebd_enrollments_class ON ebd_enrollments(class_id);
+CREATE INDEX IF NOT EXISTS idx_ebd_enrollments_member ON ebd_enrollments(member_id);
 
 -- Aulas/Lições
-CREATE TABLE ebd_lessons (
+CREATE TABLE IF NOT EXISTS ebd_lessons (
     id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     church_id       UUID NOT NULL REFERENCES churches(id),
     class_id        UUID NOT NULL REFERENCES ebd_classes(id),
@@ -637,12 +650,12 @@ CREATE TABLE ebd_lessons (
     UNIQUE(class_id, lesson_date)
 );
 
-CREATE INDEX idx_ebd_lessons_church ON ebd_lessons(church_id);
-CREATE INDEX idx_ebd_lessons_class ON ebd_lessons(class_id);
-CREATE INDEX idx_ebd_lessons_date ON ebd_lessons(lesson_date);
+CREATE INDEX IF NOT EXISTS idx_ebd_lessons_church ON ebd_lessons(church_id);
+CREATE INDEX IF NOT EXISTS idx_ebd_lessons_class ON ebd_lessons(class_id);
+CREATE INDEX IF NOT EXISTS idx_ebd_lessons_date ON ebd_lessons(lesson_date);
 
 -- Frequência da EBD
-CREATE TABLE ebd_attendances (
+CREATE TABLE IF NOT EXISTS ebd_attendances (
     id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     lesson_id       UUID NOT NULL REFERENCES ebd_lessons(id) ON DELETE CASCADE,
     member_id       UUID NOT NULL REFERENCES members(id),
@@ -660,48 +673,48 @@ CREATE TABLE ebd_attendances (
     UNIQUE(lesson_id, member_id)
 );
 
-CREATE INDEX idx_ebd_attendances_lesson ON ebd_attendances(lesson_id);
-CREATE INDEX idx_ebd_attendances_member ON ebd_attendances(member_id);
+CREATE INDEX IF NOT EXISTS idx_ebd_attendances_lesson ON ebd_attendances(lesson_id);
+CREATE INDEX IF NOT EXISTS idx_ebd_attendances_member ON ebd_attendances(member_id);
 
 -- ============================
--- 6. TRIGGERS
+-- 6. TRIGGERS (CREATE OR REPLACE — PG14+)
 -- ============================
 
-CREATE TRIGGER trg_churches_updated BEFORE UPDATE ON churches
+CREATE OR REPLACE TRIGGER trg_churches_updated BEFORE UPDATE ON churches
     FOR EACH ROW EXECUTE FUNCTION update_updated_at();
-CREATE TRIGGER trg_users_updated BEFORE UPDATE ON users
+CREATE OR REPLACE TRIGGER trg_users_updated BEFORE UPDATE ON users
     FOR EACH ROW EXECUTE FUNCTION update_updated_at();
-CREATE TRIGGER trg_roles_updated BEFORE UPDATE ON roles
+CREATE OR REPLACE TRIGGER trg_roles_updated BEFORE UPDATE ON roles
     FOR EACH ROW EXECUTE FUNCTION update_updated_at();
-CREATE TRIGGER trg_members_updated BEFORE UPDATE ON members
+CREATE OR REPLACE TRIGGER trg_members_updated BEFORE UPDATE ON members
     FOR EACH ROW EXECUTE FUNCTION update_updated_at();
-CREATE TRIGGER trg_families_updated BEFORE UPDATE ON families
+CREATE OR REPLACE TRIGGER trg_families_updated BEFORE UPDATE ON families
     FOR EACH ROW EXECUTE FUNCTION update_updated_at();
-CREATE TRIGGER trg_ministries_updated BEFORE UPDATE ON ministries
+CREATE OR REPLACE TRIGGER trg_ministries_updated BEFORE UPDATE ON ministries
     FOR EACH ROW EXECUTE FUNCTION update_updated_at();
-CREATE TRIGGER trg_account_plans_updated BEFORE UPDATE ON account_plans
+CREATE OR REPLACE TRIGGER trg_account_plans_updated BEFORE UPDATE ON account_plans
     FOR EACH ROW EXECUTE FUNCTION update_updated_at();
-CREATE TRIGGER trg_bank_accounts_updated BEFORE UPDATE ON bank_accounts
+CREATE OR REPLACE TRIGGER trg_bank_accounts_updated BEFORE UPDATE ON bank_accounts
     FOR EACH ROW EXECUTE FUNCTION update_updated_at();
-CREATE TRIGGER trg_financial_entries_updated BEFORE UPDATE ON financial_entries
+CREATE OR REPLACE TRIGGER trg_financial_entries_updated BEFORE UPDATE ON financial_entries
     FOR EACH ROW EXECUTE FUNCTION update_updated_at();
-CREATE TRIGGER trg_campaigns_updated BEFORE UPDATE ON campaigns
+CREATE OR REPLACE TRIGGER trg_campaigns_updated BEFORE UPDATE ON campaigns
     FOR EACH ROW EXECUTE FUNCTION update_updated_at();
-CREATE TRIGGER trg_asset_categories_updated BEFORE UPDATE ON asset_categories
+CREATE OR REPLACE TRIGGER trg_asset_categories_updated BEFORE UPDATE ON asset_categories
     FOR EACH ROW EXECUTE FUNCTION update_updated_at();
-CREATE TRIGGER trg_assets_updated BEFORE UPDATE ON assets
+CREATE OR REPLACE TRIGGER trg_assets_updated BEFORE UPDATE ON assets
     FOR EACH ROW EXECUTE FUNCTION update_updated_at();
-CREATE TRIGGER trg_maintenances_updated BEFORE UPDATE ON maintenances
+CREATE OR REPLACE TRIGGER trg_maintenances_updated BEFORE UPDATE ON maintenances
     FOR EACH ROW EXECUTE FUNCTION update_updated_at();
-CREATE TRIGGER trg_inventories_updated BEFORE UPDATE ON inventories
+CREATE OR REPLACE TRIGGER trg_inventories_updated BEFORE UPDATE ON inventories
     FOR EACH ROW EXECUTE FUNCTION update_updated_at();
-CREATE TRIGGER trg_ebd_terms_updated BEFORE UPDATE ON ebd_terms
+CREATE OR REPLACE TRIGGER trg_ebd_terms_updated BEFORE UPDATE ON ebd_terms
     FOR EACH ROW EXECUTE FUNCTION update_updated_at();
-CREATE TRIGGER trg_ebd_classes_updated BEFORE UPDATE ON ebd_classes
+CREATE OR REPLACE TRIGGER trg_ebd_classes_updated BEFORE UPDATE ON ebd_classes
     FOR EACH ROW EXECUTE FUNCTION update_updated_at();
-CREATE TRIGGER trg_ebd_lessons_updated BEFORE UPDATE ON ebd_lessons
+CREATE OR REPLACE TRIGGER trg_ebd_lessons_updated BEFORE UPDATE ON ebd_lessons
     FOR EACH ROW EXECUTE FUNCTION update_updated_at();
-CREATE TRIGGER trg_asset_loans_updated BEFORE UPDATE ON asset_loans
+CREATE OR REPLACE TRIGGER trg_asset_loans_updated BEFORE UPDATE ON asset_loans
     FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
 -- Trigger: Atualizar saldo da campanha
@@ -722,7 +735,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER trg_update_campaign_balance
+CREATE OR REPLACE TRIGGER trg_update_campaign_balance
 AFTER INSERT OR UPDATE ON financial_entries
 FOR EACH ROW EXECUTE FUNCTION update_campaign_balance();
 
@@ -744,7 +757,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER trg_generate_asset_code
+CREATE OR REPLACE TRIGGER trg_generate_asset_code
 BEFORE INSERT ON assets
 FOR EACH ROW EXECUTE FUNCTION generate_asset_code();
 
@@ -752,7 +765,7 @@ FOR EACH ROW EXECUTE FUNCTION generate_asset_code();
 -- 7. VIEWS
 -- ============================
 
-CREATE VIEW vw_member_stats AS
+CREATE OR REPLACE VIEW vw_member_stats AS
 SELECT
     church_id,
     status,
@@ -763,7 +776,7 @@ FROM members
 WHERE deleted_at IS NULL
 GROUP BY church_id, status;
 
-CREATE VIEW vw_account_balances AS
+CREATE OR REPLACE VIEW vw_account_balances AS
 SELECT
     ba.id as bank_account_id,
     ba.church_id,
@@ -778,7 +791,7 @@ FROM bank_accounts ba
 LEFT JOIN financial_entries fe ON fe.bank_account_id = ba.id AND fe.deleted_at IS NULL
 GROUP BY ba.id, ba.church_id, ba.name, ba.initial_balance;
 
-CREATE VIEW vw_ebd_class_attendance AS
+CREATE OR REPLACE VIEW vw_ebd_class_attendance AS
 SELECT
     ec.church_id,
     ec.id as class_id,

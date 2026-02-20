@@ -1,14 +1,16 @@
 -- ============================================================
--- Migration: EBD Module Evolution
--- Date: 2025-02-19
--- Description: Adds enriched lesson content, activities,
---              materials, student notes, and student profile view
+-- Igreja Manager — Migration: EBD Module Evolution
+-- Adds enriched lesson content, activities,
+-- materials, student notes, and student profile view
+--
+-- ⚠️  REGRA DE OURO: NUNCA modifique uma migration já aplicada!
+--     Todas as alterações devem ir em novas migrations.
 -- ============================================================
 
 -- ============================================================
 -- E1: Conteúdo Enriquecido de Lições
 -- ============================================================
-CREATE TABLE ebd_lesson_contents (
+CREATE TABLE IF NOT EXISTS ebd_lesson_contents (
     id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     lesson_id       UUID NOT NULL REFERENCES ebd_lessons(id) ON DELETE CASCADE,
     content_type    VARCHAR(20) NOT NULL CHECK (content_type IN ('text', 'image', 'bible_reference', 'note')),
@@ -21,16 +23,16 @@ CREATE TABLE ebd_lesson_contents (
     updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_lesson_contents_lesson ON ebd_lesson_contents(lesson_id);
-CREATE INDEX idx_lesson_contents_order ON ebd_lesson_contents(lesson_id, sort_order);
+CREATE INDEX IF NOT EXISTS idx_lesson_contents_lesson ON ebd_lesson_contents(lesson_id);
+CREATE INDEX IF NOT EXISTS idx_lesson_contents_order ON ebd_lesson_contents(lesson_id, sort_order);
 
-CREATE TRIGGER trg_lesson_contents_updated BEFORE UPDATE ON ebd_lesson_contents
+CREATE OR REPLACE TRIGGER trg_lesson_contents_updated BEFORE UPDATE ON ebd_lesson_contents
     FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
 -- ============================================================
 -- E2: Atividades por Lição
 -- ============================================================
-CREATE TABLE ebd_lesson_activities (
+CREATE TABLE IF NOT EXISTS ebd_lesson_activities (
     id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     lesson_id       UUID NOT NULL REFERENCES ebd_lessons(id) ON DELETE CASCADE,
     activity_type   VARCHAR(30) NOT NULL CHECK (activity_type IN (
@@ -47,12 +49,12 @@ CREATE TABLE ebd_lesson_activities (
     updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_lesson_activities_lesson ON ebd_lesson_activities(lesson_id);
+CREATE INDEX IF NOT EXISTS idx_lesson_activities_lesson ON ebd_lesson_activities(lesson_id);
 
-CREATE TRIGGER trg_lesson_activities_updated BEFORE UPDATE ON ebd_lesson_activities
+CREATE OR REPLACE TRIGGER trg_lesson_activities_updated BEFORE UPDATE ON ebd_lesson_activities
     FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
-CREATE TABLE ebd_activity_responses (
+CREATE TABLE IF NOT EXISTS ebd_activity_responses (
     id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     activity_id     UUID NOT NULL REFERENCES ebd_lesson_activities(id) ON DELETE CASCADE,
     member_id       UUID NOT NULL REFERENCES members(id),
@@ -65,16 +67,16 @@ CREATE TABLE ebd_activity_responses (
     UNIQUE(activity_id, member_id)
 );
 
-CREATE INDEX idx_activity_responses_activity ON ebd_activity_responses(activity_id);
-CREATE INDEX idx_activity_responses_member ON ebd_activity_responses(member_id);
+CREATE INDEX IF NOT EXISTS idx_activity_responses_activity ON ebd_activity_responses(activity_id);
+CREATE INDEX IF NOT EXISTS idx_activity_responses_member ON ebd_activity_responses(member_id);
 
-CREATE TRIGGER trg_activity_responses_updated BEFORE UPDATE ON ebd_activity_responses
+CREATE OR REPLACE TRIGGER trg_activity_responses_updated BEFORE UPDATE ON ebd_activity_responses
     FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
 -- ============================================================
 -- E4: Materiais e Recursos da Lição
 -- ============================================================
-CREATE TABLE ebd_lesson_materials (
+CREATE TABLE IF NOT EXISTS ebd_lesson_materials (
     id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     lesson_id       UUID NOT NULL REFERENCES ebd_lessons(id) ON DELETE CASCADE,
     material_type   VARCHAR(20) NOT NULL CHECK (material_type IN (
@@ -89,12 +91,12 @@ CREATE TABLE ebd_lesson_materials (
     created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_lesson_materials_lesson ON ebd_lesson_materials(lesson_id);
+CREATE INDEX IF NOT EXISTS idx_lesson_materials_lesson ON ebd_lesson_materials(lesson_id);
 
 -- ============================================================
 -- E5: Anotações do Professor por Aluno
 -- ============================================================
-CREATE TABLE ebd_student_notes (
+CREATE TABLE IF NOT EXISTS ebd_student_notes (
     id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     church_id       UUID NOT NULL REFERENCES churches(id),
     member_id       UUID NOT NULL REFERENCES members(id),
@@ -110,11 +112,11 @@ CREATE TABLE ebd_student_notes (
     updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_student_notes_church ON ebd_student_notes(church_id);
-CREATE INDEX idx_student_notes_member ON ebd_student_notes(member_id);
-CREATE INDEX idx_student_notes_term ON ebd_student_notes(term_id);
+CREATE INDEX IF NOT EXISTS idx_student_notes_church ON ebd_student_notes(church_id);
+CREATE INDEX IF NOT EXISTS idx_student_notes_member ON ebd_student_notes(member_id);
+CREATE INDEX IF NOT EXISTS idx_student_notes_term ON ebd_student_notes(term_id);
 
-CREATE TRIGGER trg_student_notes_updated BEFORE UPDATE ON ebd_student_notes
+CREATE OR REPLACE TRIGGER trg_student_notes_updated BEFORE UPDATE ON ebd_student_notes
     FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
 -- ============================================================
