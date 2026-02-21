@@ -852,7 +852,7 @@ pub async fn asset_stats(
     let on_loan = sqlx::query_scalar::<_, i64>(
         "SELECT COUNT(*) FROM asset_loans al \
          JOIN assets a ON a.id = al.asset_id \
-         WHERE a.church_id = $1 AND al.returned_at IS NULL"
+         WHERE a.church_id = $1 AND al.actual_return_date IS NULL"
     )
     .bind(church_id)
     .fetch_one(pool.get_ref())
