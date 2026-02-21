@@ -43,6 +43,10 @@ import '../../features/ebd/presentation/ebd_student_profile_screen.dart';
 import '../../features/ebd/presentation/ebd_activity_responses_screen.dart';
 import '../../features/ebd/presentation/ebd_report_screen.dart';
 import '../../features/reports/presentation/reports_screen.dart';
+import '../../features/congregations/presentation/pages/congregation_list_page.dart';
+import '../../features/congregations/presentation/pages/congregation_detail_page.dart';
+import '../../features/congregations/presentation/pages/congregation_form_page.dart';
+import '../../features/congregations/presentation/pages/congregation_assign_members_page.dart';
 import '../../features/settings/presentation/settings_overview_screen.dart';
 import '../../features/settings/presentation/church_settings_screen.dart';
 import '../../features/settings/presentation/user_management_screen.dart';
@@ -409,6 +413,50 @@ class AppRouter {
                 path: 'users',
                 name: 'settings-users',
                 builder: (context, state) => const UserManagementScreen(),
+              ),
+              GoRoute(
+                path: 'congregations',
+                name: 'settings-congregations',
+                builder: (context, state) => const CongregationListPage(),
+                routes: [
+                  GoRoute(
+                    path: 'new',
+                    name: 'congregation-create',
+                    builder: (context, state) => const CongregationFormPage(),
+                  ),
+                  GoRoute(
+                    path: ':id',
+                    name: 'congregation-detail',
+                    builder: (context, state) {
+                      final id = state.pathParameters['id']!;
+                      return CongregationDetailPage(congregationId: id);
+                    },
+                    routes: [
+                      GoRoute(
+                        path: 'edit',
+                        name: 'congregation-edit',
+                        builder: (context, state) {
+                          final congregation = state.extra as dynamic;
+                          final id = state.pathParameters['id'];
+                          return CongregationFormPage(
+                            existingCongregation: congregation,
+                            congregationId: congregation == null ? id : null,
+                          );
+                        },
+                      ),
+                      GoRoute(
+                        path: 'assign-members',
+                        name: 'congregation-assign-members',
+                        builder: (context, state) {
+                          final id = state.pathParameters['id']!;
+                          return CongregationAssignMembersPage(
+                            congregationId: id,
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ],
           ),

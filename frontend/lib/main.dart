@@ -8,6 +8,8 @@ import 'core/theme/app_theme.dart';
 import 'features/auth/bloc/auth_bloc.dart';
 import 'features/auth/bloc/auth_event_state.dart';
 import 'features/auth/data/auth_repository.dart';
+import 'features/congregations/bloc/congregation_context_cubit.dart';
+import 'features/congregations/data/congregation_repository.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -39,20 +41,34 @@ class IgrejaManagerApp extends StatefulWidget {
 class _IgrejaManagerAppState extends State<IgrejaManagerApp> {
   late final AuthBloc _authBloc;
   late final AppRouter _appRouter;
+  late final CongregationContextCubit _congregationContextCubit;
 
   @override
   void initState() {
     super.initState();
     _authBloc = AuthBloc(authRepository: widget.authRepository);
     _appRouter = AppRouter(authBloc: _authBloc);
+    _congregationContextCubit = CongregationContextCubit(
+      repository: CongregationRepository(apiClient: widget.apiClient),
+    );
 
     // Check authentication on startup
     _authBloc.add(const AuthCheckRequested());
+
+    // Load congregations when user becomes authenticated
+    _authBloc.stream.listen((state) {
+      if (state is AuthAuthenticated) {
+        _congregationContextCubit.loadCongregations();
+      } else if (state is AuthUnauthenticated) {
+        _congregationContextCubit.clear();
+      }
+    });
   }
 
   @override
   void dispose() {
     _authBloc.close();
+    _congregationContextCubit.close();
     super.dispose();
   }
 
@@ -63,8 +79,11 @@ class _IgrejaManagerAppState extends State<IgrejaManagerApp> {
         RepositoryProvider.value(value: widget.apiClient),
         RepositoryProvider.value(value: widget.authRepository),
       ],
-      child: BlocProvider.value(
-        value: _authBloc,
+      child: MultiBlocProvider(
+        providers: [
+          BlocProvider.value(value: _authBloc),
+          BlocProvider.value(value: _congregationContextCubit),
+        ],
         child: MaterialApp.router(
           title: 'Igreja Manager',
           debugShowCheckedModeBanner: false,

@@ -51,6 +51,14 @@ class SettingsOverviewScreen extends StatelessWidget {
               ),
               const SizedBox(height: AppSpacing.md),
               _SettingsNavCard(
+                icon: Icons.church_outlined,
+                title: 'Congregações',
+                subtitle:
+                    'Gerenciar congregações, pontos de pregação e atribuir membros',
+                onTap: () => context.go('/settings/congregations'),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              _SettingsNavCard(
                 icon: Icons.description_outlined,
                 title: 'Relatórios',
                 subtitle:
