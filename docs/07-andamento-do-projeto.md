@@ -1,14 +1,14 @@
 # 📊 Andamento do Projeto — Igreja Manager
 
-> **Última atualização:** 19 de fevereiro de 2026  
-> **Versão do documento:** 1.15  
-> **Status geral do projeto:** Em Desenvolvimento Ativo (~99.5% concluído)
+> **Última atualização:** 20 de fevereiro de 2026  
+> **Versão do documento:** 1.16  
+> **Status geral do projeto:** Em Desenvolvimento Ativo (~99.8% concluído)
 
 ---
 
 ## 1. Visão Geral do Progresso
 
-O **Igreja Manager** é uma plataforma de gestão para igrejas composta por **5 módulos principais**: Autenticação, Membros, Financeiro, Patrimônio e EBD (Escola Bíblica Dominical). A stack tecnológica definida é **Rust (Actix-Web)** no backend, **PostgreSQL 16** como banco de dados, **Redis 7** para cache e **Flutter 3.38** no frontend (Web, Android, iOS).
+O **Igreja Manager** é uma plataforma de gestão para igrejas composta por **6 módulos principais**: Autenticação, Membros, Financeiro, Patrimônio, EBD (Escola Bíblica Dominical) e Congregações. A stack tecnológica definida é **Rust (Actix-Web)** no backend, **PostgreSQL 16** como banco de dados, **Redis 7** para cache e **Flutter 3.38** no frontend (Web, Android, iOS).
 
 ### Resumo Executivo por Área
 
@@ -35,7 +35,9 @@ O **Igreja Manager** é uma plataforma de gestão para igrejas composta por **5 
 | Frontend — Patrimônio | ![95%](https://img.shields.io/badge/95%25-green) | 🟢 12 telas + BLoC + Paginação + Filtro categoria + Edit navigation fix |
 | Frontend — EBD | ![98%](https://img.shields.io/badge/98%25-brightgreen) | ✅ Overview + 10 telas + BLoC + Relatórios + Paginação (E1–E7 + F1) |
 | Frontend — Relatórios | ![100%](https://img.shields.io/badge/100%25-brightgreen) | ✅ Tela central + métricas (4 módulos) + Gráficos fl_chart (pie + bar) + aniversariantes |
-| Frontend — Configurações | ![100%](https://img.shields.io/badge/100%25-brightgreen) | ✅ NOVO — Igrejas + Usuários/Papéis (3 telas + BLoC + Repositório) |
+| Backend — Congregações | ![100%](https://img.shields.io/badge/100%25-brightgreen) | ✅ NOVO — CRUD + Stats + Users + Assign Members + Overview (12 endpoints) |
+| Frontend — Congregações | ![100%](https://img.shields.io/badge/100%25-brightgreen) | ✅ NOVO — 5 telas + BLoC + Context Cubit + Selector Widget |
+| Frontend — Configurações | ![100%](https://img.shields.io/badge/100%25-brightgreen) | ✅ NOVO — Igrejas + Usuários/Papéis + Congregações (3 telas + BLoC + Repositório) |
 
 ---
 
@@ -53,6 +55,7 @@ Toda a documentação de especificação foi finalizada, totalizando **~6.600 li
 | `06-regras-de-negocio.md` | 399 | 40+ regras de negócio por módulo |
 | `08-inline-create-ux.md` | — | UX patterns para criação inline |
 | `09-ebd-evolucao-modulo.md` | ~1.470 | Evolução do módulo EBD — especificação E1-E7 + F1 + registro de implementação |
+| `10-modulo-congregacoes.md` | ~1.544 | Módulo de Congregações — modelo de dados, regras de negócio, API, frontend, plano de implementação |
 
 **Documento adicional:**
 - `SKILL.md` (`.github/skills/frontend/SKILL.md`) — Guia de estética: "Sacred Geometry meets Modern Editorial" (DM Serif Display + Source Sans 3, paleta navy #0D1B2A + gold #D4A843)
@@ -69,9 +72,9 @@ Toda a documentação de especificação foi finalizada, totalizando **~6.600 li
 | Redis | 7-alpine | ✅ Configurado via `docker-compose.yml` |
 | Extensões | uuid-ossp, pgcrypto, unaccent | ✅ Ativadas no `init.sql` |
 
-### 3.2 Tabelas Criadas (Migrations: `initial.sql` + `password_reset_tokens.sql` + `ebd_evolution.sql`)
+### 3.2 Tabelas Criadas (Migrations: `initial.sql` + `password_reset_tokens.sql` + `ebd_evolution.sql` + `congregations.sql`)
 
-**Total: 29 tabelas, 4 views, 23+ triggers, 3 extensões**
+**Total: 31 tabelas, 6 views, 25+ triggers, 3 extensões**
 
 #### Módulo Sistema (5 tabelas)
 
@@ -140,6 +143,15 @@ Toda a documentação de especificação foi finalizada, totalizando **~6.600 li
 | `ebd_lesson_materials` | 8 | ✅ List/Create/Delete (3 endpoints) — **NOVO E4** | ✅ Aba "Materiais" |
 | `ebd_student_notes` | 8 | ✅ CRUD (4 endpoints) — **NOVO E5** | ✅ Seção no perfil + edição |
 
+#### Módulo Congregações (2 tabelas + 2 views) — ✅ NOVO
+
+| Tabela | Campos | Backend | Frontend |
+|--------|:------:|:-------:|:--------:|
+| `congregations` | 17 | ✅ CRUD + Stats + Assign Members | ✅ Lista + Detalhe + Form |
+| `user_congregations` | 5 | ✅ Add/Remove/List users | ✅ Lista na tela de detalhe |
+
+**Alterações em tabelas existentes:** coluna `congregation_id UUID REFERENCES congregations(id) ON DELETE SET NULL` adicionada em 11 tabelas: `members`, `financial_entries`, `bank_accounts`, `campaigns`, `monthly_closings`, `account_plans`, `ebd_terms`, `ebd_classes`, `assets`, `inventories`, `ministries`.
+
 #### Views e Triggers
 
 | View | Propósito |
@@ -148,6 +160,8 @@ Toda a documentação de especificação foi finalizada, totalizando **~6.600 li
 | `vw_account_balances` | Saldos correntes de contas bancárias |
 | `vw_ebd_class_attendance` | Frequência de alunos por turma/aula |
 | `vw_ebd_student_profile` | Perfil unificado do aluno EBD (histórico + frequência acumulada) — **NOVO E3** |
+| `vw_congregation_member_stats` | Estatísticas de membros por congregação (ativos, visitantes, congregados, total) — **NOVO** |
+| `vw_congregation_financial_summary` | Resumo financeiro por congregação (receita, despesa, saldo por mês) — **NOVO** |
 
 - **18 triggers** `update_updated_at` em tabelas com coluna `updated_at`
 - **1 trigger** `update_campaign_balance` para atualizar saldo de campanhas
@@ -206,7 +220,8 @@ backend/src/
 │       ├── member_history_handler.rs
 │       ├── financial_handler.rs
 │       ├── asset_handler.rs
-│       └── ebd_handler.rs       ← 48+ endpoints (Evolução E1-E7 + F1 + Reports)
+│       ├── ebd_handler.rs       ← 48+ endpoints (Evolução E1-E7 + F1 + Reports)
+│       └── congregation_handler.rs ← NOVO — 12 endpoints (CRUD + Stats + Users + Assign + Reports)
 ├── application/
 │   ├── dto/
 │   │   ├── auth_dto.rs      ← LoginRequest, Claims, etc.
@@ -218,7 +233,8 @@ backend/src/
 │   │   ├── ministry_dto.rs  ← CreateMinistryRequest, AddMinistryMemberRequest
 │   │   ├── financial_dto.rs ← CreateFinancialEntryRequest, etc.
 │   │   ├── asset_dto.rs     ← CreateAssetRequest, AssetFilter, etc.
-│   │   └── ebd_dto.rs       ← 30+ DTOs: Terms, Classes, Lessons, Contents, Activities, Responses, Materials, Students, Notes, Clone, Reports
+│   │   ├── ebd_dto.rs       ← 30+ DTOs: Terms, Classes, Lessons, Contents, Activities, Responses, Materials, Students, Notes, Clone, Reports
+│   │   └── congregation_dto.rs ← NOVO — CreateCongregationRequest, UpdateCongregationRequest, AssignMembersRequest, etc.
 │   └── services/
 │       ├── auth_service.rs   ← Hashing, JWT, login flow
 │       ├── audit_service.rs  ← AuditService::log() integrado em 6 módulos (Members, Assets, Financial, Churches, Users, EBD)
@@ -246,7 +262,8 @@ backend/src/
 │       ├── ebd_lesson_material_service.rs ← Materiais e recursos (E4)
 │       ├── ebd_student_note_service.rs ← Anotações do professor (E5)
 │       ├── ebd_student_service.rs ← Perfil unificado do aluno (E3)
-│       └── ebd_report_service.rs ← Relatórios avançados (E6)
+│       ├── ebd_report_service.rs ← Relatórios avançados (E6)
+│       └── congregation_service.rs ← NOVO — CRUD + Stats + Users + Assign Members + Overview (~450 linhas)
 ├── domain/entities/
 │   ├── church.rs
 │   ├── user.rs              ← User, Role, RefreshToken
@@ -275,6 +292,7 @@ backend/src/
 │   ├── ebd_lesson_material.rs ← EbdLessonMaterial (E4)
 │   ├── ebd_student_note.rs   ← EbdStudentNote (E5)
 │   └── ebd_student_profile.rs ← EbdStudentProfile (E3 — view)
+│   └── congregation.rs       ← NOVO — Congregation, CongregationSummary, CongregationStats, UserCongregation, AssignMembersResult, CongregationsOverview
 └── infrastructure/
     ├── database.rs          ← Pool de conexões PG
     └── cache.rs             ← CacheService (get/set/del/del_pattern)
@@ -537,6 +555,23 @@ backend/src/
 | `DELETE` | `/api/v1/ebd/terms/{id}` | ✅ `ebd:write` | Excluir trimestre (transacional: aulas → turmas → notas → período) | ✅ Completo |
 | `DELETE` | `/api/v1/ebd/classes/{id}` | ✅ `ebd:write` | Excluir turma (transacional: aulas → turma) | ✅ Completo |
 
+#### Congregações (12 endpoints) — ✅ NOVO
+
+| Método | Rota | Auth | Descrição | Status |
+|--------|------|------|-----------|--------|
+| `GET` | `/api/v1/congregations` | ✅ JWT | Listar congregações (filtros: is_active, type) | ✅ Completo |
+| `GET` | `/api/v1/congregations/{id}` | ✅ JWT | Detalhes da congregação | ✅ Completo |
+| `POST` | `/api/v1/congregations` | ✅ `settings:write` | Criar congregação (RN-CONG-001 sede única, RN-CONG-002 líder ativo) | ✅ Completo |
+| `PUT` | `/api/v1/congregations/{id}` | ✅ `settings:write` | Atualizar congregação (campos dinâmicos) | ✅ Completo |
+| `DELETE` | `/api/v1/congregations/{id}` | ✅ `settings:write` | Desativar congregação (sede não pode ser desativada) | ✅ Completo |
+| `GET` | `/api/v1/congregations/{id}/stats` | ✅ JWT | Estatísticas da congregação (membros + financeiro) | ✅ Completo |
+| `GET` | `/api/v1/congregations/{id}/users` | ✅ JWT | Listar usuários da congregação | ✅ Completo |
+| `POST` | `/api/v1/congregations/{id}/users` | ✅ `settings:write` | Adicionar usuário à congregação (com role) | ✅ Completo |
+| `DELETE` | `/api/v1/congregations/{cid}/users/{uid}` | ✅ `settings:write` | Remover usuário da congregação | ✅ Completo |
+| `POST` | `/api/v1/congregations/{id}/assign-members` | ✅ `settings:write` | Associar membros em lote (com overwrite opcional) | ✅ Completo |
+| `POST` | `/api/v1/user/active-congregation` | ✅ JWT | Definir congregação ativa do usuário logado | ✅ Completo |
+| `GET` | `/api/v1/reports/congregations/overview` | ✅ JWT | Relatório visão geral de todas as congregações | ✅ Completo |
+
 ### 4.4 O que Falta no Backend
 
 #### Prioridade Alta
@@ -682,7 +717,7 @@ frontend/lib/
     └── presentation/
         └── reports_screen.dart          ✅ Métricas agregadas (4 módulos) + aniversariantes + navegação
 │
-└── settings/                            ✅ NOVO — Gestão de Igrejas + Usuários
+└── settings/                            ✅ NOVO — Gestão de Igrejas + Usuários + Congregações
     ├── bloc/
     │   ├── settings_bloc.dart           ✅ 8 event handlers (Church + User CRUD)
     │   └── settings_event_state.dart    ✅ 8 events, 7 states
@@ -691,9 +726,27 @@ frontend/lib/
     │   └── models/
     │       └── settings_models.dart     ✅ Church (22 campos), AppUser, AppRole
     └── presentation/
-        ├── settings_overview_screen.dart ✅ Overview com 3 cards de navegação
+        ├── settings_overview_screen.dart ✅ Overview com 4 cards de navegação (Igrejas, Usuários, Congregações, Relatórios)
         ├── church_settings_screen.dart  ✅ Perfil da igreja (info/endereço/contato) + edição
         └── user_management_screen.dart  ✅ Lista de usuários + criar/editar + roles
+│
+└── congregations/                       ✅ NOVO — CRUD completo + Context Cubit + Selector
+    ├── bloc/
+    │   ├── congregation_bloc.dart       ✅ 5 event handlers (load, create, update, deactivate, assign)
+    │   ├── congregation_event_state.dart ✅ 5 events, 7 states
+    │   └── congregation_context_cubit.dart ✅ Global context cubit (seletor de congregação ativa)
+    ├── data/
+    │   ├── congregation_repository.dart ✅ 12 métodos (CRUD + stats + users + assign + overview)
+    │   └── models/
+    │       └── congregation_models.dart ✅ Congregation (17+ campos), CongregationStats, CongregationUser, AssignMembersResult, CongregationsOverview
+    └── presentation/
+        ├── widgets/
+        │   └── congregation_selector.dart ✅ Widget AppBar dropdown + BottomSheet (seleção de congregação ativa)
+        └── pages/
+            ├── congregation_list_page.dart ✅ Lista com filter chips (Todas/Sede/Congregações/Pontos) + busca
+            ├── congregation_detail_page.dart ✅ Header + Stats grid + Info + Endereço + Usuários + Ações
+            ├── congregation_form_page.dart ✅ Criar/editar (3 seções: básico, contato, endereço) + responsivo
+            └── congregation_assign_members_page.dart ✅ Associação em lote com busca + seleção + overwrite
 ```
 
 ### 5.3 Design System — Tokens Implementados
@@ -831,6 +884,11 @@ frontend/lib/
 
 | `/financial/monthly-closings` | `MonthlyClosingListScreen` (dentro de `AppShell`) | Protegida |
 | `/reports` | `ReportsScreen` (dentro de `AppShell`) | Protegida |\n| `/settings` | `SettingsOverviewScreen` (dentro de `AppShell`) | Protegida |\n| `/settings/church` | `ChurchSettingsScreen` (dentro de `AppShell`) | Protegida |\n| `/settings/users` | `UserManagementScreen` (dentro de `AppShell`) | Protegida |
+| `/settings/congregations` | `CongregationListPage` (dentro de `AppShell`) | Protegida |
+| `/settings/congregations/new` | `CongregationFormPage` (dentro de `AppShell`) | Protegida |
+| `/settings/congregations/:id` | `CongregationDetailPage` (dentro de `AppShell`) | Protegida |
+| `/settings/congregations/:id/edit` | `CongregationFormPage` (dentro de `AppShell`) | Protegida |
+| `/settings/congregations/:id/assign-members` | `CongregationAssignMembersPage` (dentro de `AppShell`) | Protegida |
 
 **Shell responsivo:**
 - Desktop (≥ 900px): Sidebar navy com itens: Dashboard, Membros, Famílias, Ministérios, Financeiro, Patrimônio, EBD, Configurações
@@ -877,6 +935,9 @@ frontend/lib/
 | 25 | Redis cache conectado mas nunca utilizado (`#[allow(dead_code)]`) | Integrado em `member_stats`, `ebd_stats`, `asset_stats` + cache invalidation em write handlers |
 | 26 | Audit logging apenas no módulo de Membros | Expandido para Financial (entries), Assets (CRUD), Churches (create/update), Users (create/update), **EBD** (13 write handlers) |
 | 27 | EBD: sem update/delete de aulas, notas em attendance não salvas, módulo limitado a fluxo básico | Implementada **Evolução EBD** (doc 09): migration `20250219100000_ebd_evolution.sql` (5 tabelas + 1 view), 6 entities, 6 services, 16 DTOs, 28 novos endpoints (E1-E7 + F1.2 + F1.5 + F1.10 + E6) — total EBD: 48+ endpoints. Frontend: 10 telas, paginação, relatórios, audit logging |
+| 28 | Sem módulo de Congregações (subdivisions dentro da Church) | Implementado **Módulo Congregações** (doc 10): migration `20260220100000_congregations.sql` (2 tabelas + 2 views + ALTER em 11 tabelas), entity + service + handler (12 endpoints), frontend completo (5 telas + BLoC + Context Cubit + Selector Widget) |
+| 29 | Rust: `null as Option<String>` no `serde_json::json!` macro não compila | Substituído por `serde_json::Value::Null` no service de congregações |
+| 30 | Flutter: `DropdownButtonFormField.value` deprecated no Flutter 3.38 | Substituído por `initialValue` no formulário de congregações |
 
 ---
 
@@ -966,6 +1027,23 @@ Crates/packages importados mas ainda sem uso no código — preparados para fase
 | 5.4 | Inventário | ✅ **Frontend: lista + criar + fechar inventário** |
 | 5.5 | Empréstimos | ✅ **Frontend: lista + registro + devolução** |
 
+### Fase 5.1 — Módulo Congregações (Prioridade: 🟡 Média) — ✅ CONCLUÍDO
+
+| # | Tarefa | Backend | Frontend | Status |
+|---|--------|:-------:|:--------:|:------:|
+| 5.1.1 | Migration (tabelas + views + ALTER) | ✅ | — | ✅ Completo |
+| 5.1.2 | Entity + DTOs | ✅ 9 structs + 5 DTOs | — | ✅ Completo |
+| 5.1.3 | Service (CRUD + Stats + Users + Assign) | ✅ 12 métodos | — | ✅ Completo |
+| 5.1.4 | Handler (12 endpoints + OpenAPI) | ✅ | — | ✅ Completo |
+| 5.1.5 | Models + Repository | — | ✅ 5 models + 12 métodos | ✅ Completo |
+| 5.1.6 | BLoC + Context Cubit | — | ✅ 5 events + cubit global | ✅ Completo |
+| 5.1.7 | Tela de lista (filter chips) | — | ✅ | ✅ Completo |
+| 5.1.8 | Tela de detalhe (stats + info) | — | ✅ | ✅ Completo |
+| 5.1.9 | Formulário criar/editar (responsivo) | — | ✅ | ✅ Completo |
+| 5.1.10 | Associar membros em lote | — | ✅ | ✅ Completo |
+| 5.1.11 | Selector widget (AppBar) | — | ✅ | ✅ Completo |
+| 5.1.12 | Rotas + Navegação | — | ✅ 5 rotas | ✅ Completo |
+
 ### Fase 6 — Infraestrutura e Qualidade
 
 | # | Tarefa | Descrição |
@@ -982,7 +1060,62 @@ Crates/packages importados mas ainda sem uso no código — preparados para fase
 
 ---
 
-## 9.1 Changelog — Sessão v1.15 (19/02/2026)
+## 9.1 Changelog — Sessão v1.16 (20/02/2026)
+
+Melhorias implementadas nesta sessão:
+
+### Módulo de Congregações — Implementação Completa (doc 10)
+
+#### Backend (Rust/Actix-Web)
+- **Migration `20260220100000_congregations.sql`** — Tabela `congregations` (17 campos, UNIQUE church_id+name), tabela `user_congregations` (5 campos), ALTER TABLE em 11 tabelas existentes adicionando `congregation_id`, 2 views consolidadas (`vw_congregation_member_stats`, `vw_congregation_financial_summary`), índices e triggers.
+- **Entity `congregation.rs`** — 9 structs: Congregation, CongregationSummary, CongregationStats, UserCongregation, CongregationUserInfo, AssignMembersResult, SkippedMember, CongregationsOverview, CongregationOverviewItem.
+- **DTO `congregation_dto.rs`** — 5 DTOs com validação: CreateCongregationRequest, UpdateCongregationRequest, AssignMembersRequest, AddUserToCongregationRequest, SetActiveCongregationRequest.
+- **Service `congregation_service.rs`** (~450 linhas) — 12 métodos: list, get_by_id, create (RN-CONG-001 sede única, RN-CONG-002 líder ativo), update (dynamic SET), deactivate (protege sede), get_stats, list_users, add_user, remove_user, assign_members (batch com overwrite), get_overview.
+- **Handler `congregation_handler.rs`** (~400 linhas) — 12 handlers com anotações utoipa/OpenAPI. Todos os endpoints registrados em `main.rs`.
+
+#### Frontend (Flutter/BLoC)
+- **Models `congregation_models.dart`** (346 linhas) — Congregation (Equatable, fromJson, toCreateJson, copyWith, displayName, typeLabel, typeIcon, addressShort), CongregationStats, CongregationUser, AssignMembersResult, CongregationsOverview.
+- **Repository `congregation_repository.dart`** — 12 métodos para todos os endpoints da API.
+- **BLoC `congregation_bloc.dart`** + **Events/States** — 5 events (Load, Create, Update, Deactivate, AssignMembers), 7 states. Handler para cada event.
+- **Context Cubit `congregation_context_cubit.dart`** — Cubit global (provido no `main.dart`) para gerenciar a congregação ativa. Métodos: loadCongregations(), selectCongregation(), clear(). Auto-carrega no login, limpa no logout.
+- **Selector Widget `congregation_selector.dart`** (198 linhas) — Widget para AppBar com dropdown/BottomSheet para selecionar congregação ativa ("Todas (Geral)" ou específica).
+- **5 telas de apresentação:**
+  - `congregation_list_page.dart` (405 linhas) — Lista com filter chips (Todas/Sede/Congregações/Pontos), cards com tipo, líder, contagem de membros, endereço.
+  - `congregation_detail_page.dart` — Header card + grid de stats + seções de info/endereço/usuários + ações (adicionar usuário, associar membros, editar, desativar).
+  - `congregation_form_page.dart` (829 linhas) — Formulário criar/editar com 3 seções (básico, contato, endereço), dropdown de tipo, dialog de busca de líder, layout responsivo (2 colunas ≥ 800px).
+  - `congregation_assign_members_page.dart` — Associação de membros em lote com busca, chips de seleção, toggle de overwrite, resultado com contagem.
+
+#### Integração
+- **Rotas** — 5 novas rotas em `app_router.dart`: `/settings/congregations`, `/new`, `/:id`, `/:id/edit`, `/:id/assign-members`.
+- **Navegação** — Card "Congregações" adicionado em `settings_overview_screen.dart`.
+- **Global Provider** — `CongregationContextCubit` integrado como `BlocProvider` global em `main.dart`.
+
+### Arquivos Criados (15 arquivos)
+- `backend/migrations/20260220100000_congregations.sql`
+- `backend/src/domain/entities/congregation.rs`
+- `backend/src/application/dto/congregation_dto.rs`
+- `backend/src/application/services/congregation_service.rs`
+- `backend/src/api/handlers/congregation_handler.rs`
+- `frontend/lib/features/congregations/data/models/congregation_models.dart`
+- `frontend/lib/features/congregations/data/congregation_repository.dart`
+- `frontend/lib/features/congregations/bloc/congregation_event_state.dart`
+- `frontend/lib/features/congregations/bloc/congregation_bloc.dart`
+- `frontend/lib/features/congregations/bloc/congregation_context_cubit.dart`
+- `frontend/lib/features/congregations/presentation/widgets/congregation_selector.dart`
+- `frontend/lib/features/congregations/presentation/pages/congregation_list_page.dart`
+- `frontend/lib/features/congregations/presentation/pages/congregation_detail_page.dart`
+- `frontend/lib/features/congregations/presentation/pages/congregation_form_page.dart`
+- `frontend/lib/features/congregations/presentation/pages/congregation_assign_members_page.dart`
+
+### Arquivos Modificados (4 arquivos)
+- `backend/src/main.rs` — Importação + 12 rotas + OpenAPI paths/tags
+- `frontend/lib/core/router/app_router.dart` — 4 imports + 5 rotas de congregações
+- `frontend/lib/features/settings/presentation/settings_overview_screen.dart` — Card de navegação para Congregações
+- `frontend/lib/main.dart` — CongregationContextCubit como BlocProvider global
+
+---
+
+## 9.2 Changelog — Sessão v1.15 (19/02/2026)
 
 Melhorias implementadas nesta sessão:
 
@@ -1028,7 +1161,7 @@ Melhorias implementadas nesta sessão:
 
 ---
 
-## 9.2 Changelog — Sessão v1.14 (20/02/2026)
+## 9.3 Changelog — Sessão v1.14 (20/02/2026)
 
 Melhorias implementadas nesta sessão para aumentar completude do frontend:
 
@@ -1065,19 +1198,19 @@ Melhorias implementadas nesta sessão para aumentar completude do frontend:
 
 | Componente | Arquivos | Linhas Estimadas |
 |------------|:--------:|:----------------:|
-| Documentação (docs/) | 9 | ~6.600 |
-| Backend (Rust) | 90 .rs | ~14.500 |
-| Migrations (SQL) | 3 | ~875 |
-| Frontend (Dart) | 84 .dart | ~24.000 |
+| Documentação (docs/) | 10 | ~8.100 |
+| Backend (Rust) | 94 .rs | ~15.400 |
+| Migrations (SQL) | 4 | ~1.050 |
+| Frontend (Dart) | 96 .dart | ~27.500 |
 | Configuração | 5 | ~200 |
-| **Total** | **187** | **~43.500** |
+| **Total** | **205** | **~49.500** |
 
 ### Status de Compilação
 
 | Componente | Comando | Resultado |
 |------------|---------|-----------|
-| Backend Rust | `SQLX_OFFLINE=true cargo check` | ✅ Compila (0 errors, 0 warnings) |
-| Frontend Flutter | `flutter analyze` | ✅ 44 info issues (zero errors, zero warnings) |
+| Backend Rust | `SQLX_OFFLINE=true cargo check` | ✅ Compila (0 errors, 2 warnings dead_code) |
+| Frontend Flutter | `flutter analyze` | ✅ 64 info issues (zero errors, zero warnings) |
 
 ---
 

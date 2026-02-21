@@ -11,7 +11,7 @@ use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
-use crate::api::handlers::{asset_handler, auth_handler, church_handler, church_role_handler, ebd_handler, family_handler, financial_handler, health_handler, member_handler, member_history_handler, ministry_handler, upload_handler, user_handler};
+use crate::api::handlers::{asset_handler, auth_handler, church_handler, church_role_handler, congregation_handler, ebd_handler, family_handler, financial_handler, health_handler, member_handler, member_history_handler, ministry_handler, upload_handler, user_handler};
 use crate::application::services::AuthService;
 use crate::config::AppConfig;
 use crate::infrastructure::database;
@@ -177,6 +177,19 @@ use crate::infrastructure::cloudinary::CloudinaryService;
         ebd_handler::get_term_ranking,
         ebd_handler::get_term_comparison,
         ebd_handler::get_absent_students,
+        // Congregations
+        congregation_handler::list_congregations,
+        congregation_handler::get_congregation,
+        congregation_handler::create_congregation,
+        congregation_handler::update_congregation,
+        congregation_handler::deactivate_congregation,
+        congregation_handler::get_congregation_stats,
+        congregation_handler::list_congregation_users,
+        congregation_handler::add_congregation_user,
+        congregation_handler::remove_congregation_user,
+        congregation_handler::assign_members_batch,
+        congregation_handler::set_active_congregation,
+        congregation_handler::congregations_overview_report,
     ),
     components(schemas(
         crate::api::response::ApiResponse<serde_json::Value>,
@@ -193,6 +206,7 @@ use crate::infrastructure::cloudinary::CloudinaryService;
         (name = "Financial", description = "Módulo financeiro"),
         (name = "Assets", description = "Gestão de patrimônio"),
         (name = "EBD", description = "Escola Bíblica Dominical"),
+        (name = "Congregations", description = "Gestão de congregações"),
     ),
     modifiers(&SecurityAddon),
 )]
@@ -364,6 +378,8 @@ async fn main() -> std::io::Result<()> {
             .service(asset_handler::list_asset_categories)
             .service(asset_handler::create_asset_category)
             .service(asset_handler::update_asset_category)
+            // Assets — Stats (before {id} route)
+            .service(asset_handler::asset_stats)
             // Assets — CRUD
             .service(asset_handler::list_assets)
             .service(asset_handler::get_asset)
@@ -380,8 +396,6 @@ async fn main() -> std::io::Result<()> {
             .service(asset_handler::create_inventory)
             .service(asset_handler::update_inventory_item)
             .service(asset_handler::close_inventory)
-            // Assets — Stats
-            .service(asset_handler::asset_stats)
             // Assets — Loans
             .service(asset_handler::list_asset_loans)
             .service(asset_handler::create_asset_loan)
@@ -450,6 +464,19 @@ async fn main() -> std::io::Result<()> {
             .service(ebd_handler::get_term_ranking)
             .service(ebd_handler::get_term_comparison)
             .service(ebd_handler::get_absent_students)
+            // Congregations
+            .service(congregation_handler::list_congregations)
+            .service(congregation_handler::get_congregation)
+            .service(congregation_handler::create_congregation)
+            .service(congregation_handler::update_congregation)
+            .service(congregation_handler::deactivate_congregation)
+            .service(congregation_handler::get_congregation_stats)
+            .service(congregation_handler::list_congregation_users)
+            .service(congregation_handler::add_congregation_user)
+            .service(congregation_handler::remove_congregation_user)
+            .service(congregation_handler::assign_members_batch)
+            .service(congregation_handler::set_active_congregation)
+            .service(congregation_handler::congregations_overview_report)
             // Swagger UI
             .service(
                 SwaggerUi::new("/swagger-ui/{_:.*}")

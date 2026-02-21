@@ -2,6 +2,7 @@ pub mod asset_handler;
 pub mod auth_handler;
 pub mod church_handler;
 pub mod church_role_handler;
+pub mod congregation_handler;
 pub mod ebd_handler;
 pub mod family_handler;
 pub mod financial_handler;
