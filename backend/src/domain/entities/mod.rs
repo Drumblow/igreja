@@ -54,4 +54,4 @@ pub use member_history::MemberHistory;
 pub use ministry::{MemberMinistry, Ministry, MinistryMemberInfo, MinistrySummary};
 pub use monthly_closing::{MonthlyClosing, MonthlyClosingSummary};
 pub use church_role::ChurchRole;
-pub use congregation::{AssignMembersResult, Congregation, CongregationOverviewItem, CongregationStats, CongregationSummary, CongregationUserInfo, CongregationsOverview, SkippedMember, UserCongregation};
+pub use congregation::{AssignMembersResult, Congregation, CongregationCompareItem, CongregationCompareReport, CongregationDetail, CongregationOverviewItem, CongregationStats, CongregationSummary, CongregationUserInfo, CongregationsOverview, SkippedMember, UserCongregation};

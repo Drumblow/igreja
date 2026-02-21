@@ -6,8 +6,8 @@ use validator::Validate;
 use crate::api::middleware;
 use crate::api::response::ApiResponse;
 use crate::application::dto::{
-    AddUserToCongregationRequest, AssignMembersRequest, CreateCongregationRequest,
-    SetActiveCongregationRequest, UpdateCongregationRequest,
+    AddUserToCongregationRequest, AssignMembersRequest, CongregationCompareFilter,
+    CreateCongregationRequest, SetActiveCongregationRequest, UpdateCongregationRequest,
 };
 use crate::application::services::CongregationService;
 use crate::application::services::AuditService;
@@ -79,10 +79,10 @@ pub async fn get_congregation(
     let church_id = middleware::get_church_id(&claims)?;
     let congregation_id = path.into_inner();
 
-    let congregation =
-        CongregationService::get_by_id(pool.get_ref(), church_id, congregation_id).await?;
+    let detail =
+        CongregationService::get_detail(pool.get_ref(), church_id, congregation_id).await?;
 
-    Ok(HttpResponse::Ok().json(ApiResponse::ok(congregation)))
+    Ok(HttpResponse::Ok().json(ApiResponse::ok(detail)))
 }
 
 /// Create a new congregation
@@ -403,19 +403,21 @@ pub async fn set_active_congregation(
 
     // If a congregation_id is specified, validate it exists
     if let Some(congregation_id) = body.congregation_id {
-        let _cong =
-            CongregationService::get_by_id(pool.get_ref(), church_id, congregation_id).await?;
+        let name =
+            CongregationService::validate_active_congregation(pool.get_ref(), church_id, congregation_id).await?;
 
         Ok(HttpResponse::Ok().json(ApiResponse::with_message(
             serde_json::json!({
                 "active_congregation_id": congregation_id,
+                "active_congregation_name": name,
             }),
-            "Contexto de congregação atualizado",
+            format!("Contexto alterado para {}", name),
         )))
     } else {
         Ok(HttpResponse::Ok().json(ApiResponse::with_message(
             serde_json::json!({
                 "active_congregation_id": serde_json::Value::Null,
+                "active_congregation_name": "Todas as Congregações",
             }),
             "Contexto alterado para Todas as congregações",
         )))
@@ -444,4 +446,35 @@ pub async fn congregations_overview_report(
     let overview = CongregationService::get_overview(pool.get_ref(), church_id).await?;
 
     Ok(HttpResponse::Ok().json(ApiResponse::ok(overview)))
+}
+
+/// Congregations compare report
+#[utoipa::path(
+    get,
+    path = "/api/v1/reports/congregations/compare",
+    params(
+        ("metric" = Option<String>, Query, description = "Metric: members, financial, ebd, assets"),
+        ("period_start" = Option<String>, Query, description = "Period start date (YYYY-MM-DD)"),
+        ("period_end" = Option<String>, Query, description = "Period end date (YYYY-MM-DD)"),
+        ("congregation_ids" = Option<String>, Query, description = "Comma-separated congregation UUIDs to compare"),
+    ),
+    responses(
+        (status = 200, description = "Congregations comparison report"),
+        (status = 401, description = "Not authenticated")
+    ),
+    security(("bearer_auth" = []))
+)]
+#[get("/api/v1/reports/congregations/compare")]
+pub async fn congregations_compare_report(
+    req: HttpRequest,
+    pool: web::Data<PgPool>,
+    config: web::Data<AppConfig>,
+    filter: web::Query<CongregationCompareFilter>,
+) -> Result<HttpResponse, AppError> {
+    let claims = middleware::auth_middleware(req, config).await?;
+    let church_id = middleware::get_church_id(&claims)?;
+
+    let report = CongregationService::compare(pool.get_ref(), church_id, &filter).await?;
+
+    Ok(HttpResponse::Ok().json(ApiResponse::ok(report)))
 }

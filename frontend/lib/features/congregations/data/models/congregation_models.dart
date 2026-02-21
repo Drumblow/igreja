@@ -343,3 +343,69 @@ class CongregationOverviewItem {
     );
   }
 }
+
+/// Compare report between congregations
+class CongregationCompareReport {
+  final String metric;
+  final String? periodStart;
+  final String? periodEnd;
+  final List<CongregationCompareItem> congregations;
+
+  const CongregationCompareReport({
+    required this.metric,
+    this.periodStart,
+    this.periodEnd,
+    this.congregations = const [],
+  });
+
+  factory CongregationCompareReport.fromJson(Map<String, dynamic> json) {
+    return CongregationCompareReport(
+      metric: json['metric'] as String? ?? 'members',
+      periodStart: json['period_start'] as String?,
+      periodEnd: json['period_end'] as String?,
+      congregations: (json['congregations'] as List?)
+              ?.map((e) =>
+                  CongregationCompareItem.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          [],
+    );
+  }
+}
+
+class CongregationCompareItem {
+  final String id;
+  final String name;
+  final String type;
+  final double value1;
+  final double value2;
+  final double value3;
+  final String? label1;
+  final String? label2;
+  final String? label3;
+
+  const CongregationCompareItem({
+    required this.id,
+    required this.name,
+    this.type = 'congregacao',
+    this.value1 = 0,
+    this.value2 = 0,
+    this.value3 = 0,
+    this.label1,
+    this.label2,
+    this.label3,
+  });
+
+  factory CongregationCompareItem.fromJson(Map<String, dynamic> json) {
+    return CongregationCompareItem(
+      id: json['id'] as String,
+      name: json['name'] as String,
+      type: json['type'] as String? ?? 'congregacao',
+      value1: (json['value_1'] as num?)?.toDouble() ?? 0,
+      value2: (json['value_2'] as num?)?.toDouble() ?? 0,
+      value3: (json['value_3'] as num?)?.toDouble() ?? 0,
+      label1: json['label_1'] as String?,
+      label2: json['label_2'] as String?,
+      label3: json['label_3'] as String?,
+    );
+  }
+}

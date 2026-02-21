@@ -61,3 +61,11 @@ pub struct AddUserToCongregationRequest {
 pub struct SetActiveCongregationRequest {
     pub congregation_id: Option<Uuid>,
 }
+
+#[derive(Debug, Deserialize)]
+pub struct CongregationCompareFilter {
+    pub metric: Option<String>,
+    pub period_start: Option<String>,
+    pub period_end: Option<String>,
+    pub congregation_ids: Option<String>,
+}

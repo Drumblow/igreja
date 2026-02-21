@@ -14,6 +14,15 @@ import '../../data/models/congregation_models.dart';
 class CongregationListPage extends StatelessWidget {
   const CongregationListPage({super.key});
 
+  /// Returns the base path for congregation routes based on current location.
+  static String basePath(BuildContext context) {
+    final location = GoRouterState.of(context).matchedLocation;
+    if (location.startsWith('/settings/congregations')) {
+      return '/settings/congregations';
+    }
+    return '/congregations';
+  }
+
   @override
   Widget build(BuildContext context) {
     final apiClient = RepositoryProvider.of<ApiClient>(context);
@@ -51,7 +60,7 @@ class _CongregationListViewState extends State<_CongregationListView> {
         title: const Text('Congregações'),
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => context.go('/settings/congregations/new'),
+        onPressed: () => context.go('${CongregationListPage.basePath(context)}/new'),
         icon: const Icon(Icons.add),
         label: const Text('Nova Congregação'),
         backgroundColor: AppColors.accent,
@@ -175,7 +184,7 @@ class _CongregationListViewState extends State<_CongregationListView> {
                       return _CongregationTile(
                         congregation: congregation,
                         onTap: () => context.go(
-                            '/settings/congregations/${congregation.id}'),
+                            '${CongregationListPage.basePath(context)}/${congregation.id}'),
                       );
                     },
                   );

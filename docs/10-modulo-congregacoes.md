@@ -1332,8 +1332,8 @@ pub fn require_congregation_access(claims: &Claims, congregation_id: Uuid, pool:
 | 1.2 | Criar migration para adicionar `congregation_id` em tabelas existentes (members, financial_entries, etc.) | ✅ (na mesma migration) |
 | 1.3 | Criar entity `congregation.rs` e `user_congregation.rs` | ✅ (9 structs) |
 | 1.4 | Criar DTOs em `congregation_dto.rs` | ✅ (5 DTOs) |
-| 1.5 | Criar `congregation_service.rs` com CRUD básico | ✅ (~450 linhas, 12 métodos) |
-| 1.6 | Criar `congregation_handler.rs` com CRUD endpoints | ✅ (~400 linhas, 12 handlers) |
+| 1.5 | Criar `congregation_service.rs` com CRUD básico | ✅ (~700 linhas, 16 métodos incl. compare) |
+| 1.6 | Criar `congregation_handler.rs` com CRUD endpoints | ✅ (~490 linhas, 13 handlers) |
 | 1.7 | Registrar rotas no `main.rs` | ✅ |
 | 1.8 | Criar views SQL consolidadas | ✅ (2 views) |
 
@@ -1352,7 +1352,7 @@ pub fn require_congregation_access(claims: &Claims, congregation_id: Uuid, pool:
 | 2.8 | Modificar services EBD — incluir `congregation_id` | 🟡 Pendente |
 | 2.9 | Implementar middleware de filtro de congregação | 🟡 Pendente |
 | 2.10 | Endpoint de migração em lote (assign-members) | ✅ Implementado em `congregation_handler` |
-| 2.11 | Endpoints de relatórios consolidados (overview + compare) | ✅ Overview implementado (compare pendente) |
+| 2.11 | Endpoints de relatórios consolidados (overview + compare) | ✅ Ambos implementados (overview + compare com 4 métricas) |
 | 2.12 | Integrar AuditService nos novos endpoints | ✅ Concluído |
 | 2.13 | Invalidar caches relevantes ao mudar congregação | ✅ Concluído |
 
@@ -1390,9 +1390,9 @@ pub fn require_congregation_access(claims: &Claims, congregation_id: Uuid, pool:
 | 4.5 | Modificar `MinistriesBloc` para filtro por congregação | 🟡 Pendente |
 | 4.6 | Modificar Dashboard para exibir resumo por congregação | ✅ Concluído (stats filtrado) |
 | 4.7 | Adicionar campo `congregation_id` nos formulários de criação | ✅ Concluído (Member model + toCreateJson) |
-| 4.8 | Criar tela de comparativo entre congregações | 🟡 Pendente |
+| 4.8 | Criar tela de comparativo entre congregações | ✅ Concluído (congregation_report_page.dart — 2 abas: Overview + Comparativo) |
 | 4.9 | Integrar relatórios consolidados na tela de Relatórios | 🟡 Pendente |
-| 4.10 | Adicionar rota no `go_router` para as novas telas | ✅ (5 rotas registradas) |
+| 4.10 | Adicionar rota no `go_router` para as novas telas | ✅ (5 rotas settings + 7 rotas top-level + reports) |
 | 4.11 | Integrar `CongregationSelector` no AppShell (sidebar + mobile) | ✅ Concluído |
 | 4.12 | Adicionar nav item "Congregações" no sidebar e "Mais" | ✅ Concluído |
 
@@ -1405,7 +1405,7 @@ pub fn require_congregation_access(claims: &Claims, congregation_id: Uuid, pool:
 | 5.3 | Testar permissões (dirigente vê só sua congregação) | 🟡 Pendente |
 | 5.4 | Testar relatórios consolidados e comparativos | 🟡 Pendente |
 | 5.5 | Testar migração de dados existentes (congregation_id NULL) | 🟡 Pendente |
-| 5.6 | Atualizar Swagger UI com novos endpoints | ✅ (utoipa annotations em todos os 12 handlers) |
+| 5.6 | Atualizar Swagger UI com novos endpoints | ✅ (utoipa annotations em todos os 13 handlers) |
 | 5.7 | Cache invalidation nos novos fluxos | 🟡 Pendente |
 | 5.8 | Atualizar documentação (API REST, regras de negócio) | ✅ Concluído |
 
@@ -1612,5 +1612,26 @@ A sessão v1.17 avançou nas **Fases 2 e 4** (integração com módulos existent
 - Middleware de filtro de congregação automático (backend)
 - Integração do `CongregationContextCubit` nos BLoCs de Financial, EBD, Assets, Ministries (frontend)
 - Dropdown de congregação nos formulários de criação de lançamentos financeiros, turmas EBD, patrimônio
-- Tela de comparativo entre congregações
-- Relatórios consolidados na tela de Relatórios
+
+### Resumo — Sessão v1.18 (Evolução do Módulo)
+
+A sessão v1.18 avançou significativamente nas **Fases 2 e 4**, completando itens-chave:
+
+**Backend:**
+- Novo endpoint `GET /api/v1/reports/congregations/compare` com 4 métricas: `members`, `financial`, `ebd`, `assets`
+- `get_congregation` agora retorna `CongregationDetail` enriquecido (leader_name + stats embutidos)
+- `set_active_congregation` agora retorna `active_congregation_name` na resposta
+- `assign_members` agora wrapped em SQL transaction (`pool.begin()` → `tx.commit()`)
+- 3 novos entity types: `CongregationDetail`, `CongregationCompareReport`, `CongregationCompareItem`
+- Novo DTO: `CongregationCompareFilter`
+- Service expandido para ~700 linhas, 16 métodos (4 novos: `get_detail`, `validate_active_congregation`, `compare`, sub-métricas)
+
+**Frontend:**
+- Corrigida rota `/congregations` top-level (sidebar nav item agora funciona)
+- Todas as páginas de congregações usam caminhos dinâmicos (`/congregations` ou `/settings/congregations`)
+- Tela de detalhe agora permite adicionar/remover usuários (dialog com UUID, role, isPrimary)
+- Nova tela `congregation_report_page.dart` (~430 linhas) com 2 abas: Overview + Comparativo
+- Novos modelos `CongregationCompareReport` e `CongregationCompareItem`
+- Repository expandido para 14 métodos (+`getCompareReport`, +`getCongregationStatsFromDetail`)
+
+**Arquivos:** 1 criado + 12 modificados

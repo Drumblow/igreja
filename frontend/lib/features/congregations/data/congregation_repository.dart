@@ -27,12 +27,24 @@ class CongregationRepository {
         .toList();
   }
 
-  /// Get congregation by ID
+  /// Get congregation by ID (returns enriched detail with leader_name and stats)
   Future<Congregation> getCongregation(String id) async {
     final response = await _apiClient.dio.get('/v1/congregations/$id');
-    return Congregation.fromJson(
-      response.data['data'] as Map<String, dynamic>,
-    );
+    final data = response.data['data'] as Map<String, dynamic>;
+    // The backend returns a flattened CongregationDetail with congregation
+    // fields at root level (via serde flatten), plus leader_name and stats.
+    // Congregation.fromJson handles all root-level fields including leader_name.
+    return Congregation.fromJson(data);
+  }
+
+  /// Get the embedded stats from a congregation detail response, if available.
+  Future<CongregationStats?> getCongregationStatsFromDetail(String id) async {
+    final response = await _apiClient.dio.get('/v1/congregations/$id');
+    final data = response.data['data'] as Map<String, dynamic>;
+    if (data['stats'] != null) {
+      return CongregationStats.fromJson(data['stats'] as Map<String, dynamic>);
+    }
+    return null;
   }
 
   /// Create a new congregation
@@ -144,6 +156,31 @@ class CongregationRepository {
     final response = await _apiClient.dio
         .get('/v1/reports/congregations/overview');
     return CongregationsOverview.fromJson(
+      response.data['data'] as Map<String, dynamic>,
+    );
+  }
+
+  /// Get congregations compare report
+  Future<CongregationCompareReport> getCompareReport({
+    String metric = 'members',
+    String? periodStart,
+    String? periodEnd,
+    List<String>? congregationIds,
+  }) async {
+    final queryParams = <String, dynamic>{
+      'metric': metric,
+    };
+    if (periodStart != null) queryParams['period_start'] = periodStart;
+    if (periodEnd != null) queryParams['period_end'] = periodEnd;
+    if (congregationIds != null && congregationIds.isNotEmpty) {
+      queryParams['congregation_ids'] = congregationIds.join(',');
+    }
+
+    final response = await _apiClient.dio.get(
+      '/v1/reports/congregations/compare',
+      queryParameters: queryParams,
+    );
+    return CongregationCompareReport.fromJson(
       response.data['data'] as Map<String, dynamic>,
     );
   }

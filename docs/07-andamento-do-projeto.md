@@ -1,7 +1,7 @@
 # 📊 Andamento do Projeto — Igreja Manager
 
 > **Última atualização:** 20 de fevereiro de 2026  
-> **Versão do documento:** 1.17  
+> **Versão do documento:** 1.18
 > **Status geral do projeto:** Em Desenvolvimento Ativo (~99.9% concluído)
 
 ---
@@ -35,8 +35,8 @@ O **Igreja Manager** é uma plataforma de gestão para igrejas composta por **6 
 | Frontend — Patrimônio | ![95%](https://img.shields.io/badge/95%25-green) | 🟢 12 telas + BLoC + Paginação + Filtro categoria + Edit navigation fix |
 | Frontend — EBD | ![98%](https://img.shields.io/badge/98%25-brightgreen) | ✅ Overview + 10 telas + BLoC + Relatórios + Paginação (E1–E7 + F1) |
 | Frontend — Relatórios | ![100%](https://img.shields.io/badge/100%25-brightgreen) | ✅ Tela central + métricas (4 módulos) + Gráficos fl_chart (pie + bar) + aniversariantes |
-| Backend — Congregações | ![100%](https://img.shields.io/badge/100%25-brightgreen) | ✅ CRUD + Stats + Users + Assign Members + Overview (12 endpoints) + Audit + Cache |
-| Frontend — Congregações | ![100%](https://img.shields.io/badge/100%25-brightgreen) | ✅ 5 telas + BLoC + Context Cubit + Selector no AppShell + Nav item |
+| Backend — Congregações | ![100%](https://img.shields.io/badge/100%25-brightgreen) | ✅ CRUD + Stats + Users + Assign Members + Overview + Compare (13 endpoints) + Audit + Cache |
+| Frontend — Congregações | ![100%](https://img.shields.io/badge/100%25-brightgreen) | ✅ 6 telas + BLoC + Context Cubit + Selector no AppShell + Nav item + Relatórios |
 | Frontend — Configurações | ![100%](https://img.shields.io/badge/100%25-brightgreen) | ✅ NOVO — Igrejas + Usuários/Papéis + Congregações (3 telas + BLoC + Repositório) |
 
 ---
@@ -221,7 +221,7 @@ backend/src/
 │       ├── financial_handler.rs
 │       ├── asset_handler.rs
 │       ├── ebd_handler.rs       ← 48+ endpoints (Evolução E1-E7 + F1 + Reports)
-│       └── congregation_handler.rs ← NOVO — 12 endpoints (CRUD + Stats + Users + Assign + Reports)
+│       └── congregation_handler.rs ← NOVO — 13 endpoints (CRUD + Stats + Users + Assign + Reports + Compare)
 ├── application/
 │   ├── dto/
 │   │   ├── auth_dto.rs      ← LoginRequest, Claims, etc.
@@ -234,7 +234,7 @@ backend/src/
 │   │   ├── financial_dto.rs ← CreateFinancialEntryRequest, etc.
 │   │   ├── asset_dto.rs     ← CreateAssetRequest, AssetFilter, etc.
 │   │   ├── ebd_dto.rs       ← 30+ DTOs: Terms, Classes, Lessons, Contents, Activities, Responses, Materials, Students, Notes, Clone, Reports
-│   │   └── congregation_dto.rs ← NOVO — CreateCongregationRequest, UpdateCongregationRequest, AssignMembersRequest, etc.
+│   │   └── congregation_dto.rs ← NOVO — CreateCongregationRequest, UpdateCongregationRequest, AssignMembersRequest, CongregationCompareFilter, etc.
 │   └── services/
 │       ├── auth_service.rs   ← Hashing, JWT, login flow
 │       ├── audit_service.rs  ← AuditService::log() integrado em 6 módulos (Members, Assets, Financial, Churches, Users, EBD)
@@ -263,7 +263,7 @@ backend/src/
 │       ├── ebd_student_note_service.rs ← Anotações do professor (E5)
 │       ├── ebd_student_service.rs ← Perfil unificado do aluno (E3)
 │       ├── ebd_report_service.rs ← Relatórios avançados (E6)
-│       └── congregation_service.rs ← NOVO — CRUD + Stats + Users + Assign Members + Overview (~450 linhas)
+│       └── congregation_service.rs ← NOVO — CRUD + Stats + Users + Assign Members + Overview + Compare (~700 linhas)
 ├── domain/entities/
 │   ├── church.rs
 │   ├── user.rs              ← User, Role, RefreshToken
@@ -292,7 +292,7 @@ backend/src/
 │   ├── ebd_lesson_material.rs ← EbdLessonMaterial (E4)
 │   ├── ebd_student_note.rs   ← EbdStudentNote (E5)
 │   └── ebd_student_profile.rs ← EbdStudentProfile (E3 — view)
-│   └── congregation.rs       ← NOVO — Congregation, CongregationSummary, CongregationStats, UserCongregation, AssignMembersResult, CongregationsOverview
+│   └── congregation.rs       ← NOVO — Congregation, CongregationSummary, CongregationStats, UserCongregation, AssignMembersResult, CongregationsOverview, CongregationDetail, CongregationCompareReport, CongregationCompareItem
 └── infrastructure/
     ├── database.rs          ← Pool de conexões PG
     └── cache.rs             ← CacheService (get/set/del/del_pattern)
@@ -555,7 +555,7 @@ backend/src/
 | `DELETE` | `/api/v1/ebd/terms/{id}` | ✅ `ebd:write` | Excluir trimestre (transacional: aulas → turmas → notas → período) | ✅ Completo |
 | `DELETE` | `/api/v1/ebd/classes/{id}` | ✅ `ebd:write` | Excluir turma (transacional: aulas → turma) | ✅ Completo |
 
-#### Congregações (12 endpoints) — ✅ NOVO
+#### Congregações (13 endpoints) — ✅ NOVO
 
 | Método | Rota | Auth | Descrição | Status |
 |--------|------|------|-----------|--------|
@@ -571,6 +571,7 @@ backend/src/
 | `POST` | `/api/v1/congregations/{id}/assign-members` | ✅ `settings:write` | Associar membros em lote (com overwrite opcional) | ✅ Completo |
 | `POST` | `/api/v1/user/active-congregation` | ✅ JWT | Definir congregação ativa do usuário logado | ✅ Completo |
 | `GET` | `/api/v1/reports/congregations/overview` | ✅ JWT | Relatório visão geral de todas as congregações | ✅ Completo |
+| `GET` | `/api/v1/reports/congregations/compare` | ✅ JWT | Relatório comparativo entre congregações (members/financial/ebd/assets) | ✅ Completo |
 
 ### 4.4 O que Falta no Backend
 
@@ -736,17 +737,18 @@ frontend/lib/
     │   ├── congregation_event_state.dart ✅ 5 events, 7 states
     │   └── congregation_context_cubit.dart ✅ Global context cubit (seletor de congregação ativa)
     ├── data/
-    │   ├── congregation_repository.dart ✅ 12 métodos (CRUD + stats + users + assign + overview)
+    │   ├── congregation_repository.dart ✅ 14 métodos (CRUD + stats + users + assign + overview + compare)
     │   └── models/
-    │       └── congregation_models.dart ✅ Congregation (17+ campos), CongregationStats, CongregationUser, AssignMembersResult, CongregationsOverview
+    │       └── congregation_models.dart ✅ Congregation (17+ campos), CongregationStats, CongregationUser, AssignMembersResult, CongregationsOverview, CongregationCompareReport, CongregationCompareItem
     └── presentation/
         ├── widgets/
         │   └── congregation_selector.dart ✅ Widget AppBar dropdown + BottomSheet (seleção de congregação ativa)
         └── pages/
             ├── congregation_list_page.dart ✅ Lista com filter chips (Todas/Sede/Congregações/Pontos) + busca
-            ├── congregation_detail_page.dart ✅ Header + Stats grid + Info + Endereço + Usuários + Ações
+            ├── congregation_detail_page.dart ✅ Header + Stats grid + Info + Endereço + Usuários (add/remove) + Ações
             ├── congregation_form_page.dart ✅ Criar/editar (3 seções: básico, contato, endereço) + responsivo
-            └── congregation_assign_members_page.dart ✅ Associação em lote com busca + seleção + overwrite
+            ├── congregation_assign_members_page.dart ✅ Associação em lote com busca + seleção + overwrite
+            └── congregation_report_page.dart ✅ NOVO — Overview + Comparativo (2 abas, ranking por métrica)
 ```
 
 ### 5.3 Design System — Tokens Implementados
@@ -889,6 +891,12 @@ frontend/lib/
 | `/settings/congregations/:id` | `CongregationDetailPage` (dentro de `AppShell`) | Protegida |
 | `/settings/congregations/:id/edit` | `CongregationFormPage` (dentro de `AppShell`) | Protegida |
 | `/settings/congregations/:id/assign-members` | `CongregationAssignMembersPage` (dentro de `AppShell`) | Protegida |
+| `/congregations` | `CongregationListPage` (dentro de `AppShell`) | Protegida — Rota top-level (sidebar nav) |
+| `/congregations/new` | `CongregationFormPage` (dentro de `AppShell`) | Protegida |
+| `/congregations/:id` | `CongregationDetailPage` (dentro de `AppShell`) | Protegida |
+| `/congregations/:id/edit` | `CongregationFormPage` (dentro de `AppShell`) | Protegida |
+| `/congregations/:id/assign-members` | `CongregationAssignMembersPage` (dentro de `AppShell`) | Protegida |
+| `/congregations/reports` | `CongregationReportPage` (dentro de `AppShell`) | Protegida — Overview + Comparativo |
 
 **Shell responsivo:**
 - Desktop (≥ 900px): Sidebar navy com itens: Dashboard, Membros, Famílias, Ministérios, Financeiro, Patrimônio, EBD, Configurações
@@ -938,6 +946,12 @@ frontend/lib/
 | 28 | Sem módulo de Congregações (subdivisions dentro da Church) | Implementado **Módulo Congregações** (doc 10): migration `20260220100000_congregations.sql` (2 tabelas + 2 views + ALTER em 11 tabelas), entity + service + handler (12 endpoints), frontend completo (5 telas + BLoC + Context Cubit + Selector Widget) |
 | 29 | Rust: `null as Option<String>` no `serde_json::json!` macro não compila | Substituído por `serde_json::Value::Null` no service de congregações |
 | 30 | Flutter: `DropdownButtonFormField.value` deprecated no Flutter 3.38 | Substituído por `initialValue` no formulário de congregações |
+| 31 | Sidebar nav "Congregações" apontava para `/congregations` mas rotas só existiam em `/settings/congregations` | Adicionadas rotas top-level `/congregations` com suffix `-top` nos nomes para evitar conflito com GoRouter |
+| 32 | `assign_members` executava queries individuais sem transaction safety | Wrapped em `pool.begin()` / `tx.commit()` com `AppError::Internal()` para error mapping |
+| 33 | `set_active_congregation` não retornava nome da congregação | Adicionado `validate_active_congregation()` que retorna `active_congregation_name` na response |
+| 34 | Tela de detalhe da congregação não permitia adicionar/remover usuários | Adicionados `_showAddUserDialog()` (UUID + role + isPrimary) e `_removeUser()` com confirmação |
+| 35 | Sem relatório comparativo entre congregações | Implementado endpoint `GET /reports/congregations/compare` com 4 métricas (members/financial/ebd/assets) + tela frontend com ranking |
+| 36 | Navegação hardcoded nas páginas de congregações quebravam quando acessadas via `/congregations` vs `/settings/congregations` | Implementado `basePath(context)` dinâmico que detecta prefixo da rota atual |
 
 ---
 
@@ -1042,7 +1056,14 @@ Crates/packages importados mas ainda sem uso no código — preparados para fase
 | 5.1.9 | Formulário criar/editar (responsivo) | — | ✅ | ✅ Completo |
 | 5.1.10 | Associar membros em lote | — | ✅ | ✅ Completo |
 | 5.1.11 | Selector widget (AppBar) | — | ✅ | ✅ Completo |
-| 5.1.12 | Rotas + Navegação | — | ✅ 5 rotas | ✅ Completo |
+| 5.1.12 | Rotas + Navegação | — | ✅ 5 rotas + top-level | ✅ Completo |
+| 5.1.13 | Endpoint comparativo (compare) | ✅ 1 endpoint | ✅ Aba Comparativo | ✅ Completo |
+| 5.1.14 | Tela de relatórios (overview + comparativo) | — | ✅ 2 abas | ✅ Completo |
+| 5.1.15 | Gestão de usuários na tela de detalhe (add/remove) | — | ✅ Dialog + botão | ✅ Completo |
+| 5.1.16 | Rota top-level /congregations (sidebar nav fix) | — | ✅ GoRouter | ✅ Completo |
+| 5.1.17 | Transaction safety no assign_members | ✅ pool.begin/commit | — | ✅ Completo |
+| 5.1.18 | set_active retorna nome da congregação | ✅ validate_active | — | ✅ Completo |
+| 5.1.19 | get_congregation retorna CongregationDetail enriquecido | ✅ leader_name + stats | — | ✅ Completo |
 
 ### Fase 6 — Infraestrutura e Qualidade
 
@@ -1060,7 +1081,63 @@ Crates/packages importados mas ainda sem uso no código — preparados para fase
 
 ---
 
-## 9.1 Changelog — Sessão v1.17 (20/02/2026)
+## 9.1 Changelog — Sessão v1.18 (20/02/2026)
+
+Evolução do módulo de Congregações: endpoint comparativo, relatórios, gestão de usuários, transaction safety e correções de navegação.
+
+### Backend (Rust/Actix-Web)
+
+- **`congregation.rs` (entities)** — Adicionados 3 novos structs: `CongregationDetail` (congregação enriquecida com `leader_name` + stats embutidos), `CongregationCompareReport` (relatório com métrica + período + lista de items), `CongregationCompareItem` (label/value flexíveis para rankings). Total: 12 structs.
+- **`congregation_dto.rs`** — Novo DTO `CongregationCompareFilter` (metric, period_start, period_end, congregation_ids). Total: 6 DTOs.
+- **`congregation_service.rs`** (~700 linhas) — Novos métodos:
+  - `get_detail()` — Retorna `CongregationDetail` com `leader_name` e stats embutidos.
+  - `validate_active_congregation()` — Valida e retorna nome para resposta do `set_active`.
+  - `compare()` — Dispatcher para 4 métricas: `compare_members()`, `compare_financial()`, `compare_ebd()`, `compare_assets()`.
+  - `assign_members()` — Agora wrapped em SQL transaction (`pool.begin()` → `tx.commit()`).
+- **`congregation_handler.rs`** (~490 linhas) — Melhorias:
+  - `get_congregation()` agora retorna `CongregationDetail` enriquecido.
+  - `set_active_congregation()` retorna `active_congregation_name` na resposta.
+  - Novo handler `congregations_compare_report()` em `GET /api/v1/reports/congregations/compare`.
+- **`main.rs`** — Registrado novo endpoint `congregations_compare_report` no OpenAPI e `.service()`.
+- **`entities/mod.rs`** — Exportados os 3 novos types.
+
+### Frontend (Flutter)
+
+- **`app_router.dart`** — Adicionada rota top-level `/congregations` com sub-rotas (new, :id, :id/edit, :id/assign-members, reports). Nomes com suffix `-top` para evitar conflito com GoRouter.
+- **`congregation_list_page.dart`** — Método `basePath(context)` para detectar prefixo dinâmico (`/congregations` vs `/settings/congregations`).
+- **`congregation_detail_page.dart`** — Navegação dinâmica + gestão de usuários (add dialog com UUID/role/isPrimary + remove com confirmação).
+- **`congregation_form_page.dart`** — Navegação dinâmica pós-save.
+- **`congregation_assign_members_page.dart`** — Navegação dinâmica pós-assign.
+- **`congregation_models.dart`** — Novos modelos `CongregationCompareReport` e `CongregationCompareItem` com `fromJson()`.
+- **`congregation_repository.dart`** — Novos métodos `getCompareReport()` e `getCongregationStatsFromDetail()`. Total: 14 métodos.
+- **`congregation_report_page.dart`** (NOVO, ~430 linhas) — Tela de relatórios com 2 abas:
+  - **Overview**: Summary cards (congregações, membros, receita, despesas) + cards por congregação com financeiro.
+  - **Comparativo**: `SegmentedButton` para escolher métrica (members/financial/ebd/assets) + ranking cards com formatação dinâmica (moeda/porcentagem).
+
+### Arquivos Criados (1 arquivo)
+- `frontend/lib/features/congregations/presentation/pages/congregation_report_page.dart`
+
+### Arquivos Modificados (12 arquivos)
+
+| Arquivo | Mudanças |
+|---------|----------|
+| `backend/src/domain/entities/congregation.rs` | +3 structs (CongregationDetail, CongregationCompareReport, CongregationCompareItem) |
+| `backend/src/domain/entities/mod.rs` | +3 exports |
+| `backend/src/application/dto/congregation_dto.rs` | +CongregationCompareFilter |
+| `backend/src/application/services/congregation_service.rs` | +get_detail, +validate_active, +compare (4 métricas), assign_members com transaction |
+| `backend/src/api/handlers/congregation_handler.rs` | +congregations_compare_report, melhorias em get/set_active |
+| `backend/src/main.rs` | +1 rota (compare report) |
+| `frontend/lib/core/router/app_router.dart` | +rota top-level /congregations (7 sub-rotas) |
+| `frontend/lib/features/congregations/presentation/pages/congregation_list_page.dart` | +basePath dinâmico |
+| `frontend/lib/features/congregations/presentation/pages/congregation_detail_page.dart` | +add/remove user UI + dynamic paths |
+| `frontend/lib/features/congregations/presentation/pages/congregation_form_page.dart` | +dynamic path navigation |
+| `frontend/lib/features/congregations/presentation/pages/congregation_assign_members_page.dart` | +dynamic path navigation |
+| `frontend/lib/features/congregations/data/models/congregation_models.dart` | +CongregationCompareReport, +CongregationCompareItem |
+| `frontend/lib/features/congregations/data/congregation_repository.dart` | +getCompareReport, +getCongregationStatsFromDetail |
+
+---
+
+## 9.3 Changelog — Sessão v1.17 (20/02/2026)
 
 Integração do módulo de Congregações com módulos existentes (Fases 2 e 4 parciais):
 
@@ -1101,7 +1178,7 @@ Integração do módulo de Congregações com módulos existentes (Fases 2 e 4 p
 
 ---
 
-## 9.2 Changelog — Sessão v1.16 (20/02/2026)
+## 9.4 Changelog — Sessão v1.16 (20/02/2026)
 
 Melhorias implementadas nesta sessão:
 
@@ -1156,7 +1233,7 @@ Melhorias implementadas nesta sessão:
 
 ---
 
-## 9.3 Changelog — Sessão v1.15 (19/02/2026)
+## 9.5 Changelog — Sessão v1.15 (19/02/2026)
 
 Melhorias implementadas nesta sessão:
 
@@ -1202,7 +1279,7 @@ Melhorias implementadas nesta sessão:
 
 ---
 
-## 9.4 Changelog — Sessão v1.14 (20/02/2026)
+## 9.6 Changelog — Sessão v1.14 (20/02/2026)
 
 Melhorias implementadas nesta sessão para aumentar completude do frontend:
 
@@ -1239,12 +1316,12 @@ Melhorias implementadas nesta sessão para aumentar completude do frontend:
 
 | Componente | Arquivos | Linhas Estimadas |
 |------------|:--------:|:----------------:|
-| Documentação (docs/) | 10 | ~8.100 |
-| Backend (Rust) | 94 .rs | ~15.400 |
+| Documentação (docs/) | 10 | ~8.600 |
+| Backend (Rust) | 94 .rs | ~15.900 |
 | Migrations (SQL) | 4 | ~1.050 |
-| Frontend (Dart) | 96 .dart | ~27.500 |
+| Frontend (Dart) | 97 .dart | ~28.000 |
 | Configuração | 5 | ~200 |
-| **Total** | **205** | **~49.500** |
+| **Total** | **206** | **~51.000** |
 
 ### Status de Compilação
 

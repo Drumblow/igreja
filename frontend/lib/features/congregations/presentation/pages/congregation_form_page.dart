@@ -215,8 +215,9 @@ class _CongregationFormViewState extends State<_CongregationFormView> {
                 behavior: SnackBarBehavior.floating,
               ),
             );
-            context.go(
-                '/settings/congregations/${state.congregation.id}');
+            final loc = GoRouterState.of(context).matchedLocation;
+            final congBase = loc.contains('/settings/congregations') ? '/settings/congregations' : '/congregations';
+            context.go('$congBase/${state.congregation.id}');
           } else if (state is CongregationError) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(

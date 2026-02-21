@@ -170,8 +170,9 @@ class _AssignMembersViewState extends State<_AssignMembersView> {
                 behavior: SnackBarBehavior.floating,
               ),
             );
-            context.go(
-                '/settings/congregations/${widget.congregationId}');
+            final loc = GoRouterState.of(context).matchedLocation;
+            final congBase = loc.contains('/settings/congregations') ? '/settings/congregations' : '/congregations';
+            context.go('$congBase/${widget.congregationId}');
           } else if (state is CongregationError) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(

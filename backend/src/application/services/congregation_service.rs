@@ -1,11 +1,11 @@
 use crate::application::dto::{
-    AddUserToCongregationRequest, AssignMembersRequest, CreateCongregationRequest,
-    UpdateCongregationRequest,
+    AddUserToCongregationRequest, AssignMembersRequest, CongregationCompareFilter,
+    CreateCongregationRequest, UpdateCongregationRequest,
 };
 use crate::domain::entities::{
-    AssignMembersResult, Congregation, CongregationOverviewItem, CongregationStats,
-    CongregationSummary, CongregationUserInfo, CongregationsOverview, SkippedMember,
-    UserCongregation,
+    AssignMembersResult, Congregation, CongregationCompareItem, CongregationCompareReport,
+    CongregationDetail, CongregationOverviewItem, CongregationStats, CongregationSummary,
+    CongregationUserInfo, CongregationsOverview, SkippedMember, UserCongregation,
 };
 use crate::errors::AppError;
 use sqlx::PgPool;
@@ -577,7 +577,7 @@ impl CongregationService {
         Ok(())
     }
 
-    /// Assign members to a congregation in batch
+    /// Assign members to a congregation in batch (with transaction)
     pub async fn assign_members(
         pool: &PgPool,
         church_id: Uuid,
@@ -586,6 +586,8 @@ impl CongregationService {
     ) -> Result<AssignMembersResult, AppError> {
         // Verify congregation exists
         let _existing = Self::get_by_id(pool, church_id, congregation_id).await?;
+
+        let mut tx = pool.begin().await.map_err(|e| AppError::Internal(e.to_string()))?;
 
         let mut assigned: i64 = 0;
         let mut skipped: i64 = 0;
@@ -598,7 +600,7 @@ impl CongregationService {
             )
             .bind(member_id)
             .bind(church_id)
-            .fetch_optional(pool)
+            .fetch_optional(&mut *tx)
             .await?;
 
             let Some((mid, full_name, current_cong_id)) = member else {
@@ -613,7 +615,7 @@ impl CongregationService {
                         "SELECT name FROM congregations WHERE id = $1",
                     )
                     .bind(cid)
-                    .fetch_optional(pool)
+                    .fetch_optional(&mut *tx)
                     .await?
                 } else {
                     None
@@ -632,7 +634,7 @@ impl CongregationService {
             sqlx::query("UPDATE members SET congregation_id = $1 WHERE id = $2")
                 .bind(congregation_id)
                 .bind(mid)
-                .execute(pool)
+                .execute(&mut *tx)
                 .await?;
 
             // Create history entry for internal transfer
@@ -642,13 +644,15 @@ impl CongregationService {
                        VALUES ($1, 'transferencia_interna', $2)"#,
                 )
                 .bind(mid)
-                .bind(format!("Transferido para congregação via associação em lote"))
-                .execute(pool)
+                .bind("Transferido para congregação via associação em lote")
+                .execute(&mut *tx)
                 .await;
             }
 
             assigned += 1;
         }
+
+        tx.commit().await.map_err(|e| AppError::Internal(e.to_string()))?;
 
         Ok(AssignMembersResult {
             assigned,
@@ -693,5 +697,241 @@ impl CongregationService {
             total_expense_month,
             congregations,
         })
+    }
+
+    /// Get congregation detail with leader name and stats
+    pub async fn get_detail(
+        pool: &PgPool,
+        church_id: Uuid,
+        congregation_id: Uuid,
+    ) -> Result<CongregationDetail, AppError> {
+        let congregation = Self::get_by_id(pool, church_id, congregation_id).await?;
+
+        // Get leader name
+        let leader_name = if let Some(leader_id) = congregation.leader_id {
+            sqlx::query_scalar::<_, String>(
+                "SELECT full_name FROM members WHERE id = $1 AND deleted_at IS NULL",
+            )
+            .bind(leader_id)
+            .fetch_optional(pool)
+            .await?
+        } else {
+            None
+        };
+
+        // Get stats
+        let stats = Self::get_stats(pool, church_id, congregation_id).await.ok();
+
+        Ok(CongregationDetail {
+            congregation,
+            leader_name,
+            stats,
+        })
+    }
+
+    /// Validate and return congregation name for active context
+    pub async fn validate_active_congregation(
+        pool: &PgPool,
+        church_id: Uuid,
+        congregation_id: Uuid,
+    ) -> Result<String, AppError> {
+        let cong = Self::get_by_id(pool, church_id, congregation_id).await?;
+        Ok(cong.name)
+    }
+
+    /// Compare congregations by metric
+    pub async fn compare(
+        pool: &PgPool,
+        church_id: Uuid,
+        filter: &CongregationCompareFilter,
+    ) -> Result<CongregationCompareReport, AppError> {
+        let metric = filter.metric.as_deref().unwrap_or("members");
+
+        // Parse congregation_ids if provided (comma-separated)
+        let congregation_ids: Option<Vec<Uuid>> = filter.congregation_ids.as_ref().and_then(|ids| {
+            let parsed: Vec<Uuid> = ids
+                .split(',')
+                .filter_map(|s| s.trim().parse::<Uuid>().ok())
+                .collect();
+            if parsed.is_empty() { None } else { Some(parsed) }
+        });
+
+        let items = match metric {
+            "members" => Self::compare_members(pool, church_id, &congregation_ids).await?,
+            "financial" => Self::compare_financial(pool, church_id, &congregation_ids, &filter.period_start, &filter.period_end).await?,
+            "ebd" => Self::compare_ebd(pool, church_id, &congregation_ids).await?,
+            "assets" => Self::compare_assets(pool, church_id, &congregation_ids).await?,
+            _ => return Err(AppError::validation("Métrica inválida. Use: members, financial, ebd ou assets")),
+        };
+
+        Ok(CongregationCompareReport {
+            metric: metric.to_string(),
+            period_start: filter.period_start.clone(),
+            period_end: filter.period_end.clone(),
+            congregations: items,
+        })
+    }
+
+    async fn compare_members(
+        pool: &PgPool,
+        church_id: Uuid,
+        congregation_ids: &Option<Vec<Uuid>>,
+    ) -> Result<Vec<CongregationCompareItem>, AppError> {
+        let filter_clause = if let Some(ids) = congregation_ids {
+            let id_list: Vec<String> = ids.iter().map(|id| format!("'{}'", id)).collect();
+            format!("AND c.id IN ({})", id_list.join(","))
+        } else {
+            String::new()
+        };
+
+        let sql = format!(
+            r#"
+            SELECT c.id, c.name, c.type,
+                (SELECT COUNT(*)::float8 FROM members m WHERE m.congregation_id = c.id AND m.status = 'ativo' AND m.deleted_at IS NULL) AS value_1,
+                (SELECT COUNT(*)::float8 FROM members m WHERE m.congregation_id = c.id AND m.deleted_at IS NULL) AS value_2,
+                (SELECT COUNT(*)::float8 FROM members m WHERE m.congregation_id = c.id AND m.deleted_at IS NULL AND m.created_at >= DATE_TRUNC('month', NOW())) AS value_3,
+                'Membros Ativos'::text AS label_1,
+                'Total Membros'::text AS label_2,
+                'Novos no Mês'::text AS label_3
+            FROM congregations c
+            WHERE c.church_id = $1 AND c.is_active = TRUE {filter_clause}
+            ORDER BY value_1 DESC NULLS LAST
+            "#
+        );
+
+        let items = sqlx::query_as::<_, CongregationCompareItem>(&sql)
+            .bind(church_id)
+            .fetch_all(pool)
+            .await?;
+
+        Ok(items)
+    }
+
+    async fn compare_financial(
+        pool: &PgPool,
+        church_id: Uuid,
+        congregation_ids: &Option<Vec<Uuid>>,
+        period_start: &Option<String>,
+        period_end: &Option<String>,
+    ) -> Result<Vec<CongregationCompareItem>, AppError> {
+        let filter_clause = if let Some(ids) = congregation_ids {
+            let id_list: Vec<String> = ids.iter().map(|id| format!("'{}'", id)).collect();
+            format!("AND c.id IN ({})", id_list.join(","))
+        } else {
+            String::new()
+        };
+
+        let date_filter = match (period_start, period_end) {
+            (Some(start), Some(end)) => format!(
+                "AND fe.entry_date >= '{start}' AND fe.entry_date <= '{end}'"
+            ),
+            (Some(start), None) => format!("AND fe.entry_date >= '{start}'"),
+            (None, Some(end)) => format!("AND fe.entry_date <= '{end}'"),
+            _ => "AND fe.entry_date >= DATE_TRUNC('month', NOW())".to_string(),
+        };
+
+        let sql = format!(
+            r#"
+            SELECT c.id, c.name, c.type,
+                (SELECT COALESCE(SUM(fe.amount::float8), 0.0) FROM financial_entries fe 
+                 WHERE fe.congregation_id = c.id AND fe.type = 'receita' AND fe.status = 'confirmado' 
+                 {date_filter} AND fe.deleted_at IS NULL) AS value_1,
+                (SELECT COALESCE(SUM(fe.amount::float8), 0.0) FROM financial_entries fe 
+                 WHERE fe.congregation_id = c.id AND fe.type = 'despesa' AND fe.status = 'confirmado' 
+                 {date_filter} AND fe.deleted_at IS NULL) AS value_2,
+                (SELECT COALESCE(SUM(CASE WHEN fe.type = 'receita' THEN fe.amount ELSE -fe.amount END)::float8, 0.0) FROM financial_entries fe 
+                 WHERE fe.congregation_id = c.id AND fe.status = 'confirmado' 
+                 {date_filter} AND fe.deleted_at IS NULL) AS value_3,
+                'Receitas'::text AS label_1,
+                'Despesas'::text AS label_2,
+                'Saldo'::text AS label_3
+            FROM congregations c
+            WHERE c.church_id = $1 AND c.is_active = TRUE {filter_clause}
+            ORDER BY value_3 DESC NULLS LAST
+            "#
+        );
+
+        let items = sqlx::query_as::<_, CongregationCompareItem>(&sql)
+            .bind(church_id)
+            .fetch_all(pool)
+            .await?;
+
+        Ok(items)
+    }
+
+    async fn compare_ebd(
+        pool: &PgPool,
+        church_id: Uuid,
+        congregation_ids: &Option<Vec<Uuid>>,
+    ) -> Result<Vec<CongregationCompareItem>, AppError> {
+        let filter_clause = if let Some(ids) = congregation_ids {
+            let id_list: Vec<String> = ids.iter().map(|id| format!("'{}'", id)).collect();
+            format!("AND c.id IN ({})", id_list.join(","))
+        } else {
+            String::new()
+        };
+
+        let sql = format!(
+            r#"
+            SELECT c.id, c.name, c.type,
+                (SELECT COUNT(*)::float8 FROM ebd_classes ec WHERE ec.congregation_id = c.id AND ec.is_active = TRUE) AS value_1,
+                (SELECT COUNT(DISTINCT ee.member_id)::float8 FROM ebd_enrollments ee
+                 JOIN ebd_classes ec2 ON ec2.id = ee.class_id
+                 WHERE ec2.congregation_id = c.id AND ee.is_active = TRUE) AS value_2,
+                (SELECT COALESCE(AVG(CASE WHEN ea.status = 'presente' THEN 100.0 ELSE 0.0 END), 0.0) FROM ebd_attendances ea
+                 JOIN ebd_lessons el ON el.id = ea.lesson_id
+                 JOIN ebd_classes ec3 ON ec3.id = el.class_id
+                 WHERE ec3.congregation_id = c.id) AS value_3,
+                'Turmas Ativas'::text AS label_1,
+                'Alunos Matriculados'::text AS label_2,
+                'Frequência Média (%)'::text AS label_3
+            FROM congregations c
+            WHERE c.church_id = $1 AND c.is_active = TRUE {filter_clause}
+            ORDER BY value_3 DESC NULLS LAST
+            "#
+        );
+
+        let items = sqlx::query_as::<_, CongregationCompareItem>(&sql)
+            .bind(church_id)
+            .fetch_all(pool)
+            .await?;
+
+        Ok(items)
+    }
+
+    async fn compare_assets(
+        pool: &PgPool,
+        church_id: Uuid,
+        congregation_ids: &Option<Vec<Uuid>>,
+    ) -> Result<Vec<CongregationCompareItem>, AppError> {
+        let filter_clause = if let Some(ids) = congregation_ids {
+            let id_list: Vec<String> = ids.iter().map(|id| format!("'{}'", id)).collect();
+            format!("AND c.id IN ({})", id_list.join(","))
+        } else {
+            String::new()
+        };
+
+        let sql = format!(
+            r#"
+            SELECT c.id, c.name, c.type,
+                (SELECT COUNT(*)::float8 FROM assets a WHERE a.congregation_id = c.id AND a.deleted_at IS NULL) AS value_1,
+                (SELECT COALESCE(SUM(a.acquisition_value::float8), 0.0) FROM assets a 
+                 WHERE a.congregation_id = c.id AND a.deleted_at IS NULL) AS value_2,
+                (SELECT COUNT(*)::float8 FROM assets a WHERE a.congregation_id = c.id AND a.status = 'em_uso' AND a.deleted_at IS NULL) AS value_3,
+                'Total Bens'::text AS label_1,
+                'Valor Total'::text AS label_2,
+                'Em Uso'::text AS label_3
+            FROM congregations c
+            WHERE c.church_id = $1 AND c.is_active = TRUE {filter_clause}
+            ORDER BY value_2 DESC NULLS LAST
+            "#
+        );
+
+        let items = sqlx::query_as::<_, CongregationCompareItem>(&sql)
+            .bind(church_id)
+            .fetch_all(pool)
+            .await?;
+
+        Ok(items)
     }
 }

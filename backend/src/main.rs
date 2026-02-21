@@ -190,6 +190,7 @@ use crate::infrastructure::cloudinary::CloudinaryService;
         congregation_handler::assign_members_batch,
         congregation_handler::set_active_congregation,
         congregation_handler::congregations_overview_report,
+        congregation_handler::congregations_compare_report,
     ),
     components(schemas(
         crate::api::response::ApiResponse<serde_json::Value>,
@@ -477,6 +478,7 @@ async fn main() -> std::io::Result<()> {
             .service(congregation_handler::assign_members_batch)
             .service(congregation_handler::set_active_congregation)
             .service(congregation_handler::congregations_overview_report)
+            .service(congregation_handler::congregations_compare_report)
             // Swagger UI
             .service(
                 SwaggerUi::new("/swagger-ui/{_:.*}")

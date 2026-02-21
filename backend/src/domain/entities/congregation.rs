@@ -125,3 +125,36 @@ pub struct CongregationOverviewItem {
     pub income_month: Option<f64>,
     pub expense_month: Option<f64>,
 }
+
+/// Congregation detail with leader info (for get_by_id enriched)
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct CongregationDetail {
+    #[serde(flatten)]
+    pub congregation: Congregation,
+    pub leader_name: Option<String>,
+    pub stats: Option<CongregationStats>,
+}
+
+/// Comparison report between congregations
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct CongregationCompareReport {
+    pub metric: String,
+    pub period_start: Option<String>,
+    pub period_end: Option<String>,
+    pub congregations: Vec<CongregationCompareItem>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow, ToSchema)]
+pub struct CongregationCompareItem {
+    pub id: Uuid,
+    pub name: String,
+    #[sqlx(rename = "type")]
+    #[serde(rename = "type")]
+    pub congregation_type: String,
+    pub value_1: Option<f64>,
+    pub value_2: Option<f64>,
+    pub value_3: Option<f64>,
+    pub label_1: Option<String>,
+    pub label_2: Option<String>,
+    pub label_3: Option<String>,
+}

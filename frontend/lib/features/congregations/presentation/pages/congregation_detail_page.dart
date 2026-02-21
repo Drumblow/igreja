@@ -94,13 +94,154 @@ class _CongregationDetailPageState extends State<CongregationDetailPage> {
               behavior: SnackBarBehavior.floating,
             ),
           );
-          context.go('/settings/congregations');
+          final base = GoRouterState.of(context).matchedLocation;
+          final congBase = base.startsWith('/settings/congregations') ? '/settings/congregations' : '/congregations';
+          context.go(congBase);
         }
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('Erro ao desativar: $e'),
+              backgroundColor: AppColors.error,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  Future<void> _showAddUserDialog() async {
+    String? userId;
+    String role = 'viewer';
+    bool isPrimary = false;
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: const Text('Adicionar Usuário'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                decoration: const InputDecoration(
+                  labelText: 'ID do Usuário (UUID)',
+                  hintText: 'Cole o UUID do usuário aqui',
+                ),
+                onChanged: (v) => userId = v.trim(),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              DropdownButtonFormField<String>(
+                value: role,
+                decoration: const InputDecoration(labelText: 'Papel na Congregação'),
+                items: const [
+                  DropdownMenuItem(value: 'dirigente', child: Text('Dirigente')),
+                  DropdownMenuItem(value: 'secretario', child: Text('Secretário(a)')),
+                  DropdownMenuItem(value: 'tesoureiro', child: Text('Tesoureiro(a)')),
+                  DropdownMenuItem(value: 'professor_ebd', child: Text('Professor(a) EBD')),
+                  DropdownMenuItem(value: 'viewer', child: Text('Visualizador')),
+                ],
+                onChanged: (v) => setDialogState(() => role = v ?? 'viewer'),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              CheckboxListTile(
+                title: const Text('Congregação principal'),
+                value: isPrimary,
+                onChanged: (v) => setDialogState(() => isPrimary = v ?? false),
+                contentPadding: EdgeInsets.zero,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: const Text('Adicionar'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (result == true && userId != null && userId!.isNotEmpty && mounted) {
+      try {
+        await _repo.addUserToCongregation(
+          congregationId: widget.congregationId,
+          userId: userId!,
+          roleInCongregation: role,
+          isPrimary: isPrimary,
+        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Usuário adicionado com sucesso'),
+              backgroundColor: AppColors.success,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+          _loadData();
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Erro ao adicionar: $e'),
+              backgroundColor: AppColors.error,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  Future<void> _removeUser(CongregationUser user) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Remover Acesso'),
+        content: Text(
+            'Remover acesso de "${user.email}" a esta congregação?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppColors.error),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Remover'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      try {
+        await _repo.removeUserFromCongregation(
+          congregationId: widget.congregationId,
+          userId: user.userId,
+        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Acesso removido com sucesso'),
+              backgroundColor: AppColors.success,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+          _loadData();
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Erro ao remover: $e'),
               backgroundColor: AppColors.error,
               behavior: SnackBarBehavior.floating,
             ),
@@ -121,15 +262,20 @@ class _CongregationDetailPageState extends State<CongregationDetailPage> {
                 IconButton(
                   icon: const Icon(Icons.group_add_outlined),
                   tooltip: 'Atribuir Membros',
-                  onPressed: () => context.go(
-                      '/settings/congregations/${widget.congregationId}/assign-members'),
+                  onPressed: () {
+                    final base = GoRouterState.of(context).matchedLocation;
+                    final congBase = base.contains('/settings/congregations') ? '/settings/congregations' : '/congregations';
+                    context.go('$congBase/${widget.congregationId}/assign-members');
+                  },
                 ),
                 IconButton(
                   icon: const Icon(Icons.edit_outlined),
                   tooltip: 'Editar',
-                  onPressed: () => context.go(
-                      '/settings/congregations/${widget.congregationId}/edit',
-                      extra: _congregation),
+                  onPressed: () {
+                    final base = GoRouterState.of(context).matchedLocation;
+                    final congBase = base.contains('/settings/congregations') ? '/settings/congregations' : '/congregations';
+                    context.go('$congBase/${widget.congregationId}/edit', extra: _congregation);
+                  },
                 ),
                 if (_congregation!.type != 'sede')
                   IconButton(
@@ -215,8 +361,14 @@ class _CongregationDetailPageState extends State<CongregationDetailPage> {
 
             // ── Users (access) ──
             _sectionTitle('Usuários com Acesso', Icons.admin_panel_settings_outlined),
-            const SizedBox(height: AppSpacing.md),
-            _buildUsersSection(),
+            const SizedBox(height: AppSpacing.md),            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                onPressed: _showAddUserDialog,
+                icon: const Icon(Icons.person_add_outlined, size: 18),
+                label: const Text('Adicionar Usuário'),
+              ),
+            ),            _buildUsersSection(),
             const SizedBox(height: AppSpacing.lg),
 
             // ── Metadata ──
@@ -545,6 +697,11 @@ class _CongregationDetailPageState extends State<CongregationDetailPage> {
                         ),
                       ],
                     ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.remove_circle_outline, color: AppColors.error, size: 20),
+                    tooltip: 'Remover acesso',
+                    onPressed: () => _removeUser(user),
                   ),
                 ],
               ),
