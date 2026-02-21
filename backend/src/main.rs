@@ -507,7 +507,7 @@ async fn seed_test_data(pool: &sqlx::PgPool) {
     // 1. Create test church
     let church_id: (uuid::Uuid,) = sqlx::query_as(
         r#"INSERT INTO churches (name, denomination, pastor_name, city, state, email, is_active)
-           VALUES ('Igreja Exemplo', 'Assembleia de Deus', 'Pr. João Silva', 'São Paulo', 'SP', 'contato@igrejaexemplo.com', TRUE)
+           VALUES ('AD Ministério de Tutóia', 'Assembleia de Deus', 'Pr. Daniel Xavier Silva', 'Tutóia', 'MA', 'contato@admtutoia.com', TRUE)
            RETURNING id"#,
     )
     .fetch_one(pool)

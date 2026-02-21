@@ -56,9 +56,6 @@ class _CongregationListViewState extends State<_CongregationListView> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: const Text('Congregações'),
-      ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => context.go('${CongregationListPage.basePath(context)}/new'),
         icon: const Icon(Icons.add),
@@ -68,6 +65,39 @@ class _CongregationListViewState extends State<_CongregationListView> {
       ),
       body: Column(
         children: [
+          // Header
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.lg,
+              AppSpacing.xl,
+              AppSpacing.lg,
+              AppSpacing.md,
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Congregações', style: AppTypography.headingLarge),
+                      const SizedBox(height: AppSpacing.xs),
+                      BlocBuilder<CongregationBloc, CongregationState>(
+                        builder: (context, state) {
+                          final count = state is CongregationListLoaded ? state.congregations.length : 0;
+                          return Text(
+                            '$count congregações cadastradas',
+                            style: AppTypography.bodyMedium.copyWith(
+                              color: AppColors.textSecondary,
+                            ),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
           // Filter chips
           Padding(
             padding: const EdgeInsets.fromLTRB(

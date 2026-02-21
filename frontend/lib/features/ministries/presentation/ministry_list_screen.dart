@@ -52,9 +52,6 @@ class _MinistryListViewState extends State<_MinistryListView> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: const Text('Ministérios'),
-      ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => context.go('/ministries/new'),
         icon: const Icon(Icons.add),
@@ -64,11 +61,44 @@ class _MinistryListViewState extends State<_MinistryListView> {
       ),
       body: Column(
         children: [
+          // Header
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.lg,
+              AppSpacing.xl,
+              AppSpacing.lg,
+              AppSpacing.md,
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Ministérios', style: AppTypography.headingLarge),
+                      const SizedBox(height: AppSpacing.xs),
+                      BlocBuilder<MinistryBloc, MinistryState>(
+                        builder: (context, state) {
+                          final count = state is MinistryListLoaded ? state.ministries.length : 0;
+                          return Text(
+                            '$count ministérios cadastrados',
+                            style: AppTypography.bodyMedium.copyWith(
+                              color: AppColors.textSecondary,
+                            ),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
           // Search bar
           Padding(
             padding: const EdgeInsets.fromLTRB(
               AppSpacing.lg,
-              AppSpacing.md,
+              0,
               AppSpacing.lg,
               AppSpacing.sm,
             ),
