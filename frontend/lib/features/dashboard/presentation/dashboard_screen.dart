@@ -8,6 +8,7 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../auth/bloc/auth_bloc.dart';
 import '../../auth/bloc/auth_event_state.dart';
+import '../../congregations/bloc/congregation_context_cubit.dart';
 import '../../financial/data/financial_repository.dart';
 import '../../financial/data/models/financial_models.dart';
 import '../../financial/presentation/format_utils.dart';
@@ -77,6 +78,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   FinancialBalance? _financialBalance;
   AssetStats? _assetStats;
   EbdStats? _ebdStats;
+  String? _lastCongregationId;
 
   @override
   void initState() {
@@ -84,15 +86,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
     _loadStats();
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final congId = context.watch<CongregationContextCubit>().state.activeCongregationId;
+    if (congId != _lastCongregationId) {
+      _lastCongregationId = congId;
+      _loadStats();
+    }
+  }
+
   Future<void> _loadStats() async {
     try {
       final apiClient = RepositoryProvider.of<ApiClient>(context);
       final memberRepo = MemberRepository(apiClient: apiClient);
       final financialRepo = FinancialRepository(apiClient: apiClient);
+      final congregationId = context.read<CongregationContextCubit>().state.activeCongregationId;
 
       // Load all stats in parallel
       final results = await Future.wait([
-        memberRepo.getStats(),
+        memberRepo.getStats(congregationId: congregationId),
         financialRepo.getBalanceReport().catchError((_) => const FinancialBalance(
               totalIncome: 0,
               totalExpense: 0,

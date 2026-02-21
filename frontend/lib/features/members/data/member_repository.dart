@@ -12,6 +12,7 @@ class MemberRepository {
     int perPage = 20,
     String? search,
     String? status,
+    String? congregationId,
   }) async {
     final queryParams = <String, dynamic>{
       'page': page,
@@ -22,6 +23,9 @@ class MemberRepository {
     }
     if (status != null && status.isNotEmpty) {
       queryParams['status'] = status;
+    }
+    if (congregationId != null && congregationId.isNotEmpty) {
+      queryParams['congregation_id'] = congregationId;
     }
 
     final response = await _apiClient.dio.get(
@@ -64,8 +68,15 @@ class MemberRepository {
     await _apiClient.dio.delete('/v1/members/$id');
   }
 
-  Future<MemberStats> getStats() async {
-    final response = await _apiClient.dio.get('/v1/members/stats');
+  Future<MemberStats> getStats({String? congregationId}) async {
+    final queryParams = <String, dynamic>{};
+    if (congregationId != null && congregationId.isNotEmpty) {
+      queryParams['congregation_id'] = congregationId;
+    }
+    final response = await _apiClient.dio.get(
+      '/v1/members/stats',
+      queryParameters: queryParams,
+    );
     return MemberStats.fromJson(
       response.data['data'] as Map<String, dynamic>,
     );

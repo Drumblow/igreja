@@ -6,6 +6,7 @@ import '../../../core/network/api_client.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../congregations/bloc/congregation_context_cubit.dart';
 import '../bloc/member_bloc.dart';
 import '../bloc/member_event_state.dart';
 import '../data/member_repository.dart';
@@ -17,10 +18,14 @@ class MemberListScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final apiClient = RepositoryProvider.of<ApiClient>(context);
+    final congCubit = context.read<CongregationContextCubit>();
     return BlocProvider(
       create: (_) => MemberBloc(
         repository: MemberRepository(apiClient: apiClient),
-      )..add(const MembersLoadRequested()),
+        congregationCubit: congCubit,
+      )..add(MembersLoadRequested(
+          congregationId: congCubit.state.activeCongregationId,
+        )),
       child: const _MemberListView(),
     );
   }

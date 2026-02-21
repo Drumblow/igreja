@@ -7,6 +7,7 @@ import '../../../core/network/api_client.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../congregations/bloc/congregation_context_cubit.dart';
 import '../bloc/member_bloc.dart';
 import '../bloc/member_event_state.dart';
 import '../data/member_repository.dart';
@@ -32,7 +33,10 @@ class MemberFormScreen extends StatelessWidget {
     // If we already have the entity, show form immediately
     if (existingMember != null || memberId == null) {
       return BlocProvider(
-        create: (_) => MemberBloc(repository: repo),
+        create: (_) => MemberBloc(
+          repository: repo,
+          congregationCubit: context.read<CongregationContextCubit>(),
+        ),
         child: _MemberFormView(existingMember: existingMember),
       );
     }
@@ -55,7 +59,10 @@ class MemberFormScreen extends StatelessWidget {
           );
         }
         return BlocProvider(
-          create: (_) => MemberBloc(repository: repo),
+          create: (_) => MemberBloc(
+            repository: repo,
+            congregationCubit: context.read<CongregationContextCubit>(),
+          ),
           child: _MemberFormView(existingMember: snapshot.data),
         );
       },

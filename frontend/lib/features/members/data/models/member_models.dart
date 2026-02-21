@@ -4,6 +4,7 @@ class Member extends Equatable {
   final String id;
   final String churchId;
   final String? familyId;
+  final String? congregationId;
 
   // Personal data
   final String fullName;
@@ -59,6 +60,7 @@ class Member extends Equatable {
     required this.id,
     this.churchId = '',
     this.familyId,
+    this.congregationId,
     required this.fullName,
     this.socialName,
     this.birthDate,
@@ -105,6 +107,7 @@ class Member extends Equatable {
       id: json['id'] as String,
       churchId: json['church_id'] as String? ?? '',
       familyId: json['family_id'] as String?,
+      congregationId: json['congregation_id'] as String?,
       fullName: json['full_name'] as String,
       socialName: json['social_name'] as String?,
       birthDate: _parseDate(json['birth_date']),
@@ -183,6 +186,7 @@ class Member extends Equatable {
       if (marriageDate != null) 'marriage_date': _formatDate(marriageDate),
       'status': status,
       if (notes != null) 'notes': notes,
+      if (congregationId != null) 'congregation_id': congregationId,
     };
   }
 

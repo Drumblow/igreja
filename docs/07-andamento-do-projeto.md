@@ -1,8 +1,8 @@
 # 📊 Andamento do Projeto — Igreja Manager
 
 > **Última atualização:** 20 de fevereiro de 2026  
-> **Versão do documento:** 1.16  
-> **Status geral do projeto:** Em Desenvolvimento Ativo (~99.8% concluído)
+> **Versão do documento:** 1.17  
+> **Status geral do projeto:** Em Desenvolvimento Ativo (~99.9% concluído)
 
 ---
 
@@ -20,7 +20,7 @@ O **Igreja Manager** é uma plataforma de gestão para igrejas composta por **6 
 | Backend — Autenticação | ![100%](https://img.shields.io/badge/100%25-brightgreen) | ✅ Completo (login/refresh/logout/me/forgot/reset) |
 | Backend — Igrejas | ![100%](https://img.shields.io/badge/100%25-brightgreen) | ✅ CRUD completo (5 endpoints) + Audit Log |
 | Backend — Usuários/Papéis | ![100%](https://img.shields.io/badge/100%25-brightgreen) | ✅ CRUD completo (5 endpoints) + Audit Log |
-| Backend — Membros | ![100%](https://img.shields.io/badge/100%25-brightgreen) | ✅ Famílias + Ministérios + Histórico + Cache + Audit |
+| Backend — Membros | ![100%](https://img.shields.io/badge/100%25-brightgreen) | ✅ Famílias + Ministérios + Histórico + Cache + Audit + Filtro congregation_id |
 | Backend — Financeiro | ![95%](https://img.shields.io/badge/95%25-green) | 🟢 CRUD completo (5 sub-módulos, 18 endpoints) + Audit Log |
 | Backend — Patrimônio | ![100%](https://img.shields.io/badge/100%25-brightgreen) | ✅ CRUD + Stats + Cache + Audit (5 sub-módulos, 18 endpoints) |
 | Backend — EBD | ![100%](https://img.shields.io/badge/100%25-brightgreen) | ✅ CRUD + Stats + Cache + Audit + Reports (10 sub-módulos, 48+ endpoints) — Evolução E1-E7 + F1 |
@@ -35,8 +35,8 @@ O **Igreja Manager** é uma plataforma de gestão para igrejas composta por **6 
 | Frontend — Patrimônio | ![95%](https://img.shields.io/badge/95%25-green) | 🟢 12 telas + BLoC + Paginação + Filtro categoria + Edit navigation fix |
 | Frontend — EBD | ![98%](https://img.shields.io/badge/98%25-brightgreen) | ✅ Overview + 10 telas + BLoC + Relatórios + Paginação (E1–E7 + F1) |
 | Frontend — Relatórios | ![100%](https://img.shields.io/badge/100%25-brightgreen) | ✅ Tela central + métricas (4 módulos) + Gráficos fl_chart (pie + bar) + aniversariantes |
-| Backend — Congregações | ![100%](https://img.shields.io/badge/100%25-brightgreen) | ✅ NOVO — CRUD + Stats + Users + Assign Members + Overview (12 endpoints) |
-| Frontend — Congregações | ![100%](https://img.shields.io/badge/100%25-brightgreen) | ✅ NOVO — 5 telas + BLoC + Context Cubit + Selector Widget |
+| Backend — Congregações | ![100%](https://img.shields.io/badge/100%25-brightgreen) | ✅ CRUD + Stats + Users + Assign Members + Overview (12 endpoints) + Audit + Cache |
+| Frontend — Congregações | ![100%](https://img.shields.io/badge/100%25-brightgreen) | ✅ 5 telas + BLoC + Context Cubit + Selector no AppShell + Nav item |
 | Frontend — Configurações | ![100%](https://img.shields.io/badge/100%25-brightgreen) | ✅ NOVO — Igrejas + Usuários/Papéis + Congregações (3 telas + BLoC + Repositório) |
 
 ---
@@ -1060,7 +1060,48 @@ Crates/packages importados mas ainda sem uso no código — preparados para fase
 
 ---
 
-## 9.1 Changelog — Sessão v1.16 (20/02/2026)
+## 9.1 Changelog — Sessão v1.17 (20/02/2026)
+
+Integração do módulo de Congregações com módulos existentes (Fases 2 e 4 parciais):
+
+### Backend (Rust/Actix-Web)
+
+- **`member_dto.rs`** — Adicionado `congregation_id: Option<Uuid>` a `CreateMemberRequest`, `UpdateMemberRequest` e `MemberFilter`.
+- **`member_service.rs`** — Variant `Uuid(Uuid)` no enum `BindValue`, filtro `congregation_id` no `list()`, campo `$36` no INSERT do `create()`, SET clause no `update()`.
+- **`member_handler.rs`** — Novo struct `CongregationIdFilter`, parâmetro utoipa `congregation_id` na listagem, handler `member_stats` com queries dinâmicas condicionais por congregação.
+- **`congregation_handler.rs`** — `AuditService::log_action()` em create/update/deactivate, `CacheService::del_pattern()` para invalidar cache de congregações.
+
+### Frontend (Flutter/BLoC)
+
+- **`app_shell.dart`** — `CongregationSelector` integrado no sidebar (desktop, após header) e no AppBar (mobile). Nav item "Congregações" adicionado em `_allNavItems` e `_moreNavItems`.
+- **`member_bloc.dart`** — Agora recebe `CongregationContextCubit`, escuta mudanças de congregação e recarrega lista automaticamente. Passa `congregationId` ao repositório.
+- **`member_event_state.dart`** — `congregationId` em `MembersLoadRequested` e `activeCongregationId` em `MemberLoaded`.
+- **`member_repository.dart`** — `getMembers()` e `getStats()` aceitam parâmetro `congregationId` (enviado como query param).
+- **`member_models.dart`** — Campo `congregationId` no model `Member`, `fromJson`, `toCreateJson`.
+- **`member_list_screen.dart`** / **`member_form_screen.dart`** — Passam `CongregationContextCubit` ao criar `MemberBloc`.
+- **`dashboard_screen.dart`** — Recarrega stats ao trocar congregação via `didChangeDependencies`, passa `congregationId` ao `getStats()`.
+
+### Arquivos Modificados (10 arquivos)
+
+| Arquivo | Mudanças |
+|---------|----------|
+| `backend/src/application/dto/member_dto.rs` | +`congregation_id` em 3 structs |
+| `backend/src/application/services/member_service.rs` | +`BindValue::Uuid`, filtro list, campo create/update |
+| `backend/src/api/handlers/member_handler.rs` | +`CongregationIdFilter`, stats com filtro dinâmico |
+| `backend/src/api/handlers/congregation_handler.rs` | +AuditService + CacheService em 3 handlers |
+| `frontend/lib/core/shell/app_shell.dart` | +CongregationSelector + nav item Congregações |
+| `frontend/lib/features/members/bloc/member_bloc.dart` | +CongregationContextCubit listener |
+| `frontend/lib/features/members/bloc/member_event_state.dart` | +congregationId em event/state |
+| `frontend/lib/features/members/data/member_repository.dart` | +congregationId param em getMembers/getStats |
+| `frontend/lib/features/members/data/models/member_models.dart` | +congregationId field |
+| `frontend/lib/features/members/presentation/member_list_screen.dart` | +CongregationContextCubit no BlocProvider |
+| `frontend/lib/features/members/presentation/member_form_screen.dart` | +CongregationContextCubit no BlocProvider |
+| `frontend/lib/features/dashboard/presentation/dashboard_screen.dart` | +congregation-aware stats reload |
+| `docs/10-modulo-congregacoes.md` | Atualização status Fases 2 e 4 |
+
+---
+
+## 9.2 Changelog — Sessão v1.16 (20/02/2026)
 
 Melhorias implementadas nesta sessão:
 
@@ -1115,7 +1156,7 @@ Melhorias implementadas nesta sessão:
 
 ---
 
-## 9.2 Changelog — Sessão v1.15 (19/02/2026)
+## 9.3 Changelog — Sessão v1.15 (19/02/2026)
 
 Melhorias implementadas nesta sessão:
 
@@ -1161,7 +1202,7 @@ Melhorias implementadas nesta sessão:
 
 ---
 
-## 9.3 Changelog — Sessão v1.14 (20/02/2026)
+## 9.4 Changelog — Sessão v1.14 (20/02/2026)
 
 Melhorias implementadas nesta sessão para aumentar completude do frontend:
 

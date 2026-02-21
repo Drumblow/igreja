@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../theme/app_spacing.dart';
+import '../../features/congregations/bloc/congregation_context_cubit.dart';
+import '../../features/congregations/presentation/widgets/congregation_selector.dart';
 
 /// Persistent shell with a responsive sidebar/bottom nav.
 class AppShell extends StatelessWidget {
@@ -54,6 +57,12 @@ class AppShell extends StatelessWidget {
       activeIcon: Icons.school_rounded,
       label: 'EBD',
       path: '/ebd',
+    ),
+    _NavItem(
+      icon: Icons.church_outlined,
+      activeIcon: Icons.church_rounded,
+      label: 'Congregações',
+      path: '/congregations',
     ),
     _NavItem(
       icon: Icons.settings_outlined,
@@ -112,6 +121,12 @@ class AppShell extends StatelessWidget {
       path: '/ebd',
     ),
     _NavItem(
+      icon: Icons.church_outlined,
+      activeIcon: Icons.church_rounded,
+      label: 'Congregações',
+      path: '/congregations',
+    ),
+    _NavItem(
       icon: Icons.settings_outlined,
       activeIcon: Icons.settings_rounded,
       label: 'Configurações',
@@ -161,6 +176,13 @@ class AppShell extends StatelessWidget {
     final mobileSelectedIndex = isInMore ? 4 : (selectedIndex < 0 ? 0 : selectedIndex);
 
     return Scaffold(
+      appBar: AppBar(
+        title: const Text('Igreja Manager'),
+        actions: const [
+          CongregationSelector(),
+          SizedBox(width: AppSpacing.sm),
+        ],
+      ),
       body: child,
       bottomNavigationBar: NavigationBar(
         selectedIndex: mobileSelectedIndex,
@@ -352,7 +374,22 @@ class _Sidebar extends StatelessWidget {
             height: 1,
             color: Colors.white.withValues(alpha: 0.08),
           ),
-          const SizedBox(height: AppSpacing.md),
+
+          // ── Congregation Selector ──
+          BlocBuilder<CongregationContextCubit, CongregationContextState>(
+            builder: (context, congState) {
+              if (!congState.hasLoaded || !congState.hasCongregations) {
+                return const SizedBox(height: AppSpacing.md);
+              }
+              return Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.md,
+                  vertical: AppSpacing.sm,
+                ),
+                child: const CongregationSelector(),
+              );
+            },
+          ),
 
           // ── Nav Items ──
           Expanded(

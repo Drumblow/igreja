@@ -49,6 +49,9 @@ pub struct CreateMemberRequest {
 
     pub status: Option<String>,
     pub notes: Option<String>,
+
+    /// Congregation this member belongs to
+    pub congregation_id: Option<uuid::Uuid>,
 }
 
 #[derive(Debug, Deserialize, Validate, ToSchema)]
@@ -93,6 +96,9 @@ pub struct UpdateMemberRequest {
     pub status: Option<String>,
     pub status_reason: Option<String>,
     pub notes: Option<String>,
+
+    /// Congregation this member belongs to
+    pub congregation_id: Option<uuid::Uuid>,
 }
 
 #[derive(Debug, Deserialize, ToSchema)]
@@ -109,6 +115,7 @@ pub struct MemberFilter {
     pub neighborhood: Option<String>,
     pub entry_date_from: Option<NaiveDate>,
     pub entry_date_to: Option<NaiveDate>,
+    pub congregation_id: Option<uuid::Uuid>,
 }
 
 #[derive(Debug, Serialize, ToSchema)]

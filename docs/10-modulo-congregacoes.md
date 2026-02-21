@@ -1337,24 +1337,24 @@ pub fn require_congregation_access(claims: &Claims, congregation_id: Uuid, pool:
 | 1.7 | Registrar rotas no `main.rs` | ✅ |
 | 1.8 | Criar views SQL consolidadas | ✅ (2 views) |
 
-### Fase 2: Integração com Módulos Existentes (Backend) — 🟡 PENDENTE
-**Nota:** A infraestrutura (tabelas, coluna `congregation_id` nas tabelas existentes, views) foi criada. A integração dos filtros nos módulos existentes (member_handler, financial_handler, etc.) será feita em iteração futura.
+### Fase 2: Integração com Módulos Existentes (Backend) — � PARCIALMENTE CONCLUÍDO
+**Nota:** A infraestrutura (tabelas, coluna `congregation_id` nas tabelas existentes, views) foi criada. Integração de filtros nos módulos de Membros concluída. Outros módulos (Financial, EBD, Assets, Ministries) ficam pendentes.
 
 | # | Tarefa | Status |
 |---|--------|:------:|
-| 2.1 | Modificar `member_handler.rs` — aceitar filtro `congregation_id` | 🟡 Pendente |
+| 2.1 | Modificar `member_handler.rs` — aceitar filtro `congregation_id` | ✅ Concluído |
 | 2.2 | Modificar `financial_handler.rs` — aceitar filtro `congregation_id` | 🟡 Pendente |
 | 2.3 | Modificar `ebd_handler.rs` — aceitar filtro `congregation_id` | 🟡 Pendente |
 | 2.4 | Modificar `asset_handler.rs` — aceitar filtro `congregation_id` | 🟡 Pendente |
 | 2.5 | Modificar `ministry_handler.rs` — aceitar filtro `congregation_id` | 🟡 Pendente |
-| 2.6 | Modificar `member_service.rs` — incluir `congregation_id` no create/update | 🟡 Pendente |
+| 2.6 | Modificar `member_service.rs` — incluir `congregation_id` no create/update | ✅ Concluído |
 | 2.7 | Modificar services financeiros — incluir `congregation_id` | 🟡 Pendente |
 | 2.8 | Modificar services EBD — incluir `congregation_id` | 🟡 Pendente |
 | 2.9 | Implementar middleware de filtro de congregação | 🟡 Pendente |
 | 2.10 | Endpoint de migração em lote (assign-members) | ✅ Implementado em `congregation_handler` |
 | 2.11 | Endpoints de relatórios consolidados (overview + compare) | ✅ Overview implementado (compare pendente) |
-| 2.12 | Integrar AuditService nos novos endpoints | 🟡 Pendente |
-| 2.13 | Invalidar caches relevantes ao mudar congregação | 🟡 Pendente |
+| 2.12 | Integrar AuditService nos novos endpoints | ✅ Concluído |
+| 2.13 | Invalidar caches relevantes ao mudar congregação | ✅ Concluído |
 
 ### Fase 3: Frontend — Módulo de Congregações — ✅ CONCLUÍDO
 **Estimativa: 3-4 dias → Concluído em 1 sessão**
@@ -1378,21 +1378,23 @@ pub fn require_congregation_access(claims: &Claims, congregation_id: Uuid, pool:
 | 3.9 | Criar formulário de criação/edição | ✅ (829 linhas, 3 seções, responsivo) |
 | 3.10 | Criar tela de associação de membros em lote | ✅ (busca + seleção + overwrite) |
 
-### Fase 4: Frontend — Integração com Módulos Existentes — 🟡 PENDENTE
-**Nota:** O `CongregationContextCubit` foi criado e integrado globalmente. A integração dos filtros nos BLoCs dos módulos existentes será feita em iteração futura.
+### Fase 4: Frontend — Integração com Módulos Existentes — � PARCIALMENTE CONCLUÍDO
+**Nota:** O `CongregationContextCubit` foi integrado globalmente. MemberBloc, MemberRepository e Dashboard agora filtram por congregação. Selector está no AppShell (sidebar + AppBar mobile). Outros módulos ficam pendentes.
 
 | # | Tarefa | Status |
 |---|--------|:------:|
-| 4.1 | Modificar `MembersBloc` para escutar `CongregationContextCubit` | 🟡 Pendente |
+| 4.1 | Modificar `MembersBloc` para escutar `CongregationContextCubit` | ✅ Concluído |
 | 4.2 | Modificar `FinancialBloc` para filtro por congregação | 🟡 Pendente |
 | 4.3 | Modificar `EbdBloc` para filtro por congregação | 🟡 Pendente |
 | 4.4 | Modificar `AssetsBloc` para filtro por congregação | 🟡 Pendente |
 | 4.5 | Modificar `MinistriesBloc` para filtro por congregação | 🟡 Pendente |
-| 4.6 | Modificar Dashboard para exibir resumo por congregação | 🟡 Pendente |
-| 4.7 | Adicionar campo `congregation_id` nos formulários de criação | 🟡 Pendente |
+| 4.6 | Modificar Dashboard para exibir resumo por congregação | ✅ Concluído (stats filtrado) |
+| 4.7 | Adicionar campo `congregation_id` nos formulários de criação | ✅ Concluído (Member model + toCreateJson) |
 | 4.8 | Criar tela de comparativo entre congregações | 🟡 Pendente |
 | 4.9 | Integrar relatórios consolidados na tela de Relatórios | 🟡 Pendente |
 | 4.10 | Adicionar rota no `go_router` para as novas telas | ✅ (5 rotas registradas) |
+| 4.11 | Integrar `CongregationSelector` no AppShell (sidebar + mobile) | ✅ Concluído |
+| 4.12 | Adicionar nav item "Congregações" no sidebar e "Mais" | ✅ Concluído |
 
 ### Fase 5: Polimento e Testes — 🟡 PARCIAL
 
@@ -1551,11 +1553,30 @@ O modelo suporta:
 
 ## 12. Registro de Implementação (20/02/2026)
 
-### Resumo
+### Resumo — Sessão v1.16
 
-O módulo de Congregações foi implementado com sucesso na sessão v1.16. A implementação cobre as **Fases 1 e 3** do plano (infraestrutura completa + frontend do módulo). As Fases 2 e 4 (integração com módulos existentes) ficam pendentes para iteração futura.
+O módulo de Congregações foi implementado com sucesso na sessão v1.16. A implementação cobre as **Fases 1 e 3** do plano (infraestrutura completa + frontend do módulo).
 
-### O que foi implementado
+### Resumo — Sessão v1.17 (Integração)
+
+A sessão v1.17 avançou nas **Fases 2 e 4** (integração com módulos existentes):
+
+**Backend (Fase 2):**
+- `member_handler.rs` — filtro `congregation_id` na listagem e no stats (queries dinâmicas)
+- `member_service.rs` — `congregation_id` no `create()` INSERT ($36) e `update()` SET, filtro no `list()`
+- `member_dto.rs` — campo `congregation_id: Option<Uuid>` em `CreateMemberRequest`, `UpdateMemberRequest` e `MemberFilter`
+- `congregation_handler.rs` — AuditService logging em create/update/deactivate + CacheService invalidation
+
+**Frontend (Fase 4):**
+- `app_shell.dart` — `CongregationSelector` integrado no sidebar (desktop) e AppBar (mobile) + nav item "Congregações" adicionado
+- `member_bloc.dart` — escuta `CongregationContextCubit`, recarrega lista ao trocar congregação, passa `congregationId` ao repositório
+- `member_event_state.dart` — `congregationId` adicionado a `MembersLoadRequested` e `MemberLoaded`
+- `member_repository.dart` — `getMembers()` e `getStats()` aceitam `congregationId` como query param
+- `member_models.dart` — campo `congregationId` no model `Member`, `fromJson` e `toCreateJson`
+- `member_list_screen.dart` / `member_form_screen.dart` — passam `CongregationContextCubit` ao criar `MemberBloc`
+- `dashboard_screen.dart` — recarrega stats ao trocar congregação, passa `congregationId` ao `getStats()`
+
+### O que foi implementado (v1.16)
 
 | Área | Componente | Arquivos | Linhas |
 |------|-----------|:--------:|:------:|
@@ -1585,13 +1606,11 @@ O módulo de Congregações foi implementado com sucesso na sessão v1.16. A imp
 | RN-CONG-009 | Contexto ativo no frontend | ✅ CongregationContextCubit |
 | RN-CONG-010 | Dados existentes (NULL) continuam funcionando | ✅ Backwards-compatible |
 
-### O que ficou pendente (Fases 2 e 4)
+### O que ficou pendente (restante Fases 2 e 4)
 
-- Filtro `congregation_id` nos handlers/services existentes (Members, Financial, EBD, Assets, Ministries)
-- Middleware de filtro de congregação automático
-- Integração do `CongregationContextCubit` nos BLoCs existentes
-- Campo `congregation_id` nos formulários de criação de membros, lançamentos, etc.
-- Dashboard com resumo por congregação
+- Filtro `congregation_id` nos handlers/services de Financial, EBD, Assets, Ministries (backend)
+- Middleware de filtro de congregação automático (backend)
+- Integração do `CongregationContextCubit` nos BLoCs de Financial, EBD, Assets, Ministries (frontend)
+- Dropdown de congregação nos formulários de criação de lançamentos financeiros, turmas EBD, patrimônio
 - Tela de comparativo entre congregações
-- Audit logging nos endpoints de congregações
-- Cache invalidation nos novos fluxos
+- Relatórios consolidados na tela de Relatórios

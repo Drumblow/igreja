@@ -12,6 +12,7 @@ enum BindValue {
     Text(String),
     Int(i32),
     Date(NaiveDate),
+    Uuid(Uuid),
 }
 
 /// Helper: bind a list of dynamic values after church_id ($1).
@@ -23,6 +24,7 @@ fn build_arguments(church_id: Uuid, values: &[BindValue]) -> PgArguments {
             BindValue::Text(s) => args.add(s.as_str()).unwrap(),
             BindValue::Int(i) => args.add(*i).unwrap(),
             BindValue::Date(d) => args.add(*d).unwrap(),
+            BindValue::Uuid(u) => args.add(*u).unwrap(),
         }
     }
     args
@@ -38,6 +40,7 @@ fn build_update_arguments(member_id: Uuid, church_id: Uuid, values: &[BindValue]
             BindValue::Text(s) => args.add(s.as_str()).unwrap(),
             BindValue::Int(i) => args.add(*i).unwrap(),
             BindValue::Date(d) => args.add(*d).unwrap(),
+            BindValue::Uuid(u) => args.add(*u).unwrap(),
         }
     }
     args
@@ -127,6 +130,11 @@ impl MemberService {
             bind_values.push(BindValue::Date(*entry_to));
             param_index += 1;
         }
+        if let Some(congregation_id) = filter.congregation_id {
+            conditions.push(format!("congregation_id = ${param_index}"));
+            bind_values.push(BindValue::Uuid(congregation_id));
+            param_index += 1;
+        }
 
         let _ = param_index;
 
@@ -183,13 +191,13 @@ impl MemberService {
                 nationality, education_level, blood_type,
                 conversion_date, water_baptism_date, spirit_baptism_date,
                 origin_church, entry_date, entry_type, role_position, ordination_date,
-                marriage_date, status, notes
+                marriage_date, status, notes, congregation_id
             ) VALUES (
                 $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
                 $11, $12, $13, $14, $15, $16, $17,
                 $18, $19, $20, $21, $22, $23, $24,
                 $25, $26, $27, $28, $29, $30, $31, $32,
-                $33, $34, $35
+                $33, $34, $35, $36
             )
             RETURNING *
             "#,
@@ -229,6 +237,7 @@ impl MemberService {
         .bind(req.marriage_date)
         .bind(req.status.as_deref().unwrap_or("ativo"))
         .bind(&req.notes)
+        .bind(req.congregation_id)
         .fetch_one(pool)
         .await?;
 
@@ -304,6 +313,13 @@ impl MemberService {
         set_field_str!(status);
         set_field_str!(status_reason);
         set_field_str!(notes);
+
+        // Handle congregation_id (UUID field)
+        if let Some(congregation_id) = req.congregation_id {
+            set_clauses.push(format!("congregation_id = ${}", param_index));
+            bind_values.push(BindValue::Uuid(congregation_id));
+            param_index += 1;
+        }
 
         let _ = param_index;
 

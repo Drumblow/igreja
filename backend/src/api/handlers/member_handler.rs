@@ -1,4 +1,5 @@
 use actix_web::{delete, get, post, put, web, HttpRequest, HttpResponse};
+use serde::Deserialize;
 use sqlx::PgPool;
 use validator::Validate;
 
@@ -10,6 +11,12 @@ use crate::config::AppConfig;
 use crate::errors::AppError;
 use crate::infrastructure::cache::CacheService;
 
+/// Optional congregation_id filter for stats endpoints
+#[derive(Debug, Deserialize)]
+pub struct CongregationIdFilter {
+    pub congregation_id: Option<uuid::Uuid>,
+}
+
 /// List members with pagination and filters
 #[utoipa::path(
     get,
@@ -20,6 +27,7 @@ use crate::infrastructure::cache::CacheService;
         ("search" = Option<String>, Query, description = "Search by name"),
         ("status" = Option<String>, Query, description = "Filter by status"),
         ("gender" = Option<String>, Query, description = "Filter by gender"),
+        ("congregation_id" = Option<uuid::Uuid>, Query, description = "Filter by congregation"),
     ),
     responses(
         (status = 200, description = "List of members"),
@@ -209,6 +217,9 @@ pub async fn delete_member(
 #[utoipa::path(
     get,
     path = "/api/v1/members/stats",
+    params(
+        ("congregation_id" = Option<uuid::Uuid>, Query, description = "Filter by congregation"),
+    ),
     responses(
         (status = 200, description = "Member statistics"),
         (status = 401, description = "Not authenticated")
@@ -221,46 +232,70 @@ pub async fn member_stats(
     pool: web::Data<PgPool>,
     config: web::Data<AppConfig>,
     cache: web::Data<CacheService>,
+    filter: web::Query<CongregationIdFilter>,
 ) -> Result<HttpResponse, AppError> {
     let claims = middleware::auth_middleware(req, config).await?;
     let church_id = middleware::get_church_id(&claims)?;
 
+    let congregation_filter = filter.congregation_id;
+
     // Try cache first (TTL 60s for stats)
-    let cache_key = format!("members:stats:{church_id}");
+    let cache_suffix = congregation_filter
+        .map(|c| c.to_string())
+        .unwrap_or_else(|| "all".to_string());
+    let cache_key = format!("members:stats:{church_id}:{cache_suffix}");
     if let Some(cached) = cache.get::<serde_json::Value>(&cache_key).await {
         return Ok(HttpResponse::Ok().json(ApiResponse::ok(cached)));
     }
 
-    let total_active = sqlx::query_scalar::<_, i64>(
-        "SELECT COUNT(*) FROM members WHERE church_id = $1 AND status = 'ativo' AND deleted_at IS NULL"
-    )
-    .bind(church_id)
-    .fetch_one(pool.get_ref())
-    .await?;
+    let cong_condition = if congregation_filter.is_some() {
+        " AND congregation_id = $2"
+    } else {
+        ""
+    };
 
-    let total_inactive = sqlx::query_scalar::<_, i64>(
-        "SELECT COUNT(*) FROM members WHERE church_id = $1 AND status != 'ativo' AND deleted_at IS NULL"
-    )
-    .bind(church_id)
-    .fetch_one(pool.get_ref())
-    .await?;
+    let total_active = {
+        let sql = format!(
+            "SELECT COUNT(*) FROM members WHERE church_id = $1 AND status = 'ativo' AND deleted_at IS NULL{}",
+            cong_condition
+        );
+        let mut q = sqlx::query_scalar::<_, i64>(&sql).bind(church_id);
+        if let Some(cid) = congregation_filter { q = q.bind(cid); }
+        q.fetch_one(pool.get_ref()).await?
+    };
 
-    let new_this_month = sqlx::query_scalar::<_, i64>(
-        "SELECT COUNT(*) FROM members WHERE church_id = $1 AND deleted_at IS NULL \
-         AND EXTRACT(MONTH FROM created_at) = EXTRACT(MONTH FROM NOW()) \
-         AND EXTRACT(YEAR FROM created_at) = EXTRACT(YEAR FROM NOW())"
-    )
-    .bind(church_id)
-    .fetch_one(pool.get_ref())
-    .await?;
+    let total_inactive = {
+        let sql = format!(
+            "SELECT COUNT(*) FROM members WHERE church_id = $1 AND status != 'ativo' AND deleted_at IS NULL{}",
+            cong_condition
+        );
+        let mut q = sqlx::query_scalar::<_, i64>(&sql).bind(church_id);
+        if let Some(cid) = congregation_filter { q = q.bind(cid); }
+        q.fetch_one(pool.get_ref()).await?
+    };
 
-    let new_this_year = sqlx::query_scalar::<_, i64>(
-        "SELECT COUNT(*) FROM members WHERE church_id = $1 AND deleted_at IS NULL \
-         AND EXTRACT(YEAR FROM created_at) = EXTRACT(YEAR FROM NOW())"
-    )
-    .bind(church_id)
-    .fetch_one(pool.get_ref())
-    .await?;
+    let new_this_month = {
+        let sql = format!(
+            "SELECT COUNT(*) FROM members WHERE church_id = $1 AND deleted_at IS NULL \
+             AND EXTRACT(MONTH FROM created_at) = EXTRACT(MONTH FROM NOW()) \
+             AND EXTRACT(YEAR FROM created_at) = EXTRACT(YEAR FROM NOW()){}",
+            cong_condition
+        );
+        let mut q = sqlx::query_scalar::<_, i64>(&sql).bind(church_id);
+        if let Some(cid) = congregation_filter { q = q.bind(cid); }
+        q.fetch_one(pool.get_ref()).await?
+    };
+
+    let new_this_year = {
+        let sql = format!(
+            "SELECT COUNT(*) FROM members WHERE church_id = $1 AND deleted_at IS NULL \
+             AND EXTRACT(YEAR FROM created_at) = EXTRACT(YEAR FROM NOW()){}",
+            cong_condition
+        );
+        let mut q = sqlx::query_scalar::<_, i64>(&sql).bind(church_id);
+        if let Some(cid) = congregation_filter { q = q.bind(cid); }
+        q.fetch_one(pool.get_ref()).await?
+    };
 
     let stats = serde_json::json!({
         "total_active": total_active,

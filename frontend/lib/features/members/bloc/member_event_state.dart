@@ -13,15 +13,17 @@ class MembersLoadRequested extends MemberEvent {
   final int page;
   final String? search;
   final String? status;
+  final String? congregationId;
 
   const MembersLoadRequested({
     this.page = 1,
     this.search,
     this.status,
+    this.congregationId,
   });
 
   @override
-  List<Object?> get props => [page, search, status];
+  List<Object?> get props => [page, search, status, congregationId];
 }
 
 class MemberCreateRequested extends MemberEvent {
@@ -74,6 +76,7 @@ class MemberLoaded extends MemberState {
   final int currentPage;
   final String? activeSearch;
   final String? activeStatus;
+  final String? activeCongregationId;
 
   const MemberLoaded({
     required this.members,
@@ -81,13 +84,14 @@ class MemberLoaded extends MemberState {
     this.currentPage = 1,
     this.activeSearch,
     this.activeStatus,
+    this.activeCongregationId,
   });
 
   bool get hasMore => currentPage * 20 < totalCount;
 
   @override
   List<Object?> get props =>
-      [members, totalCount, currentPage, activeSearch, activeStatus];
+      [members, totalCount, currentPage, activeSearch, activeStatus, activeCongregationId];
 }
 
 class MemberSaved extends MemberState {

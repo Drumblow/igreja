@@ -10,8 +10,10 @@ use crate::application::dto::{
     SetActiveCongregationRequest, UpdateCongregationRequest,
 };
 use crate::application::services::CongregationService;
+use crate::application::services::AuditService;
 use crate::config::AppConfig;
 use crate::errors::AppError;
+use crate::infrastructure::cache::CacheService;
 
 #[derive(Debug, Deserialize)]
 pub struct CongregationFilter {
@@ -100,6 +102,7 @@ pub async fn create_congregation(
     req: HttpRequest,
     pool: web::Data<PgPool>,
     config: web::Data<AppConfig>,
+    cache: web::Data<CacheService>,
     body: web::Json<CreateCongregationRequest>,
 ) -> Result<HttpResponse, AppError> {
     let claims = middleware::auth_middleware(req, config).await?;
@@ -110,6 +113,15 @@ pub async fn create_congregation(
         .map_err(|e| AppError::validation(e.to_string()))?;
 
     let congregation = CongregationService::create(pool.get_ref(), church_id, &body).await?;
+
+    // Cache invalidation
+    cache.del_pattern(&format!("congregations:*:{church_id}")).await;
+
+    // Audit log
+    let user_id = middleware::get_user_id(&claims)?;
+    AuditService::log_action(
+        pool.get_ref(), church_id, Some(user_id), "create", "congregation", congregation.id,
+    ).await.ok();
 
     Ok(HttpResponse::Created().json(ApiResponse::with_message(
         congregation,
@@ -134,6 +146,7 @@ pub async fn update_congregation(
     req: HttpRequest,
     pool: web::Data<PgPool>,
     config: web::Data<AppConfig>,
+    cache: web::Data<CacheService>,
     path: web::Path<uuid::Uuid>,
     body: web::Json<UpdateCongregationRequest>,
 ) -> Result<HttpResponse, AppError> {
@@ -147,6 +160,15 @@ pub async fn update_congregation(
 
     let congregation =
         CongregationService::update(pool.get_ref(), church_id, congregation_id, &body).await?;
+
+    // Cache invalidation
+    cache.del_pattern(&format!("congregations:*:{church_id}")).await;
+
+    // Audit log
+    let user_id = middleware::get_user_id(&claims)?;
+    AuditService::log_action(
+        pool.get_ref(), church_id, Some(user_id), "update", "congregation", congregation_id,
+    ).await.ok();
 
     Ok(HttpResponse::Ok().json(ApiResponse::with_message(
         congregation,
@@ -171,6 +193,7 @@ pub async fn deactivate_congregation(
     req: HttpRequest,
     pool: web::Data<PgPool>,
     config: web::Data<AppConfig>,
+    cache: web::Data<CacheService>,
     path: web::Path<uuid::Uuid>,
 ) -> Result<HttpResponse, AppError> {
     let claims = middleware::auth_middleware(req, config).await?;
@@ -179,6 +202,15 @@ pub async fn deactivate_congregation(
     let congregation_id = path.into_inner();
 
     CongregationService::deactivate(pool.get_ref(), church_id, congregation_id).await?;
+
+    // Cache invalidation
+    cache.del_pattern(&format!("congregations:*:{church_id}")).await;
+
+    // Audit log
+    let user_id = middleware::get_user_id(&claims)?;
+    AuditService::log_action(
+        pool.get_ref(), church_id, Some(user_id), "deactivate", "congregation", congregation_id,
+    ).await.ok();
 
     Ok(HttpResponse::Ok().json(ApiResponse::ok(
         serde_json::json!({"message": "Congregação desativada com sucesso"}),
