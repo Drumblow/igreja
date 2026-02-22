@@ -13,11 +13,12 @@ class MinistriesLoadRequested extends MinistryEvent {
   final int page;
   final String? search;
   final bool? isActive;
+  final String? congregationId;
 
-  const MinistriesLoadRequested({this.page = 1, this.search, this.isActive});
+  const MinistriesLoadRequested({this.page = 1, this.search, this.isActive, this.congregationId});
 
   @override
-  List<Object?> get props => [page, search, isActive];
+  List<Object?> get props => [page, search, isActive, congregationId];
 }
 
 class MinistryCreateRequested extends MinistryEvent {

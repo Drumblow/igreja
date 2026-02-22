@@ -12,6 +12,7 @@ impl EbdTermService {
         pool: &PgPool,
         church_id: Uuid,
         is_active: &Option<bool>,
+        congregation_id: Option<Uuid>,
         limit: i64,
         offset: i64,
     ) -> Result<(Vec<EbdTerm>, i64), AppError> {
@@ -22,6 +23,10 @@ impl EbdTermService {
             conditions.push(format!("is_active = ${param_idx}"));
             param_idx += 1;
         }
+        if congregation_id.is_some() {
+            conditions.push(format!("congregation_id = ${param_idx}"));
+            param_idx += 1;
+        }
 
         let _ = param_idx;
         let where_clause = conditions.join(" AND ");
@@ -29,7 +34,7 @@ impl EbdTermService {
         let count_sql = format!("SELECT COUNT(*) FROM ebd_terms WHERE {where_clause}");
         let query_sql = format!(
             r#"
-            SELECT id, church_id, name, start_date, end_date, theme, magazine_title, is_active, created_at, updated_at
+            SELECT id, church_id, name, start_date, end_date, theme, magazine_title, congregation_id, is_active, created_at, updated_at
             FROM ebd_terms
             WHERE {where_clause}
             ORDER BY start_date DESC
@@ -46,6 +51,11 @@ impl EbdTermService {
         if let Some(active) = is_active {
             sqlx::Arguments::add(&mut count_args, *active).unwrap();
             sqlx::Arguments::add(&mut data_args, *active).unwrap();
+        }
+
+        if let Some(cid) = congregation_id {
+            sqlx::Arguments::add(&mut count_args, cid).unwrap();
+            sqlx::Arguments::add(&mut data_args, cid).unwrap();
         }
 
         let total = sqlx::query_scalar_with::<_, i64, _>(&count_sql, count_args)
@@ -96,8 +106,8 @@ impl EbdTermService {
 
         let term = sqlx::query_as::<_, EbdTerm>(
             r#"
-            INSERT INTO ebd_terms (church_id, name, start_date, end_date, theme, magazine_title, is_active)
-            VALUES ($1, $2, $3, $4, $5, $6, TRUE)
+            INSERT INTO ebd_terms (church_id, name, start_date, end_date, theme, magazine_title, congregation_id, is_active)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, TRUE)
             RETURNING *
             "#,
         )
@@ -107,6 +117,7 @@ impl EbdTermService {
         .bind(req.end_date)
         .bind(&req.theme)
         .bind(&req.magazine_title)
+        .bind(req.congregation_id)
         .fetch_one(pool)
         .await?;
 
@@ -149,6 +160,17 @@ impl EbdTermService {
         if req.is_active.is_some() {
             set_clauses.push(format!("is_active = ${param_idx}"));
             param_idx += 1;
+        }
+        if let Some(ref congregation_id) = req.congregation_id {
+            match congregation_id {
+                Some(_) => {
+                    set_clauses.push(format!("congregation_id = ${param_idx}"));
+                    param_idx += 1;
+                }
+                None => {
+                    set_clauses.push("congregation_id = NULL".to_string());
+                }
+            }
         }
 
         if set_clauses.is_empty() {
@@ -193,6 +215,11 @@ impl EbdTermService {
         }
         if let Some(is_active) = &req.is_active {
             sqlx::Arguments::add(&mut args, *is_active).unwrap();
+        }
+        if let Some(ref congregation_id) = req.congregation_id {
+            if let Some(cid) = congregation_id {
+                sqlx::Arguments::add(&mut args, *cid).unwrap();
+            }
         }
 
         let term = sqlx::query_as_with::<_, EbdTerm, _>(&sql, args)

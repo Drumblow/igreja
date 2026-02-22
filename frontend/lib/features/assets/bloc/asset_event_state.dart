@@ -18,6 +18,7 @@ class AssetsLoadRequested extends AssetEvent {
   final String? categoryId;
   final String? status;
   final String? condition;
+  final String? congregationId;
 
   const AssetsLoadRequested({
     this.page = 1,
@@ -25,10 +26,11 @@ class AssetsLoadRequested extends AssetEvent {
     this.categoryId,
     this.status,
     this.condition,
+    this.congregationId,
   });
 
   @override
-  List<Object?> get props => [page, search, categoryId, status, condition];
+  List<Object?> get props => [page, search, categoryId, status, condition, congregationId];
 }
 
 /// Create asset

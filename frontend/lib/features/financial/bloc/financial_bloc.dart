@@ -36,6 +36,7 @@ class FinancialBloc extends Bloc<FinancialEvent, FinancialState> {
         status: event.status,
         dateFrom: event.dateFrom,
         dateTo: event.dateTo,
+        congregationId: event.congregationId,
       );
       final allEntries = event.page > 1 && state is FinancialEntriesLoaded
           ? [...(state as FinancialEntriesLoaded).entries, ...result.items]
@@ -64,6 +65,7 @@ class FinancialBloc extends Bloc<FinancialEvent, FinancialState> {
       final balance = await _repository.getBalanceReport(
         dateFrom: event.dateFrom,
         dateTo: event.dateTo,
+        congregationId: event.congregationId,
       );
       emit(FinancialBalanceLoaded(balance: balance));
     } catch (e) {

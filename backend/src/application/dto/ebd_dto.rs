@@ -17,6 +17,7 @@ pub struct CreateEbdTermRequest {
     pub end_date: NaiveDate,
     pub theme: Option<String>,
     pub magazine_title: Option<String>,
+    pub congregation_id: Option<Uuid>,
 }
 
 #[derive(Debug, Deserialize, Validate, ToSchema)]
@@ -28,6 +29,7 @@ pub struct UpdateEbdTermRequest {
     pub theme: Option<String>,
     pub magazine_title: Option<String>,
     pub is_active: Option<bool>,
+    pub congregation_id: Option<Option<Uuid>>,
 }
 
 // ==========================================
@@ -45,6 +47,7 @@ pub struct CreateEbdClassRequest {
     pub max_capacity: Option<i32>,
     pub teacher_id: Option<Uuid>,
     pub aux_teacher_id: Option<Uuid>,
+    pub congregation_id: Option<Uuid>,
 }
 
 #[derive(Debug, Deserialize, Validate, ToSchema)]
@@ -58,6 +61,7 @@ pub struct UpdateEbdClassRequest {
     pub teacher_id: Option<Uuid>,
     pub aux_teacher_id: Option<Uuid>,
     pub is_active: Option<bool>,
+    pub congregation_id: Option<Option<Uuid>>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -65,6 +69,7 @@ pub struct EbdClassFilter {
     pub term_id: Option<Uuid>,
     pub is_active: Option<bool>,
     pub teacher_id: Option<Uuid>,
+    pub congregation_id: Option<Uuid>,
 }
 
 // ==========================================

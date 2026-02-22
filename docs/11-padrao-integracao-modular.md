@@ -656,10 +656,10 @@ Quando a visão é "Todas (Geral)", cada item mostra um badge/label com o nome d
 void _loadStats() {
   final congregationId = context.read<CongregationContextCubit>().activeCongregationId;
   
-  _loadMemberStats(congregationId);     // ✅ Já implementado
-  _loadFinancialStats(congregationId);  // ❌ Pendente
-  _loadAssetStats(congregationId);      // ❌ Pendente
-  _loadEbdStats(congregationId);        // ❌ Pendente
+  _loadMemberStats(congregationId);     // ✅ Implementado
+  _loadFinancialStats(congregationId);  // ✅ Implementado
+  _loadAssetStats(congregationId);      // ✅ Implementado
+  _loadEbdStats(congregationId);        // ✅ Implementado
 }
 ```
 
@@ -884,23 +884,23 @@ Use esta tabela para acompanhar a integração de cada módulo com o padrão:
 | # | Tarefa | Membros | Financeiro | Patrimônio | EBD | Ministérios |
 |:-:|--------|:-------:|:----------:|:----------:|:---:|:-----------:|
 | 1 | `congregation_id` na tabela (DB) | ✅ | ✅ | ✅ | ✅ | ✅ |
-| 2 | `congregation_id` na Entity (Rust) | 🔴 | 🔴 | 🔴 | 🔴 | 🔴 |
-| 3 | `congregation_id` no CreateDTO (Rust) | ✅ | 🔴 | 🔴 | 🔴 | 🔴 |
-| 4 | `congregation_id` no UpdateDTO (Rust) | ✅ | 🔴 | 🔴 | 🔴 | 🔴 |
-| 5 | `congregation_id` no FilterDTO (Rust) | ✅ | 🔴 | 🔴 | 🔴 | 🔴 |
-| 6 | Filtro no Service `list()` (Rust) | ✅ | 🔴 | 🔴 | 🔴 | 🔴 |
-| 7 | Bind no Service `create()` (Rust) | ✅ | 🔴 | 🔴 | 🔴 | 🔴 |
-| 8 | Bind no Service `update()` (Rust) | ✅ | 🔴 | 🔴 | 🔴 | 🔴 |
-| 9 | `congregation_name` via LEFT JOIN (Rust) | 🔴 | 🔴 | 🔴 | 🔴 | 🔴 |
-| 10 | `congregationId` no Model (Flutter) | ✅ | 🔴 | 🔴 | 🔴 | 🔴 |
-| 11 | `congregationId` no Repository (Flutter) | ✅ | 🔴 | 🔴 | 🔴 | 🔴 |
-| 12 | BLoC escuta `CongregationContextCubit` | ✅ | 🔴 | 🔴 | 🔴 | 🔴 |
+| 2 | `congregation_id` na Entity (Rust) | ✅ | ✅ | ✅ | ✅ | ✅ |
+| 3 | `congregation_id` no CreateDTO (Rust) | ✅ | ✅ | ✅ | ✅ | ✅ |
+| 4 | `congregation_id` no UpdateDTO (Rust) | ✅ | ✅ | ✅ | ✅ | ✅ |
+| 5 | `congregation_id` no FilterDTO (Rust) | ✅ | ✅ | ✅ | ✅ | ✅ |
+| 6 | Filtro no Service `list()` (Rust) | ✅ | ✅ | ✅ | ✅ | ✅ |
+| 7 | Bind no Service `create()` (Rust) | ✅ | ✅ | ✅ | ✅ | ✅ |
+| 8 | Bind no Service `update()` (Rust) | ✅ | ✅ | ✅ | ✅ | ✅ |
+| 9 | `congregation_name` via LEFT JOIN (Rust) | ✅ | ✅ | ✅ | ✅ | ✅ |
+| 10 | `congregationId` no Model (Flutter) | ✅ | ✅ | ✅ | ✅ | ✅ |
+| 11 | `congregationId` no Repository (Flutter) | ✅ | ✅ | ✅ | ✅ | ✅ |
+| 12 | BLoC escuta `CongregationContextCubit` | ✅ | ✅* | ✅* | ✅* | ✅* |
 | 13 | Dropdown de congregação no Form (Flutter) | 🔴 | 🔴 | 🔴 | 🔴 | 🔴 |
 | 14 | Badge de congregação na lista (Flutter) | 🔴 | 🔴 | 🔴 | 🔴 | 🔴 |
 | 15 | Relatórios filtram por congregação | 🔴 | 🔴 | 🔴 | 🔴 | — |
-| 16 | Dashboard filtra por congregação | ✅* | 🔴 | 🔴 | 🔴 | — |
+| 16 | Dashboard filtra por congregação | ✅ | ✅ | ✅ | ✅ | — |
 
-> ✅ = Implementado | 🔴 = Pendente | ✅* = Parcial (membros stats filtram, mas entity sem campo)
+> ✅ = Implementado | 🔴 = Pendente | ✅* = BLoC Event aceita `congregationId` (pronto para integrar com cubit listener nas telas)
 
 ### 9.2 Checklist para Novos Módulos
 

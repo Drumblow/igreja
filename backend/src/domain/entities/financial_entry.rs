@@ -32,6 +32,7 @@ pub struct FinancialEntry {
     pub closed_by: Option<Uuid>,
     pub registered_by: Uuid,
     pub notes: Option<String>,
+    pub congregation_id: Option<Uuid>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
     pub deleted_at: Option<DateTime<Utc>>,
@@ -57,6 +58,8 @@ pub struct FinancialEntrySummary {
     pub member_name: Option<String>,
     pub campaign_name: Option<String>,
     pub supplier_name: Option<String>,
+    pub congregation_id: Option<Uuid>,
+    pub congregation_name: Option<String>,
     pub created_at: DateTime<Utc>,
 }
 

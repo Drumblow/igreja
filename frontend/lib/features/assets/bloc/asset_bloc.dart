@@ -37,6 +37,7 @@ class AssetBloc extends Bloc<AssetEvent, AssetState> {
         categoryId: event.categoryId,
         status: event.status,
         condition: event.condition,
+        congregationId: event.congregationId,
       );
       final allAssets = event.page > 1 && state is AssetListLoaded
           ? [...(state as AssetListLoaded).assets, ...result.items]

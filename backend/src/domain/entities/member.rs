@@ -58,6 +58,9 @@ pub struct Member {
 
     pub notes: Option<String>,
 
+    // Congregation (transversal)
+    pub congregation_id: Option<Uuid>,
+
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
     pub deleted_at: Option<DateTime<Utc>>,
@@ -76,5 +79,7 @@ pub struct MemberSummary {
     pub role_position: Option<String>,
     pub photo_url: Option<String>,
     pub entry_date: Option<NaiveDate>,
+    pub congregation_id: Option<Uuid>,
+    pub congregation_name: Option<String>,
     pub created_at: DateTime<Utc>,
 }

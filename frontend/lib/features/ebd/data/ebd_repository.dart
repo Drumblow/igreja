@@ -39,10 +39,12 @@ class EbdRepository {
   // Terms (Trimestres)
   // ==========================================
 
-  Future<List<EbdTerm>> getTerms({int page = 1, int perPage = 20}) async {
+  Future<List<EbdTerm>> getTerms({int page = 1, int perPage = 20, String? congregationId}) async {
+    final params = <String, dynamic>{'page': page, 'per_page': perPage};
+    if (congregationId != null) params['congregation_id'] = congregationId;
     final response = await _apiClient.dio.get(
       '/v1/ebd/terms',
-      queryParameters: {'page': page, 'per_page': perPage},
+      queryParameters: params,
     );
     final list = response.data['data'] as List? ?? [];
     return list.map((e) => EbdTerm.fromJson(e as Map<String, dynamic>)).toList();
@@ -73,6 +75,7 @@ class EbdRepository {
     String? termId,
     bool? isActive,
     String? teacherId,
+    String? congregationId,
     int page = 1,
     int perPage = 20,
   }) async {
@@ -80,6 +83,7 @@ class EbdRepository {
     if (termId != null) params['term_id'] = termId;
     if (isActive != null) params['is_active'] = isActive;
     if (teacherId != null) params['teacher_id'] = teacherId;
+    if (congregationId != null) params['congregation_id'] = congregationId;
 
     final response = await _apiClient.dio.get(
       '/v1/ebd/classes',

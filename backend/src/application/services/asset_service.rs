@@ -52,6 +52,11 @@ impl AssetService {
             param_idx += 1;
         }
 
+        if filter.congregation_id.is_some() {
+            conditions.push(format!("a.congregation_id = ${param_idx}"));
+            param_idx += 1;
+        }
+
         let _ = param_idx;
         let where_clause = conditions.join(" AND ");
 
@@ -65,9 +70,12 @@ impl AssetService {
                    ac.name AS category_name,
                    a.brand, a.model, a.location, a.condition, a.status,
                    a.acquisition_date, a.acquisition_value, a.current_value,
+                   a.congregation_id,
+                   cg.name AS congregation_name,
                    a.created_at
             FROM assets a
             LEFT JOIN asset_categories ac ON ac.id = a.category_id
+            LEFT JOIN congregations cg ON cg.id = a.congregation_id
             WHERE {where_clause}
             ORDER BY a.asset_code ASC
             LIMIT {limit} OFFSET {offset}
@@ -104,6 +112,11 @@ impl AssetService {
         if let Some(term) = search {
             sqlx::Arguments::add(&mut count_args, term.as_str()).unwrap();
             sqlx::Arguments::add(&mut data_args, term.as_str()).unwrap();
+        }
+
+        if let Some(congregation_id) = filter.congregation_id {
+            sqlx::Arguments::add(&mut count_args, congregation_id).unwrap();
+            sqlx::Arguments::add(&mut data_args, congregation_id).unwrap();
         }
 
         let total = sqlx::query_scalar_with::<_, i64, _>(&count_sql, count_args)
@@ -163,9 +176,9 @@ impl AssetService {
             INSERT INTO assets (
                 church_id, category_id, description, brand, model, serial_number,
                 acquisition_date, acquisition_value, acquisition_type, donor_member_id,
-                invoice_url, current_value, residual_value, location, condition, notes
+                invoice_url, current_value, residual_value, location, condition, notes, congregation_id
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
             RETURNING *
             "#,
         )
@@ -185,6 +198,7 @@ impl AssetService {
         .bind(&req.location)
         .bind(condition)
         .bind(&req.notes)
+        .bind(req.congregation_id)
         .fetch_one(pool)
         .await?;
 
@@ -314,6 +328,18 @@ impl AssetService {
             set_clauses.push(format!("notes = ${pi}"));
             sqlx::Arguments::add(&mut args, v.as_str()).unwrap();
             pi += 1;
+        }
+        if let Some(ref congregation_id) = req.congregation_id {
+            match congregation_id {
+                Some(cid) => {
+                    set_clauses.push(format!("congregation_id = ${pi}"));
+                    sqlx::Arguments::add(&mut args, *cid).unwrap();
+                    pi += 1;
+                }
+                None => {
+                    set_clauses.push("congregation_id = NULL".to_string());
+                }
+            }
         }
 
         let _ = pi;

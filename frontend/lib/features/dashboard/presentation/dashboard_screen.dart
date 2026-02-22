@@ -106,15 +106,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
       // Load all stats in parallel
       final results = await Future.wait([
         memberRepo.getStats(congregationId: congregationId),
-        financialRepo.getBalanceReport().catchError((_) => const FinancialBalance(
+        financialRepo.getBalanceReport(congregationId: congregationId).catchError((_) => const FinancialBalance(
               totalIncome: 0,
               totalExpense: 0,
               balance: 0,
               incomeByCategory: [],
               expenseByCategory: [],
             )),
-        _loadAssetStats(apiClient),
-        _loadEbdStats(apiClient),
+        _loadAssetStats(apiClient, congregationId),
+        _loadEbdStats(apiClient, congregationId),
       ]);
 
       if (mounted) {
@@ -130,18 +130,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
-  Future<AssetStats?> _loadAssetStats(ApiClient apiClient) async {
+  Future<AssetStats?> _loadAssetStats(ApiClient apiClient, String? congregationId) async {
     try {
-      final response = await apiClient.dio.get('/v1/assets/stats');
+      final params = <String, dynamic>{};
+      if (congregationId != null) params['congregation_id'] = congregationId;
+      final response = await apiClient.dio.get('/v1/assets/stats', queryParameters: params);
       return AssetStats.fromJson(response.data['data'] as Map<String, dynamic>);
     } catch (_) {
       return null;
     }
   }
 
-  Future<EbdStats?> _loadEbdStats(ApiClient apiClient) async {
+  Future<EbdStats?> _loadEbdStats(ApiClient apiClient, String? congregationId) async {
     try {
-      final response = await apiClient.dio.get('/v1/ebd/stats');
+      final params = <String, dynamic>{};
+      if (congregationId != null) params['congregation_id'] = congregationId;
+      final response = await apiClient.dio.get('/v1/ebd/stats', queryParameters: params);
       return EbdStats.fromJson(response.data['data'] as Map<String, dynamic>);
     } catch (_) {
       return null;

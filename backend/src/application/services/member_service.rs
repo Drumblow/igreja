@@ -59,79 +59,79 @@ impl MemberService {
     ) -> Result<(Vec<MemberSummary>, i64), AppError> {
         // Build dynamic WHERE conditions
         let mut conditions: Vec<String> = vec![
-            "church_id = $1".to_string(),
-            "deleted_at IS NULL".to_string(),
+            "m.church_id = $1".to_string(),
+            "m.deleted_at IS NULL".to_string(),
         ];
         let mut bind_values: Vec<BindValue> = vec![];
         let mut param_index = 2u32;
 
         if let Some(ref status) = filter.status {
-            conditions.push(format!("status = ${param_index}"));
+            conditions.push(format!("m.status = ${param_index}"));
             bind_values.push(BindValue::Text(status.clone()));
             param_index += 1;
         }
         if let Some(ref gender) = filter.gender {
-            conditions.push(format!("gender = ${param_index}"));
+            conditions.push(format!("m.gender = ${param_index}"));
             bind_values.push(BindValue::Text(gender.clone()));
             param_index += 1;
         }
         if let Some(ref marital_status) = filter.marital_status {
-            conditions.push(format!("marital_status = ${param_index}"));
+            conditions.push(format!("m.marital_status = ${param_index}"));
             bind_values.push(BindValue::Text(marital_status.clone()));
             param_index += 1;
         }
         if let Some(ref role_position) = filter.role_position {
-            conditions.push(format!("role_position = ${param_index}"));
+            conditions.push(format!("m.role_position = ${param_index}"));
             bind_values.push(BindValue::Text(role_position.clone()));
             param_index += 1;
         }
         if let Some(ref neighborhood) = filter.neighborhood {
             conditions.push(format!(
-                "unaccent(neighborhood) ILIKE '%' || unaccent(${param_index}) || '%'"
+                "unaccent(m.neighborhood) ILIKE '%' || unaccent(${param_index}) || '%'"
             ));
             bind_values.push(BindValue::Text(neighborhood.clone()));
             param_index += 1;
         }
         if let Some(search_term) = search {
             conditions.push(format!(
-                "unaccent(full_name) ILIKE '%' || unaccent(${param_index}) || '%'"
+                "unaccent(m.full_name) ILIKE '%' || unaccent(${param_index}) || '%'"
             ));
             bind_values.push(BindValue::Text(search_term.clone()));
             param_index += 1;
         }
         if let Some(month) = filter.birth_month {
             conditions.push(format!(
-                "EXTRACT(MONTH FROM birth_date) = ${param_index}"
+                "EXTRACT(MONTH FROM m.birth_date) = ${param_index}"
             ));
             bind_values.push(BindValue::Int(month));
             param_index += 1;
         }
         if let Some(age_min) = filter.age_min {
             conditions.push(format!(
-                "EXTRACT(YEAR FROM AGE(birth_date)) >= ${param_index}"
+                "EXTRACT(YEAR FROM AGE(m.birth_date)) >= ${param_index}"
             ));
             bind_values.push(BindValue::Int(age_min));
             param_index += 1;
         }
         if let Some(age_max) = filter.age_max {
             conditions.push(format!(
-                "EXTRACT(YEAR FROM AGE(birth_date)) <= ${param_index}"
+                "EXTRACT(YEAR FROM AGE(m.birth_date)) <= ${param_index}"
             ));
             bind_values.push(BindValue::Int(age_max));
             param_index += 1;
         }
         if let Some(ref entry_from) = filter.entry_date_from {
-            conditions.push(format!("entry_date >= ${param_index}"));
+            conditions.push(format!("m.entry_date >= ${param_index}"));
             bind_values.push(BindValue::Date(*entry_from));
             param_index += 1;
         }
         if let Some(ref entry_to) = filter.entry_date_to {
-            conditions.push(format!("entry_date <= ${param_index}"));
+            conditions.push(format!("m.entry_date <= ${param_index}"));
             bind_values.push(BindValue::Date(*entry_to));
             param_index += 1;
         }
         if let Some(congregation_id) = filter.congregation_id {
-            conditions.push(format!("congregation_id = ${param_index}"));
+            conditions.push(format!("m.congregation_id = ${param_index}"));
             bind_values.push(BindValue::Uuid(congregation_id));
             param_index += 1;
         }
@@ -140,12 +140,15 @@ impl MemberService {
 
         let where_clause = conditions.join(" AND ");
 
-        let count_sql = format!("SELECT COUNT(*) FROM members WHERE {where_clause}");
+        let count_sql = format!("SELECT COUNT(*) FROM members m WHERE {where_clause}");
         let query_sql = format!(
-            "SELECT id, full_name, birth_date, gender, phone_primary, email, status, \
-             role_position, photo_url, entry_date, created_at \
-             FROM members WHERE {where_clause} \
-             ORDER BY full_name ASC LIMIT {limit} OFFSET {offset}"
+            "SELECT m.id, m.full_name, m.birth_date, m.gender, m.phone_primary, m.email, m.status, \
+             m.role_position, m.photo_url, m.entry_date, m.congregation_id, \
+             cg.name AS congregation_name, m.created_at \
+             FROM members m \
+             LEFT JOIN congregations cg ON cg.id = m.congregation_id \
+             WHERE {where_clause} \
+             ORDER BY m.full_name ASC LIMIT {limit} OFFSET {offset}"
         );
 
         // Execute count query

@@ -13,20 +13,28 @@ impl MinistryService {
         church_id: Uuid,
         search: &Option<String>,
         is_active: Option<bool>,
+        congregation_id: Option<Uuid>,
         limit: i64,
         offset: i64,
     ) -> Result<(Vec<MinistrySummary>, i64), AppError> {
         let mut conditions = vec!["mi.church_id = $1".to_string()];
+        let mut param_idx = 2u32;
 
         if is_active.is_some() {
-            conditions.push("mi.is_active = $2".to_string());
+            conditions.push(format!("mi.is_active = ${param_idx}"));
+            param_idx += 1;
+        }
+
+        if congregation_id.is_some() {
+            conditions.push(format!("mi.congregation_id = ${param_idx}"));
+            param_idx += 1;
         }
 
         if search.is_some() {
-            let idx = if is_active.is_some() { 3 } else { 2 };
             conditions.push(format!(
-                "unaccent(mi.name) ILIKE '%' || unaccent(${idx}) || '%'"
+                "unaccent(mi.name) ILIKE '%' || unaccent(${param_idx}) || '%'"
             ));
+            param_idx += 1;
         }
 
         let where_clause = conditions.join(" AND ");
@@ -38,11 +46,13 @@ impl MinistryService {
         let query_sql = format!(
             r#"
             SELECT mi.id, mi.name, mi.description, mi.leader_id,
-                   m.full_name AS leader_name, mi.is_active,
+                   m.full_name AS leader_name, mi.congregation_id,
+                   cg.name AS congregation_name, mi.is_active,
                    (SELECT COUNT(*) FROM member_ministries mm WHERE mm.ministry_id = mi.id AND mm.is_active = TRUE) AS member_count,
                    mi.created_at
             FROM ministries mi
             LEFT JOIN members m ON m.id = mi.leader_id AND m.deleted_at IS NULL
+            LEFT JOIN congregations cg ON cg.id = mi.congregation_id
             WHERE {where_clause}
             ORDER BY mi.name ASC
             LIMIT {limit} OFFSET {offset}
@@ -59,6 +69,11 @@ impl MinistryService {
         if let Some(active) = is_active {
             sqlx::Arguments::add(&mut count_args, active).unwrap();
             sqlx::Arguments::add(&mut data_args, active).unwrap();
+        }
+
+        if let Some(cid) = congregation_id {
+            sqlx::Arguments::add(&mut count_args, cid).unwrap();
+            sqlx::Arguments::add(&mut data_args, cid).unwrap();
         }
 
         if let Some(term) = search {
@@ -101,8 +116,8 @@ impl MinistryService {
     ) -> Result<Ministry, AppError> {
         let ministry = sqlx::query_as::<_, Ministry>(
             r#"
-            INSERT INTO ministries (church_id, name, description, leader_id)
-            VALUES ($1, $2, $3, $4)
+            INSERT INTO ministries (church_id, name, description, leader_id, congregation_id)
+            VALUES ($1, $2, $3, $4, $5)
             RETURNING *
             "#,
         )
@@ -110,6 +125,7 @@ impl MinistryService {
         .bind(&req.name)
         .bind(&req.description)
         .bind(req.leader_id)
+        .bind(req.congregation_id)
         .fetch_one(pool)
         .await?;
 
@@ -152,6 +168,18 @@ impl MinistryService {
             set_clauses.push(format!("is_active = ${param_index}"));
             sqlx::Arguments::add(&mut args, is_active).unwrap();
             param_index += 1;
+        }
+        if let Some(ref congregation_id) = req.congregation_id {
+            match congregation_id {
+                Some(cid) => {
+                    set_clauses.push(format!("congregation_id = ${param_index}"));
+                    sqlx::Arguments::add(&mut args, *cid).unwrap();
+                    param_index += 1;
+                }
+                None => {
+                    set_clauses.push("congregation_id = NULL".to_string());
+                }
+            }
         }
 
         let _ = param_index;

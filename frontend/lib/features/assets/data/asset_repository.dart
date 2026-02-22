@@ -67,6 +67,7 @@ class AssetRepository {
     String? status,
     String? condition,
     String? location,
+    String? congregationId,
   }) async {
     final params = <String, dynamic>{'page': page, 'per_page': perPage};
     if (search != null && search.isNotEmpty) params['search'] = search;
@@ -74,6 +75,7 @@ class AssetRepository {
     if (status != null) params['status'] = status;
     if (condition != null) params['condition'] = condition;
     if (location != null) params['location'] = location;
+    if (congregationId != null) params['congregation_id'] = congregationId;
 
     final response = await _apiClient.dio.get(
       '/v1/assets',

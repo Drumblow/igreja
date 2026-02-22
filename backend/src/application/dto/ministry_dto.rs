@@ -9,6 +9,7 @@ pub struct CreateMinistryRequest {
     pub name: String,
     pub description: Option<String>,
     pub leader_id: Option<Uuid>,
+    pub congregation_id: Option<Uuid>,
 }
 
 #[derive(Debug, Deserialize, Validate, ToSchema)]
@@ -18,6 +19,7 @@ pub struct UpdateMinistryRequest {
     pub description: Option<String>,
     pub leader_id: Option<Uuid>,
     pub is_active: Option<bool>,
+    pub congregation_id: Option<Option<Uuid>>,
 }
 
 #[derive(Debug, Deserialize, Validate, ToSchema)]

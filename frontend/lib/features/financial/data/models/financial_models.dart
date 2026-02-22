@@ -222,6 +222,8 @@ class FinancialEntry extends Equatable {
   final String? memberName;
   final String? campaignName;
   final String? supplierName;
+  final String? congregationId;
+  final String? congregationName;
   final DateTime? createdAt;
 
   // Full fields (when fetched by ID)
@@ -248,6 +250,8 @@ class FinancialEntry extends Equatable {
     this.memberName,
     this.campaignName,
     this.supplierName,
+    this.congregationId,
+    this.congregationName,
     this.createdAt,
     this.accountPlanId,
     this.bankAccountId,
@@ -277,6 +281,8 @@ class FinancialEntry extends Equatable {
       memberName: json['member_name'] as String?,
       campaignName: json['campaign_name'] as String?,
       supplierName: json['supplier_name'] as String?,
+      congregationId: json['congregation_id'] as String?,
+      congregationName: json['congregation_name'] as String?,
       createdAt: _parseDate(json['created_at']),
       accountPlanId: json['account_plan_id'] as String?,
       bankAccountId: json['bank_account_id'] as String?,
@@ -300,6 +306,7 @@ class FinancialEntry extends Equatable {
         if (campaignId != null) 'campaign_id': campaignId,
         if (memberId != null) 'member_id': memberId,
         if (supplierName != null) 'supplier_name': supplierName,
+        if (congregationId != null) 'congregation_id': congregationId,
         if (receiptUrl != null) 'receipt_url': receiptUrl,
         if (status != 'pendente') 'status': status,
         if (notes != null) 'notes': notes,

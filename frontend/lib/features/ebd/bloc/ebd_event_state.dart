@@ -14,7 +14,10 @@ abstract class EbdEvent extends Equatable {
 // ---- Terms ----
 
 class EbdTermsLoadRequested extends EbdEvent {
-  const EbdTermsLoadRequested();
+  final String? congregationId;
+  const EbdTermsLoadRequested({this.congregationId});
+  @override
+  List<Object?> get props => [congregationId];
 }
 
 class EbdTermCreateRequested extends EbdEvent {
@@ -37,10 +40,11 @@ class EbdTermUpdateRequested extends EbdEvent {
 class EbdClassesLoadRequested extends EbdEvent {
   final String? termId;
   final bool? isActive;
+  final String? congregationId;
   final int page;
-  const EbdClassesLoadRequested({this.termId, this.isActive, this.page = 1});
+  const EbdClassesLoadRequested({this.termId, this.isActive, this.congregationId, this.page = 1});
   @override
-  List<Object?> get props => [termId, isActive, page];
+  List<Object?> get props => [termId, isActive, congregationId, page];
 }
 
 class EbdClassDetailLoadRequested extends EbdEvent {

@@ -112,6 +112,7 @@ pub struct CreateFinancialEntryRequest {
     /// "pendente", "confirmado"
     pub status: Option<String>,
     pub notes: Option<String>,
+    pub congregation_id: Option<Uuid>,
 }
 
 #[derive(Debug, Deserialize, Validate, ToSchema)]
@@ -130,6 +131,7 @@ pub struct UpdateFinancialEntryRequest {
     pub receipt_url: Option<String>,
     pub status: Option<String>,
     pub notes: Option<String>,
+    pub congregation_id: Option<Option<Uuid>>,
 }
 
 // ==========================================
@@ -160,10 +162,12 @@ pub struct FinancialEntryFilter {
     pub member_id: Option<Uuid>,
     pub campaign_id: Option<Uuid>,
     pub payment_method: Option<String>,
+    pub congregation_id: Option<Uuid>,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct BalanceReportFilter {
     pub date_from: Option<NaiveDate>,
     pub date_to: Option<NaiveDate>,
+    pub congregation_id: Option<Uuid>,
 }

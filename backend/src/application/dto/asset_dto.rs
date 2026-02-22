@@ -50,6 +50,7 @@ pub struct CreateAssetRequest {
     /// "novo", "bom", "regular", "ruim", "inservivel"
     pub condition: Option<String>,
     pub notes: Option<String>,
+    pub congregation_id: Option<Uuid>,
 }
 
 #[derive(Debug, Deserialize, Validate, ToSchema)]
@@ -74,6 +75,7 @@ pub struct UpdateAssetRequest {
     pub status: Option<String>,
     pub status_reason: Option<String>,
     pub notes: Option<String>,
+    pub congregation_id: Option<Option<Uuid>>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -82,6 +84,7 @@ pub struct AssetFilter {
     pub status: Option<String>,
     pub condition: Option<String>,
     pub location: Option<String>,
+    pub congregation_id: Option<Uuid>,
 }
 
 // ==========================================

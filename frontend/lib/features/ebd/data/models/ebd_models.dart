@@ -30,6 +30,7 @@ class EbdTerm extends Equatable {
   final String endDate;
   final String? theme;
   final String? magazineTitle;
+  final String? congregationId;
   final bool isActive;
   final DateTime? createdAt;
   final DateTime? updatedAt;
@@ -41,6 +42,7 @@ class EbdTerm extends Equatable {
     required this.endDate,
     this.theme,
     this.magazineTitle,
+    this.congregationId,
     this.isActive = true,
     this.createdAt,
     this.updatedAt,
@@ -54,6 +56,7 @@ class EbdTerm extends Equatable {
       endDate: json['end_date'] as String? ?? '',
       theme: json['theme'] as String?,
       magazineTitle: json['magazine_title'] as String?,
+      congregationId: json['congregation_id'] as String?,
       isActive: json['is_active'] as bool? ?? true,
       createdAt: _parseDate(json['created_at']),
       updatedAt: _parseDate(json['updated_at']),
@@ -80,6 +83,7 @@ class EbdClass extends Equatable {
   final int? maxCapacity;
   final String? teacherId;
   final String? auxTeacherId;
+  final String? congregationId;
   final bool isActive;
   final DateTime? createdAt;
   final DateTime? updatedAt;
@@ -94,6 +98,7 @@ class EbdClass extends Equatable {
     this.maxCapacity,
     this.teacherId,
     this.auxTeacherId,
+    this.congregationId,
     this.isActive = true,
     this.createdAt,
     this.updatedAt,
@@ -110,6 +115,7 @@ class EbdClass extends Equatable {
       maxCapacity: json['max_capacity'] as int?,
       teacherId: json['teacher_id'] as String?,
       auxTeacherId: json['aux_teacher_id'] as String?,
+      congregationId: json['congregation_id'] as String?,
       isActive: json['is_active'] as bool? ?? true,
       createdAt: _parseDate(json['created_at']),
       updatedAt: _parseDate(json['updated_at']),
@@ -142,6 +148,8 @@ class EbdClassSummary extends Equatable {
   final String? room;
   final int? maxCapacity;
   final String? teacherName;
+  final String? congregationId;
+  final String? congregationName;
   final bool isActive;
   final int enrolledCount;
   final DateTime? createdAt;
@@ -155,6 +163,8 @@ class EbdClassSummary extends Equatable {
     this.room,
     this.maxCapacity,
     this.teacherName,
+    this.congregationId,
+    this.congregationName,
     this.isActive = true,
     this.enrolledCount = 0,
     this.createdAt,
@@ -170,6 +180,8 @@ class EbdClassSummary extends Equatable {
       room: json['room'] as String?,
       maxCapacity: json['max_capacity'] as int?,
       teacherName: json['teacher_name'] as String?,
+      congregationId: json['congregation_id'] as String?,
+      congregationName: json['congregation_name'] as String?,
       isActive: json['is_active'] as bool? ?? true,
       enrolledCount: json['enrolled_count'] as int? ?? 0,
       createdAt: _parseDate(json['created_at']),

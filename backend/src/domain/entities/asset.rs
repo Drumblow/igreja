@@ -29,6 +29,7 @@ pub struct Asset {
     pub status_date: Option<NaiveDate>,
     pub status_reason: Option<String>,
     pub notes: Option<String>,
+    pub congregation_id: Option<Uuid>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
     pub deleted_at: Option<DateTime<Utc>>,
@@ -48,6 +49,8 @@ pub struct AssetSummary {
     pub acquisition_date: Option<NaiveDate>,
     pub acquisition_value: Option<Decimal>,
     pub current_value: Option<Decimal>,
+    pub congregation_id: Option<Uuid>,
+    pub congregation_name: Option<String>,
     pub created_at: DateTime<Utc>,
 }
 

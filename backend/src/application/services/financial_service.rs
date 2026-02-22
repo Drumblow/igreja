@@ -68,6 +68,10 @@ impl FinancialEntryService {
             ));
             param_idx += 1;
         }
+        if filter.congregation_id.is_some() {
+            conditions.push(format!("fe.congregation_id = ${param_idx}"));
+            param_idx += 1;
+        }
 
         let _ = param_idx;
         let where_clause = conditions.join(" AND ");
@@ -85,12 +89,15 @@ impl FinancialEntryService {
                    m.full_name AS member_name,
                    ca.name AS campaign_name,
                    fe.supplier_name,
+                   fe.congregation_id,
+                   cg.name AS congregation_name,
                    fe.created_at
             FROM financial_entries fe
             LEFT JOIN account_plans ap ON ap.id = fe.account_plan_id
             LEFT JOIN bank_accounts ba ON ba.id = fe.bank_account_id
             LEFT JOIN members m ON m.id = fe.member_id
             LEFT JOIN campaigns ca ON ca.id = fe.campaign_id
+            LEFT JOIN congregations cg ON cg.id = fe.congregation_id
             WHERE {where_clause}
             ORDER BY fe.entry_date DESC, fe.created_at DESC
             LIMIT {limit} OFFSET {offset}
@@ -144,6 +151,10 @@ impl FinancialEntryService {
             sqlx::Arguments::add(&mut count_args, term.as_str()).unwrap();
             sqlx::Arguments::add(&mut data_args, term.as_str()).unwrap();
         }
+        if let Some(congregation_id) = filter.congregation_id {
+            sqlx::Arguments::add(&mut count_args, congregation_id).unwrap();
+            sqlx::Arguments::add(&mut data_args, congregation_id).unwrap();
+        }
 
         let total = sqlx::query_scalar_with::<_, i64, _>(&count_sql, count_args)
             .fetch_one(pool)
@@ -166,7 +177,7 @@ impl FinancialEntryService {
             r#"SELECT id, church_id, type, account_plan_id, bank_account_id, campaign_id,
                       amount, entry_date, due_date, payment_date, description, payment_method,
                       member_id, supplier_name, receipt_url, status, is_recurring, recurring_id,
-                      is_closed, closed_at, closed_by, registered_by, notes, created_at, updated_at, deleted_at
+                      is_closed, closed_at, closed_by, registered_by, notes, congregation_id, created_at, updated_at, deleted_at
                FROM financial_entries WHERE id = $1 AND church_id = $2 AND deleted_at IS NULL"#,
         )
         .bind(entry_id)
@@ -233,13 +244,13 @@ impl FinancialEntryService {
                 church_id, type, account_plan_id, bank_account_id, campaign_id,
                 amount, entry_date, due_date, payment_date, description,
                 payment_method, member_id, supplier_name, receipt_url,
-                status, registered_by, notes
+                status, registered_by, notes, congregation_id
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
             RETURNING id, church_id, type, account_plan_id, bank_account_id, campaign_id,
                       amount, entry_date, due_date, payment_date, description, payment_method,
                       member_id, supplier_name, receipt_url, status, is_recurring, recurring_id,
-                      is_closed, closed_at, closed_by, registered_by, notes, created_at, updated_at, deleted_at
+                      is_closed, closed_at, closed_by, registered_by, notes, congregation_id, created_at, updated_at, deleted_at
             "#,
         )
         .bind(church_id)
@@ -259,6 +270,7 @@ impl FinancialEntryService {
         .bind(status)
         .bind(user_id)
         .bind(&req.notes)
+        .bind(req.congregation_id)
         .fetch_one(pool)
         .await?;
 
@@ -383,6 +395,18 @@ impl FinancialEntryService {
             sqlx::Arguments::add(&mut args, notes.as_str()).unwrap();
             param_index += 1;
         }
+        if let Some(ref congregation_id) = req.congregation_id {
+            match congregation_id {
+                Some(cid) => {
+                    set_clauses.push(format!("congregation_id = ${param_index}"));
+                    sqlx::Arguments::add(&mut args, *cid).unwrap();
+                    param_index += 1;
+                }
+                None => {
+                    set_clauses.push("congregation_id = NULL".to_string());
+                }
+            }
+        }
 
         let _ = param_index;
 
@@ -396,7 +420,7 @@ impl FinancialEntryService {
                RETURNING id, church_id, type, account_plan_id, bank_account_id, campaign_id,
                          amount, entry_date, due_date, payment_date, description, payment_method,
                          member_id, supplier_name, receipt_url, status, is_recurring, recurring_id,
-                         is_closed, closed_at, closed_by, registered_by, notes, created_at, updated_at, deleted_at"#,
+                         is_closed, closed_at, closed_by, registered_by, notes, congregation_id, created_at, updated_at, deleted_at"#,
             set_clauses.join(", ")
         );
 
@@ -450,16 +474,23 @@ impl FinancialEntryService {
         let mut date_conditions = String::new();
         let mut has_from = false;
         let mut has_to = false;
+        let mut next_idx = 2u32;
 
         if filter.date_from.is_some() {
-            date_conditions.push_str(" AND fe.entry_date >= $2");
+            date_conditions.push_str(&format!(" AND fe.entry_date >= ${next_idx}"));
             has_from = true;
+            next_idx += 1;
         }
         if filter.date_to.is_some() {
-            let idx = if has_from { 3 } else { 2 };
-            date_conditions.push_str(&format!(" AND fe.entry_date <= ${idx}"));
+            date_conditions.push_str(&format!(" AND fe.entry_date <= ${next_idx}"));
             has_to = true;
+            next_idx += 1;
         }
+        if filter.congregation_id.is_some() {
+            date_conditions.push_str(&format!(" AND fe.congregation_id = ${next_idx}"));
+            next_idx += 1;
+        }
+        let _ = next_idx;
 
         // Total income
         let income_sql = format!(
@@ -512,6 +543,12 @@ impl FinancialEntryService {
                 sqlx::Arguments::add(&mut a2, dt).unwrap();
                 sqlx::Arguments::add(&mut a3, dt).unwrap();
                 sqlx::Arguments::add(&mut a4, dt).unwrap();
+            }
+            if let Some(cid) = filter.congregation_id {
+                sqlx::Arguments::add(&mut a1, cid).unwrap();
+                sqlx::Arguments::add(&mut a2, cid).unwrap();
+                sqlx::Arguments::add(&mut a3, cid).unwrap();
+                sqlx::Arguments::add(&mut a4, cid).unwrap();
             }
 
             (a1, a2, a3, a4)

@@ -8,6 +8,8 @@ class Ministry extends Equatable {
   final String? description;
   final String? leaderId;
   final String? leaderName;
+  final String? congregationId;
+  final String? congregationName;
   final bool isActive;
   final int memberCount;
   final DateTime? createdAt;
@@ -23,6 +25,8 @@ class Ministry extends Equatable {
     this.description,
     this.leaderId,
     this.leaderName,
+    this.congregationId,
+    this.congregationName,
     this.isActive = true,
     this.memberCount = 0,
     this.createdAt,
@@ -39,6 +43,8 @@ class Ministry extends Equatable {
       description: json['description'] as String?,
       leaderId: json['leader_id'] as String?,
       leaderName: json['leader_name'] as String?,
+      congregationId: json['congregation_id'] as String?,
+      congregationName: json['congregation_name'] as String?,
       isActive: json['is_active'] as bool? ?? true,
       memberCount: (json['member_count'] as num?)?.toInt() ?? 0,
       createdAt: _parseDate(json['created_at']),
@@ -53,6 +59,7 @@ class Ministry extends Equatable {
       if (description != null && description!.isNotEmpty)
         'description': description,
       if (leaderId != null) 'leader_id': leaderId,
+      if (congregationId != null) 'congregation_id': congregationId,
     };
   }
 
@@ -64,6 +71,8 @@ class Ministry extends Equatable {
       description: description,
       leaderId: leaderId,
       leaderName: leaderName,
+      congregationId: congregationId,
+      congregationName: congregationName,
       isActive: isActive,
       memberCount: members?.length ?? memberCount,
       createdAt: createdAt,

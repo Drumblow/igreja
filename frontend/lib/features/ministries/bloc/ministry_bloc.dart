@@ -25,6 +25,7 @@ class MinistryBloc extends Bloc<MinistryEvent, MinistryState> {
         page: event.page,
         search: event.search,
         isActive: event.isActive,
+        congregationId: event.congregationId,
       );
       final allMinistries = event.page > 1 && state is MinistryListLoaded
           ? [...(state as MinistryListLoaded).ministries, ...result.ministries]

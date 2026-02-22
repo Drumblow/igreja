@@ -119,6 +119,7 @@ class FinancialRepository {
     String? dateFrom,
     String? dateTo,
     String? paymentMethod,
+    String? congregationId,
   }) async {
     final params = <String, dynamic>{'page': page, 'per_page': perPage};
     if (search != null && search.isNotEmpty) params['search'] = search;
@@ -129,6 +130,7 @@ class FinancialRepository {
     if (dateFrom != null) params['date_from'] = dateFrom;
     if (dateTo != null) params['date_to'] = dateTo;
     if (paymentMethod != null) params['payment_method'] = paymentMethod;
+    if (congregationId != null) params['congregation_id'] = congregationId;
 
     final response = await _apiClient.dio.get('/v1/financial/entries', queryParameters: params);
     final data = response.data;
@@ -163,10 +165,12 @@ class FinancialRepository {
   Future<FinancialBalance> getBalanceReport({
     String? dateFrom,
     String? dateTo,
+    String? congregationId,
   }) async {
     final params = <String, dynamic>{};
     if (dateFrom != null) params['date_from'] = dateFrom;
     if (dateTo != null) params['date_to'] = dateTo;
+    if (congregationId != null) params['congregation_id'] = congregationId;
 
     final response = await _apiClient.dio.get('/v1/financial/reports/balance', queryParameters: params);
     return FinancialBalance.fromJson(response.data['data'] as Map<String, dynamic>);

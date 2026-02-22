@@ -13,6 +13,7 @@ use crate::errors::AppError;
 #[derive(Debug, Deserialize)]
 pub struct MinistryFilter {
     pub is_active: Option<bool>,
+    pub congregation_id: Option<uuid::Uuid>,
 }
 
 /// List ministries with pagination
@@ -24,6 +25,7 @@ pub struct MinistryFilter {
         ("per_page" = Option<i64>, Query, description = "Items per page"),
         ("search" = Option<String>, Query, description = "Search by name"),
         ("is_active" = Option<bool>, Query, description = "Filter by active status"),
+        ("congregation_id" = Option<uuid::Uuid>, Query, description = "Filter by congregation"),
     ),
     responses(
         (status = 200, description = "List of ministries"),
@@ -47,6 +49,7 @@ pub async fn list_ministries(
         church_id,
         &pagination.search,
         filter.is_active,
+        filter.congregation_id,
         pagination.per_page(),
         pagination.offset(),
     )

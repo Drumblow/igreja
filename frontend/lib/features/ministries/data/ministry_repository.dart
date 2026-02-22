@@ -11,6 +11,7 @@ class MinistryRepository {
     int perPage = 20,
     String? search,
     bool? isActive,
+    String? congregationId,
   }) async {
     final queryParams = <String, dynamic>{
       'page': page,
@@ -21,6 +22,9 @@ class MinistryRepository {
     }
     if (isActive != null) {
       queryParams['is_active'] = isActive;
+    }
+    if (congregationId != null) {
+      queryParams['congregation_id'] = congregationId;
     }
 
     final response = await _apiClient.dio.get(

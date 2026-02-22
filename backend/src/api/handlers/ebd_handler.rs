@@ -57,11 +57,13 @@ pub async fn list_ebd_terms(
     let church_id = middleware::get_church_id(&claims)?;
 
     let is_active: Option<bool> = None;
+    let congregation_id: Option<Uuid> = None; // TODO: get from query params
 
     let (terms, total) = EbdTermService::list(
         pool.get_ref(),
         church_id,
         &is_active,
+        congregation_id,
         pagination.per_page(),
         pagination.offset(),
     )
@@ -224,6 +226,7 @@ pub struct EbdClassQueryParams {
     pub term_id: Option<Uuid>,
     pub is_active: Option<bool>,
     pub teacher_id: Option<Uuid>,
+    pub congregation_id: Option<Uuid>,
 }
 
 /// List EBD classes
@@ -263,6 +266,7 @@ pub async fn list_ebd_classes(
         term_id: query.term_id,
         is_active: query.is_active,
         teacher_id: query.teacher_id,
+        congregation_id: query.congregation_id,
     };
 
     let (classes, total) = EbdClassService::list(

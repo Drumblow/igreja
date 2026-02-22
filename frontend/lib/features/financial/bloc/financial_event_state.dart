@@ -19,6 +19,7 @@ class FinancialEntriesLoadRequested extends FinancialEvent {
   final String? status;
   final String? dateFrom;
   final String? dateTo;
+  final String? congregationId;
 
   const FinancialEntriesLoadRequested({
     this.page = 1,
@@ -27,21 +28,23 @@ class FinancialEntriesLoadRequested extends FinancialEvent {
     this.status,
     this.dateFrom,
     this.dateTo,
+    this.congregationId,
   });
 
   @override
-  List<Object?> get props => [page, search, type, status, dateFrom, dateTo];
+  List<Object?> get props => [page, search, type, status, dateFrom, dateTo, congregationId];
 }
 
 /// Load balance report
 class FinancialBalanceLoadRequested extends FinancialEvent {
   final String? dateFrom;
   final String? dateTo;
+  final String? congregationId;
 
-  const FinancialBalanceLoadRequested({this.dateFrom, this.dateTo});
+  const FinancialBalanceLoadRequested({this.dateFrom, this.dateTo, this.congregationId});
 
   @override
-  List<Object?> get props => [dateFrom, dateTo];
+  List<Object?> get props => [dateFrom, dateTo, congregationId];
 }
 
 /// Create a financial entry

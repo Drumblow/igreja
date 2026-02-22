@@ -31,6 +31,10 @@ impl EbdClassService {
             conditions.push(format!("(c.teacher_id = ${param_idx} OR c.aux_teacher_id = ${param_idx})"));
             param_idx += 1;
         }
+        if filter.congregation_id.is_some() {
+            conditions.push(format!("c.congregation_id = ${param_idx}"));
+            param_idx += 1;
+        }
         if search.is_some() {
             conditions.push(format!(
                 "unaccent(c.name) ILIKE '%' || unaccent(${param_idx}) || '%'"
@@ -50,11 +54,14 @@ impl EbdClassService {
             SELECT c.id, c.term_id, c.name, c.age_range_start, c.age_range_end,
                    c.room, c.max_capacity,
                    m.full_name AS teacher_name,
+                   c.congregation_id,
+                   cg.name AS congregation_name,
                    c.is_active,
                    (SELECT COUNT(*) FROM ebd_enrollments e WHERE e.class_id = c.id AND e.is_active = TRUE) AS enrolled_count,
                    c.created_at
             FROM ebd_classes c
             LEFT JOIN members m ON m.id = c.teacher_id
+            LEFT JOIN congregations cg ON cg.id = c.congregation_id
             WHERE {where_clause}
             ORDER BY c.name ASC
             LIMIT {limit} OFFSET {offset}
@@ -78,6 +85,10 @@ impl EbdClassService {
         if let Some(teacher_id) = &filter.teacher_id {
             sqlx::Arguments::add(&mut count_args, *teacher_id).unwrap();
             sqlx::Arguments::add(&mut data_args, *teacher_id).unwrap();
+        }
+        if let Some(congregation_id) = &filter.congregation_id {
+            sqlx::Arguments::add(&mut count_args, *congregation_id).unwrap();
+            sqlx::Arguments::add(&mut data_args, *congregation_id).unwrap();
         }
         if let Some(term) = search {
             sqlx::Arguments::add(&mut count_args, term.as_str()).unwrap();
@@ -128,8 +139,8 @@ impl EbdClassService {
 
         let class = sqlx::query_as::<_, EbdClass>(
             r#"
-            INSERT INTO ebd_classes (church_id, term_id, name, age_range_start, age_range_end, room, max_capacity, teacher_id, aux_teacher_id)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+            INSERT INTO ebd_classes (church_id, term_id, name, age_range_start, age_range_end, room, max_capacity, teacher_id, aux_teacher_id, congregation_id)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
             RETURNING *
             "#,
         )
@@ -142,6 +153,7 @@ impl EbdClassService {
         .bind(req.max_capacity)
         .bind(req.teacher_id)
         .bind(req.aux_teacher_id)
+        .bind(req.congregation_id)
         .fetch_one(pool)
         .await?;
 
@@ -192,6 +204,17 @@ impl EbdClassService {
             set_clauses.push(format!("is_active = ${param_idx}"));
             param_idx += 1;
         }
+        if let Some(ref congregation_id) = req.congregation_id {
+            match congregation_id {
+                Some(_) => {
+                    set_clauses.push(format!("congregation_id = ${param_idx}"));
+                    param_idx += 1;
+                }
+                None => {
+                    set_clauses.push("congregation_id = NULL".to_string());
+                }
+            }
+        }
 
         if set_clauses.is_empty() {
             return Self::get_by_id(pool, church_id, class_id).await;
@@ -232,6 +255,11 @@ impl EbdClassService {
         }
         if let Some(v) = &req.is_active {
             sqlx::Arguments::add(&mut args, *v).unwrap();
+        }
+        if let Some(ref congregation_id) = req.congregation_id {
+            if let Some(cid) = congregation_id {
+                sqlx::Arguments::add(&mut args, *cid).unwrap();
+            }
         }
 
         let class = sqlx::query_as_with::<_, EbdClass, _>(&sql, args)

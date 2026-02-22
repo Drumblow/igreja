@@ -1,7 +1,7 @@
 # 📊 Andamento do Projeto — Igreja Manager
 
-> **Última atualização:** 20 de fevereiro de 2026  
-> **Versão do documento:** 1.18
+> **Última atualização:** 21 de fevereiro de 2026  
+> **Versão do documento:** 1.19
 > **Status geral do projeto:** Em Desenvolvimento Ativo (~99.9% concluído)
 
 ---
@@ -20,14 +20,14 @@ O **Igreja Manager** é uma plataforma de gestão para igrejas composta por **6 
 | Backend — Autenticação | ![100%](https://img.shields.io/badge/100%25-brightgreen) | ✅ Completo (login/refresh/logout/me/forgot/reset) |
 | Backend — Igrejas | ![100%](https://img.shields.io/badge/100%25-brightgreen) | ✅ CRUD completo (5 endpoints) + Audit Log |
 | Backend — Usuários/Papéis | ![100%](https://img.shields.io/badge/100%25-brightgreen) | ✅ CRUD completo (5 endpoints) + Audit Log |
-| Backend — Membros | ![100%](https://img.shields.io/badge/100%25-brightgreen) | ✅ Famílias + Ministérios + Histórico + Cache + Audit + Filtro congregation_id |
-| Backend — Financeiro | ![95%](https://img.shields.io/badge/95%25-green) | 🟢 CRUD completo (5 sub-módulos, 18 endpoints) + Audit Log |
-| Backend — Patrimônio | ![100%](https://img.shields.io/badge/100%25-brightgreen) | ✅ CRUD + Stats + Cache + Audit (5 sub-módulos, 18 endpoints) |
-| Backend — EBD | ![100%](https://img.shields.io/badge/100%25-brightgreen) | ✅ CRUD + Stats + Cache + Audit + Reports (10 sub-módulos, 48+ endpoints) — Evolução E1-E7 + F1 |
+| Backend — Membros | ![100%](https://img.shields.io/badge/100%25-brightgreen) | ✅ Famílias + Ministérios + Histórico + Cache + Audit + Filtro congregation_id + LEFT JOIN congregation_name |
+| Backend — Financeiro | ![100%](https://img.shields.io/badge/100%25-brightgreen) | ✅ CRUD completo (5 sub-módulos, 18 endpoints) + Audit Log + Filtro congregation_id |
+| Backend — Patrimônio | ![100%](https://img.shields.io/badge/100%25-brightgreen) | ✅ CRUD + Stats + Cache + Audit (5 sub-módulos, 18 endpoints) + Filtro congregation_id |
+| Backend — EBD | ![100%](https://img.shields.io/badge/100%25-brightgreen) | ✅ CRUD + Stats + Cache + Audit + Reports (10 sub-módulos, 48+ endpoints) — Evolução E1-E7 + F1 + Filtro congregation_id |
 | Backend — Swagger UI | ![100%](https://img.shields.io/badge/100%25-brightgreen) | ✅ Montado em `/swagger-ui/` |
 | Frontend — Design System | ![100%](https://img.shields.io/badge/100%25-brightgreen) | ✅ Concluído |
 | Frontend — Autenticação | ![100%](https://img.shields.io/badge/100%25-brightgreen) | ✅ Login + Forgot Password + Reset Password completos |
-| Frontend — Dashboard | ![100%](https://img.shields.io/badge/100%25-brightgreen) | ✅ Stats wired (4 módulos) + Quick Actions (6) + Pull-to-refresh + Relatórios |
+| Frontend — Dashboard | ![100%](https://img.shields.io/badge/100%25-brightgreen) | ✅ Stats wired (4 módulos) + Quick Actions (6) + Pull-to-refresh + Relatórios + Congregation filter (todos os stats) |
 | Frontend — Membros | ![98%](https://img.shields.io/badge/98%25-brightgreen) | ✅ CRUD completo + Histórico + Paginação + Edit navigation fix |
 | Frontend — Famílias | ![98%](https://img.shields.io/badge/98%25-brightgreen) | ✅ CRUD completo + Paginação + Edit navigation fix |
 | Frontend — Ministérios | ![98%](https://img.shields.io/badge/98%25-brightgreen) | ✅ CRUD + Paginação + Edit fix + Adicionar membro (dialog) + Campo líder (form) |
@@ -952,6 +952,9 @@ frontend/lib/
 | 34 | Tela de detalhe da congregação não permitia adicionar/remover usuários | Adicionados `_showAddUserDialog()` (UUID + role + isPrimary) e `_removeUser()` com confirmação |
 | 35 | Sem relatório comparativo entre congregações | Implementado endpoint `GET /reports/congregations/compare` com 4 métricas (members/financial/ebd/assets) + tela frontend com ranking |
 | 36 | Navegação hardcoded nas páginas de congregações quebravam quando acessadas via `/congregations` vs `/settings/congregations` | Implementado `basePath(context)` dinâmico que detecta prefixo da rota atual |
+| 37 | `congregation_id` existia no DB (migration) mas NÃO nas Entities/DTOs/Services Rust de 4 módulos (Financeiro, Patrimônio, EBD, Ministérios) | Implementado **Integração Modular** (doc 11): adicionado `congregation_id` em todas as entities, DTOs (Create/Update/Filter), services (list/create/update), handlers (query param). LEFT JOIN `congregations` para `congregation_name` em todos os módulos |
+| 38 | Frontend models/repositories/blocs de 4 módulos não tinham `congregationId` | Adicionado `congregationId`/`congregationName` em todos os models Flutter, `congregationId` param nos repositories e events dos BLoCs |
+| 39 | Dashboard passava `congregationId` apenas para member stats, não para financial/assets/EBD | Dashboard agora passa `congregationId` para `getBalanceReport()`, `_loadAssetStats()` e `_loadEbdStats()` |
 
 ---
 
@@ -1081,7 +1084,128 @@ Crates/packages importados mas ainda sem uso no código — preparados para fase
 
 ---
 
-## 9.1 Changelog — Sessão v1.18 (20/02/2026)
+## 9.1 Changelog — Sessão v1.19 (21/02/2026)
+
+Implementação do **Padrão de Integração Modular** (doc 11) — `congregation_id` integrado em todos os 5 módulos (Membros, Financeiro, Patrimônio, EBD, Ministérios) tanto no backend Rust como no frontend Flutter.
+
+### Backend (Rust/Actix-Web) — Fases 1-5 do doc 11
+
+#### Entities (5 módulos)
+- **`member.rs`** — `congregation_id: Option<Uuid>` em `Member` + `congregation_id` e `congregation_name` em `MemberSummary`
+- **`financial_entry.rs`** — `congregation_id: Option<Uuid>` em `FinancialEntry` + `congregation_id` e `congregation_name` em `FinancialEntrySummary`
+- **`asset.rs`** — `congregation_id: Option<Uuid>` em `Asset` + `congregation_id` e `congregation_name` em `AssetSummary`
+- **`ministry.rs`** — `congregation_id: Option<Uuid>` em `Ministry` + `congregation_id` e `congregation_name` em `MinistrySummary`
+- **`ebd_term.rs`** — `congregation_id: Option<Uuid>` em `EbdTerm`
+- **`ebd_class.rs`** — `congregation_id: Option<Uuid>` em `EbdClass` + `congregation_id` e `congregation_name` em `EbdClassSummary`
+
+#### DTOs (5 módulos)
+- Todos os `Create*Request` → `congregation_id: Option<Uuid>`
+- Todos os `Update*Request` → `congregation_id: Option<Option<Uuid>>` (padrão 3-way: None=skip, Some(None)=clear, Some(Some(uuid))=set)
+- Todos os `*Filter` → `congregation_id: Option<Uuid>`
+- Includes: `financial_dto.rs` (Create/Update/Filter entries + BalanceReportFilter), `asset_dto.rs`, `ministry_dto.rs`, `ebd_dto.rs` (terms + classes)
+
+#### Services (5 módulos)
+- **`list()`** → Filtro dinâmico `WHERE congregation_id = $N` + `LEFT JOIN congregations cg ON cg.id = ?.congregation_id` para `congregation_name`
+- **`create()`** → Bind `congregation_id` no INSERT
+- **`update()`** → Handler 3-way: `None` → skip, `Some(None)` → SET NULL, `Some(Some(uuid))` → SET value
+- **`balance_report()`** (financeiro) → Refatorado para usar índices dinâmicos (`next_idx`) com congregation_id em todas as 4 queries
+- Arquivos: `member_service.rs`, `financial_service.rs`, `asset_service.rs`, `ministry_service.rs`, `ebd_term_service.rs`, `ebd_class_service.rs`
+
+#### Handlers (3 módulos com changes)
+- **`ministry_handler.rs`** — `congregation_id` em `MinistryFilter` struct + utoipa params
+- **`ebd_handler.rs`** — `congregation_id` em `EbdClassQueryParams` e `EbdClassFilter`, passado para `EbdTermService::list()`
+- **`financial_service.rs`** → balance_report já recebia filter via DTO
+
+### Frontend (Flutter) — Fases 1-6 do doc 11
+
+#### Models (4 módulos)
+- **`financial_models.dart`** — `congregationId` + `congregationName` em `FinancialEntry`, incluído em `fromJson()` e `toCreateJson()`
+- **`ministry_models.dart`** — `congregationId` + `congregationName` em `Ministry`, incluído em `fromJson()`, `toCreateJson()` e `copyWith()`
+- **`ebd_models.dart`** — `congregationId` em `EbdTerm` e `EbdClass` + `congregationId` + `congregationName` em `EbdClassSummary`
+- **`asset_models.dart`** — `congregationId` + `congregationName` em `Asset`
+
+#### Repositories (4 módulos)
+- **`financial_repository.dart`** — `congregationId` param em `getEntries()` e `getBalanceReport()`
+- **`ministry_repository.dart`** — `congregationId` param em `getMinistries()`
+- **`ebd_repository.dart`** — `congregationId` param em `getTerms()` e `getClasses()`
+- **`asset_repository.dart`** — `congregationId` param em `getAssets()`
+
+#### BLoCs / Events (4 módulos)
+- **`financial_event_state.dart`** — `congregationId` em `FinancialEntriesLoadRequested` e `FinancialBalanceLoadRequested`
+- **`financial_bloc.dart`** — Passa `congregationId` para `getEntries()` e `getBalanceReport()`
+- **`ministry_event_state.dart`** — `congregationId` em `MinistriesLoadRequested`
+- **`ministry_bloc.dart`** — Passa `congregationId` para `getMinistries()`
+- **`ebd_event_state.dart`** — `congregationId` em `EbdTermsLoadRequested` e `EbdClassesLoadRequested`
+- **`ebd_bloc.dart`** — Passa `congregationId` para `getTerms()` e `getClasses()`
+- **`asset_event_state.dart`** — `congregationId` em `AssetsLoadRequested`
+- **`asset_bloc.dart`** — Passa `congregationId` para `getAssets()`
+
+#### Dashboard (Fase 6)
+- **`dashboard_screen.dart`** — `_loadAssetStats()` e `_loadEbdStats()` agora recebem `congregationId` e passam como query param. `getBalanceReport()` agora passa `congregationId`.
+
+### Documentação
+- **`11-padrao-integracao-modular.md`** — Checklist 9.1 atualizado: itens 2-12 e 16 atualizados de 🔴 para ✅ em todos os módulos
+- **`07-andamento-do-projeto.md`** — Versão 1.19, changelog, problemas resolvidos #37-39, métricas atualizadas
+
+### Compilação
+- **Backend**: `cargo check` → ✅ 0 errors (2 warnings pre-existentes)
+- **Frontend**: `flutter analyze` → ✅ 65 info issues (0 errors, 0 warnings)
+
+### Arquivos Modificados (26 arquivos)
+
+| Arquivo | Mudanças |
+|---------|----------|
+| `backend/src/domain/entities/member.rs` | +`congregation_id` em Member/MemberSummary |
+| `backend/src/domain/entities/financial_entry.rs` | +`congregation_id` em FinancialEntry/FinancialEntrySummary |
+| `backend/src/domain/entities/asset.rs` | +`congregation_id` em Asset/AssetSummary |
+| `backend/src/domain/entities/ministry.rs` | +`congregation_id` em Ministry/MinistrySummary |
+| `backend/src/domain/entities/ebd_term.rs` | +`congregation_id` em EbdTerm |
+| `backend/src/domain/entities/ebd_class.rs` | +`congregation_id` em EbdClass/EbdClassSummary |
+| `backend/src/application/dto/financial_dto.rs` | +`congregation_id` em Create/Update/Filter/BalanceReport |
+| `backend/src/application/dto/asset_dto.rs` | +`congregation_id` em Create/Update/Filter |
+| `backend/src/application/dto/ministry_dto.rs` | +`congregation_id` em Create/Update |
+| `backend/src/application/dto/ebd_dto.rs` | +`congregation_id` em Create/Update terms + classes, ClassFilter |
+| `backend/src/application/services/member_service.rs` | +LEFT JOIN congregations, m. alias, congregation_name |
+| `backend/src/application/services/financial_service.rs` | +filter, JOIN, bind create/update, balance_report dynamic indices |
+| `backend/src/application/services/asset_service.rs` | +filter, JOIN, bind create/update |
+| `backend/src/application/services/ministry_service.rs` | +congregation_id param, filter, JOIN, bind create/update |
+| `backend/src/application/services/ebd_term_service.rs` | +congregation_id param, filter, bind create/update |
+| `backend/src/application/services/ebd_class_service.rs` | +filter, JOIN, bind create/update |
+| `backend/src/api/handlers/ministry_handler.rs` | +congregation_id em MinistryFilter |
+| `backend/src/api/handlers/ebd_handler.rs` | +congregation_id em EbdClassQueryParams + term list call |
+| `frontend/lib/features/financial/data/models/financial_models.dart` | +congregationId/congregationName |
+| `frontend/lib/features/financial/data/financial_repository.dart` | +congregationId param |
+| `frontend/lib/features/financial/bloc/financial_bloc.dart` | +pass congregationId |
+| `frontend/lib/features/financial/bloc/financial_event_state.dart` | +congregationId em events |
+| `frontend/lib/features/ministries/data/models/ministry_models.dart` | +congregationId/congregationName |
+| `frontend/lib/features/ministries/data/ministry_repository.dart` | +congregationId param |
+| `frontend/lib/features/ministries/bloc/ministry_bloc.dart` | +pass congregationId |
+| `frontend/lib/features/ministries/bloc/ministry_event_state.dart` | +congregationId em event |
+| `frontend/lib/features/ebd/data/models/ebd_models.dart` | +congregationId em Term/Class/ClassSummary |
+| `frontend/lib/features/ebd/data/ebd_repository.dart` | +congregationId param |
+| `frontend/lib/features/ebd/bloc/ebd_bloc.dart` | +pass congregationId |
+| `frontend/lib/features/ebd/bloc/ebd_event_state.dart` | +congregationId em events |
+| `frontend/lib/features/assets/data/models/asset_models.dart` | +congregationId/congregationName |
+| `frontend/lib/features/assets/data/asset_repository.dart` | +congregationId param |
+| `frontend/lib/features/assets/bloc/asset_bloc.dart` | +pass congregationId |
+| `frontend/lib/features/assets/bloc/asset_event_state.dart` | +congregationId em event |
+| `frontend/lib/features/dashboard/presentation/dashboard_screen.dart` | +congregationId em financial/assets/ebd stats |
+| `docs/11-padrao-integracao-modular.md` | Checklist 9.1 atualizado |
+
+### O que falta (Fases 7-8 do doc 11)
+
+| # | Tarefa | Descrição | Prioridade |
+|---|--------|-----------|:----------:|
+| 1 | Dropdown de congregação nos forms | Widget reutilizável de seleção em formulários de criação/edição de todos os módulos | 🟡 Média |
+| 2 | Badge de congregação nas listas | Chip/tag mostrando nome da congregação nos cards de listagem (visão "Todas") | 🟡 Média |
+| 3 | BLoC listener no CongregationContextCubit | Telas de lista devem auto-recarregar ao trocar congregação (como Membros já faz) | 🟡 Média |
+| 4 | Relatórios filtram por congregação | Tela de relatórios gerais deve passar `congregationId` nas queries | 🟡 Média |
+| 5 | `resolve_congregation_access()` | Backend: restringir acesso por papel (dirigente só vê sua congregação) | 🔴 Alta |
+| 6 | Feature Flags (tabela `church_modules`) | Habilitar/desabilitar módulos por tenant | 🟢 Baixa |
+
+---
+
+## 9.2 Changelog — Sessão v1.18 (20/02/2026)
 
 Evolução do módulo de Congregações: endpoint comparativo, relatórios, gestão de usuários, transaction safety e correções de navegação.
 
@@ -1328,7 +1452,7 @@ Melhorias implementadas nesta sessão para aumentar completude do frontend:
 | Componente | Comando | Resultado |
 |------------|---------|-----------|
 | Backend Rust | `SQLX_OFFLINE=true cargo check` | ✅ Compila (0 errors, 2 warnings dead_code) |
-| Frontend Flutter | `flutter analyze` | ✅ 64 info issues (zero errors, zero warnings) |
+| Frontend Flutter | `flutter analyze` | ✅ 65 info issues (zero errors, zero warnings) |
 
 ---
 

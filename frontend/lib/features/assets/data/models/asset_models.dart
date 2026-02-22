@@ -93,6 +93,8 @@ class Asset extends Equatable {
   final String? statusDate;
   final String? statusReason;
   final String? notes;
+  final String? congregationId;
+  final String? congregationName;
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
@@ -119,6 +121,8 @@ class Asset extends Equatable {
     this.statusDate,
     this.statusReason,
     this.notes,
+    this.congregationId,
+    this.congregationName,
     this.createdAt,
     this.updatedAt,
   });
@@ -155,6 +159,8 @@ class Asset extends Equatable {
       statusDate: json['status_date'] as String?,
       statusReason: json['status_reason'] as String?,
       notes: json['notes'] as String?,
+      congregationId: json['congregation_id'] as String?,
+      congregationName: json['congregation_name'] as String?,
       createdAt: _parseDate(json['created_at']),
       updatedAt: _parseDate(json['updated_at']),
     );

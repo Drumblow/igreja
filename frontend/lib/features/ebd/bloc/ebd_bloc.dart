@@ -70,7 +70,7 @@ class EbdBloc extends Bloc<EbdEvent, EbdState> {
   Future<void> _onTermsLoad(EbdTermsLoadRequested event, Emitter<EbdState> emit) async {
     emit(const EbdLoading());
     try {
-      final terms = await repository.getTerms();
+      final terms = await repository.getTerms(congregationId: event.congregationId);
       emit(EbdTermsLoaded(terms: terms));
     } catch (e) {
       emit(EbdError(message: 'Erro ao carregar trimestres: $e'));
@@ -108,6 +108,7 @@ class EbdBloc extends Bloc<EbdEvent, EbdState> {
       final (newClasses, meta) = await repository.getClasses(
         termId: event.termId,
         isActive: event.isActive,
+        congregationId: event.congregationId,
         page: event.page,
       );
       final existing = isLoadMore && state is EbdClassesLoaded
