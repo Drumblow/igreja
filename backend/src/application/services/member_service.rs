@@ -13,6 +13,7 @@ enum BindValue {
     Int(i32),
     Date(NaiveDate),
     Uuid(Uuid),
+    UuidArray(Vec<Uuid>),
 }
 
 /// Helper: bind a list of dynamic values after church_id ($1).
@@ -25,6 +26,7 @@ fn build_arguments(church_id: Uuid, values: &[BindValue]) -> PgArguments {
             BindValue::Int(i) => args.add(*i).unwrap(),
             BindValue::Date(d) => args.add(*d).unwrap(),
             BindValue::Uuid(u) => args.add(*u).unwrap(),
+            BindValue::UuidArray(v) => args.add(v.as_slice()).unwrap(),
         }
     }
     args
@@ -41,6 +43,7 @@ fn build_update_arguments(member_id: Uuid, church_id: Uuid, values: &[BindValue]
             BindValue::Int(i) => args.add(*i).unwrap(),
             BindValue::Date(d) => args.add(*d).unwrap(),
             BindValue::Uuid(u) => args.add(*u).unwrap(),
+            BindValue::UuidArray(v) => args.add(v.as_slice()).unwrap(),
         }
     }
     args
@@ -49,6 +52,8 @@ fn build_update_arguments(member_id: Uuid, church_id: Uuid, values: &[BindValue]
 pub struct MemberService;
 
 impl MemberService {
+    /// List members with optional congregation-scope filtering.
+    /// `allowed_congregation_ids` – when `Some`, restricts results to those congregations only.
     pub async fn list(
         pool: &PgPool,
         church_id: Uuid,
@@ -56,6 +61,7 @@ impl MemberService {
         search: &Option<String>,
         limit: i64,
         offset: i64,
+        allowed_congregation_ids: Option<&[Uuid]>,
     ) -> Result<(Vec<MemberSummary>, i64), AppError> {
         // Build dynamic WHERE conditions
         let mut conditions: Vec<String> = vec![
@@ -134,6 +140,15 @@ impl MemberService {
             conditions.push(format!("m.congregation_id = ${param_index}"));
             bind_values.push(BindValue::Uuid(congregation_id));
             param_index += 1;
+        }
+
+        // Scope-level congregation restriction (overrides filter if more restrictive)
+        if let Some(allowed_ids) = allowed_congregation_ids {
+            if !allowed_ids.is_empty() {
+                conditions.push(format!("m.congregation_id = ANY(${param_index}::uuid[])"));
+                bind_values.push(BindValue::UuidArray(allowed_ids.to_vec()));
+                param_index += 1;
+            }
         }
 
         let _ = param_index;

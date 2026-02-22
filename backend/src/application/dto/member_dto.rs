@@ -1,6 +1,7 @@
 use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
+use uuid::Uuid;
 use validator::Validate;
 
 #[derive(Debug, Deserialize, Validate, ToSchema)]
@@ -52,6 +53,65 @@ pub struct CreateMemberRequest {
 
     /// Congregation this member belongs to
     pub congregation_id: Option<uuid::Uuid>,
+
+    /// If present, creates a user login for this member
+    pub create_user: Option<CreateUserForMemberRequest>,
+}
+
+/// Request to create a user login for an existing member
+#[derive(Debug, Deserialize, Validate, ToSchema)]
+pub struct CreateUserForMemberRequest {
+    /// Password (None = auto-generate 8 chars)
+    pub password: Option<String>,
+    /// Role UUID (None = default "member" role)
+    pub role_id: Option<Uuid>,
+    /// Force password change on first login (default: true)
+    pub force_password_change: Option<bool>,
+}
+
+/// Response after creating a user for a member
+#[derive(Debug, Serialize, ToSchema)]
+pub struct CreateUserForMemberResponse {
+    pub user_id: Uuid,
+    pub email: String,
+    pub role_name: String,
+    /// Only present when password was auto-generated
+    pub generated_password: Option<String>,
+    pub force_password_change: bool,
+}
+
+/// Request to batch create users for multiple members
+#[derive(Debug, Deserialize, Validate, ToSchema)]
+pub struct BatchCreateUsersRequest {
+    pub member_ids: Vec<Uuid>,
+    pub role_id: Option<Uuid>,
+    pub force_password_change: Option<bool>,
+}
+
+/// Single result in batch user creation
+#[derive(Debug, Serialize, ToSchema)]
+pub struct BatchCreateUserItem {
+    pub member_id: Uuid,
+    pub member_name: String,
+    pub email: String,
+    pub password: String,
+}
+
+/// Skipped member in batch user creation
+#[derive(Debug, Serialize, ToSchema)]
+pub struct BatchSkippedItem {
+    pub member_id: Uuid,
+    pub member_name: String,
+    pub reason: String,
+}
+
+/// Full response for batch user creation
+#[derive(Debug, Serialize, ToSchema)]
+pub struct BatchCreateUsersResponse {
+    pub created: Vec<BatchCreateUserItem>,
+    pub skipped: Vec<BatchSkippedItem>,
+    pub total_created: usize,
+    pub total_skipped: usize,
 }
 
 #[derive(Debug, Deserialize, Validate, ToSchema)]

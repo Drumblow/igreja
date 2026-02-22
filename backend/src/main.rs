@@ -31,6 +31,7 @@ use crate::infrastructure::cloudinary::CloudinaryService;
         auth_handler::me,
         auth_handler::forgot_password,
         auth_handler::reset_password,
+        auth_handler::change_password,
         // Upload
         upload_handler::upload_image,
         upload_handler::delete_image,
@@ -53,6 +54,8 @@ use crate::infrastructure::cloudinary::CloudinaryService;
         member_handler::update_member,
         member_handler::delete_member,
         member_handler::member_stats,
+        member_handler::create_user_for_member,
+        member_handler::batch_create_users,
         // Member History
         member_history_handler::get_member_history,
         member_history_handler::create_member_history,
@@ -320,13 +323,16 @@ async fn main() -> std::io::Result<()> {
             .service(auth_handler::me)
             .service(auth_handler::forgot_password)
             .service(auth_handler::reset_password)
+            .service(auth_handler::change_password)
             // Members
             .service(member_handler::member_stats) // before {id} route
+            .service(member_handler::batch_create_users) // before {id} route
             .service(member_handler::list_members)
             .service(member_handler::get_member)
             .service(member_handler::create_member)
             .service(member_handler::update_member)
-            .service(member_handler::delete_member)            // Member History
+            .service(member_handler::delete_member)
+            .service(member_handler::create_user_for_member)            // Member History
             .service(member_history_handler::get_member_history)
             .service(member_history_handler::create_member_history)
             // Church Roles (Cargos)

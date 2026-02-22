@@ -1,10 +1,13 @@
-use actix_web::{post, web, HttpRequest, HttpResponse};
+use actix_web::{post, put, web, HttpRequest, HttpResponse};
 use sqlx::{FromRow, PgPool};
 use validator::Validate;
 
 use crate::api::middleware;
 use crate::api::response::ApiResponse;
-use crate::application::dto::{ForgotPasswordRequest, LoginRequest, RefreshRequest, ResetPasswordRequest};
+use crate::application::dto::{
+    ChangePasswordRequest, ForgotPasswordRequest, LoginRequest, RefreshRequest,
+    ResetPasswordRequest,
+};
 use crate::application::services::AuthService;
 use crate::config::AppConfig;
 use crate::errors::AppError;
@@ -24,6 +27,7 @@ struct UserRoleRow {
     church_id: uuid::Uuid,
     role_name: String,
     role_permissions: serde_json::Value,
+    member_id: Option<uuid::Uuid>,
 }
 
 #[derive(Debug, FromRow)]
@@ -115,10 +119,11 @@ pub async fn refresh_token(
         .execute(pool.get_ref())
         .await?;
 
-    // Get user info for new access token
+    // Get user info for new access token (including member_id for scope)
     let user = sqlx::query_as::<_, UserRoleRow>(
         r#"
-        SELECT u.id, u.church_id, r.name as role_name, r.permissions as role_permissions
+        SELECT u.id, u.church_id, r.name as role_name, r.permissions as role_permissions,
+               u.member_id
         FROM users u
         JOIN roles r ON u.role_id = r.id
         WHERE u.id = $1 AND u.is_active = true
@@ -132,11 +137,24 @@ pub async fn refresh_token(
     let permissions: Vec<String> =
         serde_json::from_value(user.role_permissions).unwrap_or_default();
 
+    // Re-determine scope on refresh (congregation assignments may have changed)
+    let scope = AuthService::determine_scope_public(
+        pool.get_ref(),
+        user.id,
+        &user.role_name,
+        user.member_id,
+    )
+    .await;
+
     let access_token = AuthService::generate_access_token(
         user.id,
         user.church_id,
         &user.role_name,
         permissions,
+        &scope.0,
+        scope.1,
+        scope.2,
+        user.member_id,
         &config,
     )?;
 
@@ -364,4 +382,41 @@ pub async fn reset_password(
     .await?;
 
     Ok(HttpResponse::Ok().json(ApiResponse::with_message(serde_json::json!({}), "Senha redefinida com sucesso")))
+}
+
+/// Change password for authenticated user (forced or voluntary)
+#[utoipa::path(
+    put,
+    path = "/api/v1/auth/change-password",
+    request_body = ChangePasswordRequest,
+    responses(
+        (status = 200, description = "Password changed successfully"),
+        (status = 400, description = "Validation error"),
+        (status = 401, description = "Not authenticated")
+    ),
+    security(("bearer_auth" = []))
+)]
+#[put("/api/v1/auth/change-password")]
+pub async fn change_password(
+    req: HttpRequest,
+    pool: web::Data<PgPool>,
+    config: web::Data<AppConfig>,
+    body: web::Json<ChangePasswordRequest>,
+) -> Result<HttpResponse, AppError> {
+    let claims = middleware::auth_middleware(req, config).await?;
+    let user_id = middleware::get_user_id(&claims)?;
+
+    body.validate()
+        .map_err(|e| AppError::validation(e.to_string()))?;
+
+    if body.new_password != body.confirm_password {
+        return Err(AppError::validation("Senhas não conferem"));
+    }
+
+    AuthService::change_password(pool.get_ref(), user_id, &body.new_password).await?;
+
+    Ok(HttpResponse::Ok().json(ApiResponse::with_message(
+        serde_json::json!({}),
+        "Senha alterada com sucesso",
+    )))
 }

@@ -5,8 +5,12 @@ use validator::Validate;
 
 use crate::api::middleware;
 use crate::api::response::{ApiResponse, PaginationParams};
-use crate::application::dto::{CreateMemberRequest, MemberFilter, UpdateMemberRequest};
-use crate::application::services::{AuditService, MemberService};
+use crate::application::dto::{
+    BatchCreateUserItem, BatchCreateUsersRequest, BatchCreateUsersResponse, BatchSkippedItem,
+    CreateMemberRequest, CreateUserForMemberRequest, CreateUserForMemberResponse, MemberFilter,
+    UpdateMemberRequest,
+};
+use crate::application::services::{AuditService, AuthService, MemberService};
 use crate::config::AppConfig;
 use crate::errors::AppError;
 use crate::infrastructure::cache::CacheService;
@@ -45,6 +49,7 @@ pub async fn list_members(
 ) -> Result<HttpResponse, AppError> {
     let claims = middleware::auth_middleware(req, config).await?;
     let church_id = middleware::get_church_id(&claims)?;
+    let allowed_congregations = middleware::get_allowed_congregations(&claims);
 
     let (members, total) = MemberService::list(
         pool.get_ref(),
@@ -53,6 +58,7 @@ pub async fn list_members(
         &pagination.search,
         pagination.per_page(),
         pagination.offset(),
+        allowed_congregations.as_deref(),
     )
     .await?;
 
@@ -88,6 +94,17 @@ pub async fn get_member(
 
     let member = MemberService::get_by_id(pool.get_ref(), church_id, member_id).await?;
 
+    // Enforce congregation scope
+    if let Some(allowed) = middleware::get_allowed_congregations(&claims) {
+        if let Some(cong_id) = member.congregation_id {
+            if !allowed.contains(&cong_id) {
+                return Err(AppError::Forbidden(
+                    "Sem permissão para acessar membros desta congregação".into(),
+                ));
+            }
+        }
+    }
+
     Ok(HttpResponse::Ok().json(ApiResponse::ok(member)))
 }
 
@@ -116,6 +133,17 @@ pub async fn create_member(
 
     body.validate()
         .map_err(|e| AppError::validation(e.to_string()))?;
+
+    // Enforce congregation scope on creation
+    if let Some(allowed) = middleware::get_allowed_congregations(&claims) {
+        if let Some(cong_id) = body.congregation_id {
+            if !allowed.contains(&cong_id) {
+                return Err(AppError::Forbidden(
+                    "Sem permissão para criar membros nesta congregação".into(),
+                ));
+            }
+        }
+    }
 
     let member = MemberService::create(pool.get_ref(), church_id, &body).await?;
 
@@ -160,6 +188,18 @@ pub async fn update_member(
 
     body.validate()
         .map_err(|e| AppError::validation(e.to_string()))?;
+
+    // Enforce congregation scope: verify the member belongs to an allowed congregation
+    if let Some(allowed) = middleware::get_allowed_congregations(&claims) {
+        let existing = MemberService::get_by_id(pool.get_ref(), church_id, member_id).await?;
+        if let Some(cong_id) = existing.congregation_id {
+            if !allowed.contains(&cong_id) {
+                return Err(AppError::Forbidden(
+                    "Sem permissão para editar membros desta congregação".into(),
+                ));
+            }
+        }
+    }
 
     let member = MemberService::update(pool.get_ref(), church_id, member_id, &body).await?;
 
@@ -237,7 +277,22 @@ pub async fn member_stats(
     let claims = middleware::auth_middleware(req, config).await?;
     let church_id = middleware::get_church_id(&claims)?;
 
-    let congregation_filter = filter.congregation_id;
+    let mut congregation_filter = filter.congregation_id;
+
+    // Enforce congregation scope: if user has restricted access, use their first allowed congregation
+    if let Some(allowed) = middleware::get_allowed_congregations(&claims) {
+        match congregation_filter {
+            Some(cid) if !allowed.contains(&cid) => {
+                return Err(AppError::Forbidden(
+                    "Sem permissão para ver estatísticas desta congregação".into(),
+                ));
+            }
+            None if allowed.len() == 1 => {
+                congregation_filter = Some(allowed[0]);
+            }
+            _ => {}
+        }
+    }
 
     // Try cache first (TTL 60s for stats)
     let cache_suffix = congregation_filter
@@ -308,4 +363,208 @@ pub async fn member_stats(
     cache.set(&cache_key, &stats, 60).await;
 
     Ok(HttpResponse::Ok().json(ApiResponse::ok(stats)))
+}
+
+/// Create a user login for an existing member
+#[utoipa::path(
+    post,
+    path = "/api/v1/members/{id}/create-user",
+    params(("id" = uuid::Uuid, Path, description = "Member ID")),
+    request_body = CreateUserForMemberRequest,
+    responses(
+        (status = 201, description = "User created for member"),
+        (status = 400, description = "Validation error"),
+        (status = 404, description = "Member not found"),
+        (status = 409, description = "User already exists")
+    ),
+    security(("bearer_auth" = []))
+)]
+#[post("/api/v1/members/{id}/create-user")]
+pub async fn create_user_for_member(
+    req: HttpRequest,
+    pool: web::Data<PgPool>,
+    config: web::Data<AppConfig>,
+    path: web::Path<uuid::Uuid>,
+    body: web::Json<CreateUserForMemberRequest>,
+) -> Result<HttpResponse, AppError> {
+    let claims = middleware::auth_middleware(req, config).await?;
+    middleware::require_permission(&claims, "members:update")?;
+    let church_id = middleware::get_church_id(&claims)?;
+    let member_id = path.into_inner();
+
+    let force_change = body.force_password_change.unwrap_or(true);
+
+    let (user_id, generated_password) = AuthService::create_user_for_member(
+        pool.get_ref(),
+        church_id,
+        member_id,
+        body.password.as_deref(),
+        body.role_id,
+        force_change,
+    )
+    .await?;
+
+    // Fetch role name & email for response
+    let row = sqlx::query_as::<_, (String, String)>(
+        r#"SELECT u.email, r.name
+           FROM users u JOIN roles r ON u.role_id = r.id
+           WHERE u.id = $1"#,
+    )
+    .bind(user_id)
+    .fetch_one(pool.get_ref())
+    .await?;
+
+    let response = CreateUserForMemberResponse {
+        user_id,
+        email: row.0,
+        role_name: row.1,
+        generated_password,
+        force_password_change: force_change,
+    };
+
+    // Audit log
+    let admin_user_id = middleware::get_user_id(&claims)?;
+    AuditService::log_action(
+        pool.get_ref(),
+        church_id,
+        Some(admin_user_id),
+        "create_user",
+        "member",
+        member_id,
+    )
+    .await
+    .ok();
+
+    Ok(HttpResponse::Created().json(ApiResponse::with_message(
+        response,
+        "Login criado para o membro com sucesso",
+    )))
+}
+
+/// Batch create user logins for multiple members
+#[utoipa::path(
+    post,
+    path = "/api/v1/members/batch-create-users",
+    request_body = BatchCreateUsersRequest,
+    responses(
+        (status = 200, description = "Batch user creation results"),
+        (status = 400, description = "Validation error")
+    ),
+    security(("bearer_auth" = []))
+)]
+#[post("/api/v1/members/batch-create-users")]
+pub async fn batch_create_users(
+    req: HttpRequest,
+    pool: web::Data<PgPool>,
+    config: web::Data<AppConfig>,
+    body: web::Json<BatchCreateUsersRequest>,
+) -> Result<HttpResponse, AppError> {
+    let claims = middleware::auth_middleware(req, config).await?;
+    middleware::require_permission(&claims, "members:update")?;
+    let church_id = middleware::get_church_id(&claims)?;
+
+    if body.member_ids.is_empty() {
+        return Err(AppError::validation("Lista de membros não pode ser vazia"));
+    }
+    if body.member_ids.len() > 100 {
+        return Err(AppError::validation("Máximo de 100 membros por vez"));
+    }
+
+    let force_change = body.force_password_change.unwrap_or(true);
+
+    let mut created: Vec<BatchCreateUserItem> = Vec::new();
+    let mut skipped: Vec<BatchSkippedItem> = Vec::new();
+
+    for &mid in &body.member_ids {
+        // Fetch member info for the response
+        let member_info = sqlx::query_as::<_, (String, Option<String>)>(
+            "SELECT full_name, email FROM members WHERE id = $1 AND church_id = $2 AND deleted_at IS NULL",
+        )
+        .bind(mid)
+        .bind(church_id)
+        .fetch_optional(pool.get_ref())
+        .await?;
+
+        let (member_name, member_email) = match member_info {
+            Some(info) => info,
+            None => {
+                skipped.push(BatchSkippedItem {
+                    member_id: mid,
+                    member_name: "Não encontrado".into(),
+                    reason: "Membro não encontrado".into(),
+                });
+                continue;
+            }
+        };
+
+        let email = match member_email {
+            Some(e) => e,
+            None => {
+                skipped.push(BatchSkippedItem {
+                    member_id: mid,
+                    member_name: member_name.clone(),
+                    reason: "Membro sem email cadastrado".into(),
+                });
+                continue;
+            }
+        };
+
+        match AuthService::create_user_for_member(
+            pool.get_ref(),
+            church_id,
+            mid,
+            None, // auto-generate password
+            body.role_id,
+            force_change,
+        )
+        .await
+        {
+            Ok((_user_id, generated_password)) => {
+                created.push(BatchCreateUserItem {
+                    member_id: mid,
+                    member_name,
+                    email,
+                    password: generated_password.unwrap_or_default(),
+                });
+            }
+            Err(e) => {
+                skipped.push(BatchSkippedItem {
+                    member_id: mid,
+                    member_name,
+                    reason: e.to_string(),
+                });
+            }
+        }
+    }
+
+    let total_created = created.len();
+    let total_skipped = skipped.len();
+
+    let response = BatchCreateUsersResponse {
+        created,
+        skipped,
+        total_created,
+        total_skipped,
+    };
+
+    // Audit log
+    let user_id = middleware::get_user_id(&claims)?;
+    AuditService::log_action(
+        pool.get_ref(),
+        church_id,
+        Some(user_id),
+        "batch_create_users",
+        "member",
+        uuid::Uuid::nil(),
+    )
+    .await
+    .ok();
+
+    Ok(HttpResponse::Ok().json(ApiResponse::with_message(
+        response,
+        &format!(
+            "{} logins criados, {} ignorados",
+            total_created, total_skipped
+        ),
+    )))
 }
