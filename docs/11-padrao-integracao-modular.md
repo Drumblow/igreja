@@ -894,13 +894,13 @@ Use esta tabela para acompanhar a integração de cada módulo com o padrão:
 | 9 | `congregation_name` via LEFT JOIN (Rust) | ✅ | ✅ | ✅ | ✅ | ✅ |
 | 10 | `congregationId` no Model (Flutter) | ✅ | ✅ | ✅ | ✅ | ✅ |
 | 11 | `congregationId` no Repository (Flutter) | ✅ | ✅ | ✅ | ✅ | ✅ |
-| 12 | BLoC escuta `CongregationContextCubit` | ✅ | ✅* | ✅* | ✅* | ✅* |
-| 13 | Dropdown de congregação no Form (Flutter) | 🔴 | 🔴 | 🔴 | 🔴 | 🔴 |
-| 14 | Badge de congregação na lista (Flutter) | 🔴 | 🔴 | 🔴 | 🔴 | 🔴 |
-| 15 | Relatórios filtram por congregação | 🔴 | 🔴 | 🔴 | 🔴 | — |
+| 12 | BLoC escuta `CongregationContextCubit` | ✅ | ✅ | ✅ | ✅ | ✅ |
+| 13 | Dropdown de congregação no Form (Flutter) | ✅ | ✅ | ✅ | ✅ | ✅ |
+| 14 | Badge de congregação na lista (Flutter) | ✅ | ✅ | ✅ | ✅ | ✅ |
+| 15 | Relatórios filtram por congregação | ✅ | ✅ | ✅ | ✅ | — |
 | 16 | Dashboard filtra por congregação | ✅ | ✅ | ✅ | ✅ | — |
 
-> ✅ = Implementado | 🔴 = Pendente | ✅* = BLoC Event aceita `congregationId` (pronto para integrar com cubit listener nas telas)
+> ✅ = Implementado | 🔴 = Pendente
 
 ### 9.2 Checklist para Novos Módulos
 

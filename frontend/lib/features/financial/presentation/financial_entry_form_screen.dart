@@ -6,7 +6,9 @@ import '../../../core/network/api_client.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../core/widgets/congregation_dropdown_field.dart';
 import '../../../core/widgets/inline_create_dropdown.dart';
+import '../../congregations/bloc/congregation_context_cubit.dart';
 import '../bloc/financial_bloc.dart';
 import '../bloc/financial_event_state.dart';
 import '../data/financial_repository.dart';
@@ -22,8 +24,12 @@ class FinancialEntryFormScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final apiClient = RepositoryProvider.of<ApiClient>(context);
     final repo = FinancialRepository(apiClient: apiClient);
+    final congCubit = context.read<CongregationContextCubit>();
     return BlocProvider(
-      create: (_) => FinancialBloc(repository: repo),
+      create: (_) => FinancialBloc(
+        repository: repo,
+        congregationCubit: congCubit,
+      ),
       child: _EntryFormView(initialType: initialType, entryId: entryId, repository: repo),
     );
   }
@@ -63,12 +69,14 @@ class _EntryFormViewState extends State<_EntryFormView> {
   List<Campaign> _campaigns = [];
   bool _loadingOptions = true;
   bool _isEditing = false;
+  String? _selectedCongregationId;
 
   @override
   void initState() {
     super.initState();
     _type = widget.initialType ?? 'receita';
     _isEditing = widget.entryId != null;
+    _selectedCongregationId = context.read<CongregationContextCubit>().state.activeCongregationId;
     _loadOptions();
   }
 
@@ -114,6 +122,7 @@ class _EntryFormViewState extends State<_EntryFormView> {
             if (entry.notes != null) {
               _notesController.text = entry.notes!;
             }
+            _selectedCongregationId = entry.congregationId ?? _selectedCongregationId;
           });
         }
       }
@@ -156,6 +165,7 @@ class _EntryFormViewState extends State<_EntryFormView> {
       if (_paymentDate != null) 'payment_date': _formatDateISO(_paymentDate!),
       if (_supplierController.text.isNotEmpty) 'supplier_name': _supplierController.text.trim(),
       if (_notesController.text.isNotEmpty) 'notes': _notesController.text.trim(),
+      'congregation_id': _selectedCongregationId,
     };
 
     context.read<FinancialBloc>().add(
@@ -302,6 +312,11 @@ class _EntryFormViewState extends State<_EntryFormView> {
                               const SizedBox(height: AppSpacing.md),
                             ],
                             _buildNotesField(),
+                            const SizedBox(height: AppSpacing.md),
+                            CongregationDropdownField(
+                              value: _selectedCongregationId,
+                              onChanged: (v) => setState(() => _selectedCongregationId = v),
+                            ),
                             const SizedBox(height: AppSpacing.xl),
 
                             // Submit

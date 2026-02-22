@@ -6,7 +6,10 @@ import '../../../core/network/api_client.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../core/widgets/congregation_dropdown_field.dart';
 import '../../../core/widgets/inline_create_dropdown.dart';
+import '../../../core/widgets/congregation_badge.dart';
+import '../../congregations/bloc/congregation_context_cubit.dart';
 import '../bloc/ebd_bloc.dart';
 import '../bloc/ebd_event_state.dart';
 import '../data/ebd_repository.dart';
@@ -18,10 +21,14 @@ class EbdClassListScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final apiClient = RepositoryProvider.of<ApiClient>(context);
+    final congCubit = context.read<CongregationContextCubit>();
     return BlocProvider(
       create: (_) => EbdBloc(
         repository: EbdRepository(apiClient: apiClient),
-      )..add(const EbdClassesLoadRequested()),
+        congregationCubit: congCubit,
+      )..add(EbdClassesLoadRequested(
+          congregationId: congCubit.state.activeCongregationId,
+        )),
       child: const _ClassListView(),
     );
   }
@@ -144,6 +151,7 @@ class _ClassListView extends StatelessWidget {
     final repo = EbdRepository(apiClient: apiClient);
     final bloc = context.read<EbdBloc>();
     String? selectedTermId;
+    String? selectedCongregationId = context.read<CongregationContextCubit>().state.activeCongregationId;
     final outerContext = context;
 
     showDialog(
@@ -248,8 +256,11 @@ class _ClassListView extends StatelessWidget {
                         decoration: const InputDecoration(
                           labelText: 'Capacidade Máxima',
                         ),
-                      ),
-                    ],
+                      ),                      const SizedBox(height: AppSpacing.md),
+                      CongregationDropdownField(
+                        value: selectedCongregationId,
+                        onChanged: (v) => setDialogState(() => selectedCongregationId = v),
+                      ),                    ],
                   ),
                 ),
                 actions: [
@@ -277,6 +288,7 @@ class _ClassListView extends StatelessWidget {
                       if (capacityCtrl.text.isNotEmpty) {
                         data['max_capacity'] = int.tryParse(capacityCtrl.text);
                       }
+                      data['congregation_id'] = selectedCongregationId;
                       bloc.add(
                             EbdClassCreateRequested(data: data),
                           );
@@ -431,6 +443,9 @@ class _ClassTile extends StatelessWidget {
                         style: AppTypography.bodyMedium
                             .copyWith(fontWeight: FontWeight.w600)),
                     const SizedBox(height: 2),
+                    CongregationBadge(congregationName: classSummary.congregationName),
+                    if (classSummary.congregationName != null && classSummary.congregationName!.isNotEmpty)
+                      const SizedBox(height: 2),
                     Text(
                       classSummary.ageRangeLabel,
                       style: AppTypography.bodySmall

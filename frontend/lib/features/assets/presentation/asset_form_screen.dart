@@ -6,7 +6,9 @@ import '../../../core/network/api_client.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../core/widgets/congregation_dropdown_field.dart';
 import '../../../core/widgets/inline_create_dropdown.dart';
+import '../../congregations/bloc/congregation_context_cubit.dart';
 import '../bloc/asset_bloc.dart';
 import '../bloc/asset_event_state.dart';
 import '../data/asset_repository.dart';
@@ -49,11 +51,16 @@ class _AssetFormScreenState extends State<AssetFormScreen> {
   List<AssetCategory> _categories = [];
   bool _loadingCategories = true;
 
+  // Congregation
+  String? _selectedCongregationId;
+
   @override
   void initState() {
     super.initState();
     final a = widget.existingAsset;
     _initControllers(a);
+    _selectedCongregationId = a?.congregationId
+        ?? context.read<CongregationContextCubit>().state.activeCongregationId;
     _loadCategories();
     // If no existing asset but we have an ID, fetch it
     if (a == null && widget.assetId != null) {
@@ -108,6 +115,7 @@ class _AssetFormScreenState extends State<AssetFormScreen> {
           }
           _loadingAsset = false;
         });
+        _selectedCongregationId = asset.congregationId ?? _selectedCongregationId;
       }
     } catch (_) {
       if (mounted) setState(() => _loadingAsset = false);
@@ -241,9 +249,14 @@ class _AssetFormScreenState extends State<AssetFormScreen> {
       data['location'] = _locationCtrl.text.trim();
     }
     if (_notesCtrl.text.isNotEmpty) data['notes'] = _notesCtrl.text.trim();
+    data['congregation_id'] = _selectedCongregationId;
 
     final apiClient = RepositoryProvider.of<ApiClient>(context);
-    final bloc = AssetBloc(repository: AssetRepository(apiClient: apiClient));
+    final congCubit = context.read<CongregationContextCubit>();
+    final bloc = AssetBloc(
+      repository: AssetRepository(apiClient: apiClient),
+      congregationCubit: congCubit,
+    );
 
     if (_isEditing) {
       final editId = widget.existingAsset?.id ?? _resolvedAsset?.id ?? widget.assetId!;
@@ -473,6 +486,16 @@ class _AssetFormScreenState extends State<AssetFormScreen> {
                   labelText: 'Observações',
                   alignLabelWithHint: true,
                 ),
+              ),
+              const SizedBox(height: AppSpacing.xxl),
+
+              Text('Congregação',
+                  style: AppTypography.headingSmall
+                      .copyWith(fontSize: 16, fontWeight: FontWeight.w700)),
+              const SizedBox(height: AppSpacing.md),
+              CongregationDropdownField(
+                value: _selectedCongregationId,
+                onChanged: (v) => setState(() => _selectedCongregationId = v),
               ),
               const SizedBox(height: AppSpacing.xxl),
             ],

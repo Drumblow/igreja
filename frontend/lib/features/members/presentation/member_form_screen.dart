@@ -7,6 +7,7 @@ import '../../../core/network/api_client.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../core/widgets/congregation_dropdown_field.dart';
 import '../../congregations/bloc/congregation_context_cubit.dart';
 import '../bloc/member_bloc.dart';
 import '../bloc/member_event_state.dart';
@@ -131,11 +132,16 @@ class _MemberFormViewState extends State<_MemberFormView> {
   List<ChurchRole> _churchRoles = [];
   bool _rolesLoading = true;
 
+  // Congregation
+  String? _selectedCongregationId;
+
   final _dateFormat = DateFormat('dd/MM/yyyy');
 
   @override
   void initState() {
     super.initState();
+    _selectedCongregationId = widget.existingMember?.congregationId
+        ?? context.read<CongregationContextCubit>().state.activeCongregationId;
     _loadChurchRoles();
   }
 
@@ -229,6 +235,7 @@ class _MemberFormViewState extends State<_MemberFormView> {
     addDate('ordination_date', _ordinationDate);
     addDate('marriage_date', _marriageDate);
     addIfNotEmpty('notes', _notesCtrl.text);
+    data['congregation_id'] = _selectedCongregationId;
 
     if (_isEditing) {
       context.read<MemberBloc>().add(MemberUpdateRequested(
@@ -359,6 +366,14 @@ class _MemberFormViewState extends State<_MemberFormView> {
                 decoration: const InputDecoration(
                   hintText: 'Observações gerais sobre o membro...',
                 ),
+              ),
+              const SizedBox(height: AppSpacing.xxl),
+
+              _sectionTitle('Congregação', Icons.church_outlined),
+              const SizedBox(height: AppSpacing.md),
+              CongregationDropdownField(
+                value: _selectedCongregationId,
+                onChanged: (v) => setState(() => _selectedCongregationId = v),
               ),
               const SizedBox(height: AppSpacing.xxxl),
 

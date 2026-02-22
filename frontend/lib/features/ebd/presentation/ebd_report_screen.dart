@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../congregations/bloc/congregation_context_cubit.dart';
 import '../bloc/ebd_bloc.dart';
 import '../bloc/ebd_event_state.dart';
 import '../data/ebd_repository.dart';
@@ -13,9 +14,14 @@ class EbdReportScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final congCubit = context.read<CongregationContextCubit>();
     return BlocProvider(
-      create: (context) => EbdBloc(repository: context.read<EbdRepository>())
-        ..add(const EbdTermsLoadRequested()),
+      create: (context) => EbdBloc(
+        repository: context.read<EbdRepository>(),
+        congregationCubit: congCubit,
+      )..add(EbdTermsLoadRequested(
+          congregationId: congCubit.state.activeCongregationId,
+        )),
       child: const _EbdReportView(),
     );
   }

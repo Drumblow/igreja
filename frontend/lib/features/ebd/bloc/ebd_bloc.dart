@@ -1,13 +1,21 @@
-import 'package:flutter_bloc/flutter_bloc.dart';
+import 'dart:async';
 
+import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../congregations/bloc/congregation_context_cubit.dart';
 import '../data/ebd_repository.dart';
 import '../data/models/ebd_models.dart';
 import 'ebd_event_state.dart';
 
 class EbdBloc extends Bloc<EbdEvent, EbdState> {
   final EbdRepository repository;
+  final CongregationContextCubit _congregationCubit;
+  late final StreamSubscription<CongregationContextState> _congSub;
 
-  EbdBloc({required this.repository}) : super(const EbdInitial()) {
+  EbdBloc({
+    required this.repository,
+    required CongregationContextCubit congregationCubit,
+  })  : _congregationCubit = congregationCubit,
+        super(const EbdInitial()) {
     // Terms
     on<EbdTermsLoadRequested>(_onTermsLoad);
     on<EbdTermCreateRequested>(_onTermCreate);
@@ -61,6 +69,28 @@ class EbdBloc extends Bloc<EbdEvent, EbdState> {
     on<EbdTermReportLoadRequested>(_onTermReportLoad);
     on<EbdTermRankingLoadRequested>(_onTermRankingLoad);
     on<EbdAbsentStudentsLoadRequested>(_onAbsentStudentsLoad);
+
+    // Re-load terms/classes when active congregation changes
+    _congSub = _congregationCubit.stream.listen((congState) {
+      if (state is EbdTermsLoaded) {
+        add(EbdTermsLoadRequested(
+          congregationId: congState.activeCongregationId,
+        ));
+      } else if (state is EbdClassesLoaded) {
+        add(EbdClassesLoadRequested(
+          congregationId: congState.activeCongregationId,
+        ));
+      }
+    });
+  }
+
+  String? get _activeCongregationId =>
+      _congregationCubit.state.activeCongregationId;
+
+  @override
+  Future<void> close() {
+    _congSub.cancel();
+    return super.close();
   }
 
   // ==========================================
@@ -70,7 +100,8 @@ class EbdBloc extends Bloc<EbdEvent, EbdState> {
   Future<void> _onTermsLoad(EbdTermsLoadRequested event, Emitter<EbdState> emit) async {
     emit(const EbdLoading());
     try {
-      final terms = await repository.getTerms(congregationId: event.congregationId);
+      final congregationId = event.congregationId ?? _activeCongregationId;
+      final terms = await repository.getTerms(congregationId: congregationId);
       emit(EbdTermsLoaded(terms: terms));
     } catch (e) {
       emit(EbdError(message: 'Erro ao carregar trimestres: $e'));
@@ -105,10 +136,11 @@ class EbdBloc extends Bloc<EbdEvent, EbdState> {
     final isLoadMore = event.page > 1;
     if (!isLoadMore) emit(const EbdLoading());
     try {
+      final congregationId = event.congregationId ?? _activeCongregationId;
       final (newClasses, meta) = await repository.getClasses(
         termId: event.termId,
         isActive: event.isActive,
-        congregationId: event.congregationId,
+        congregationId: congregationId,
         page: event.page,
       );
       final existing = isLoadMore && state is EbdClassesLoaded

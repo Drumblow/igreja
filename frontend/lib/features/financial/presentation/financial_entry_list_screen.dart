@@ -7,6 +7,8 @@ import '../../../core/network/api_client.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../core/widgets/congregation_badge.dart';
+import '../../congregations/bloc/congregation_context_cubit.dart';
 import '../bloc/financial_bloc.dart';
 import '../bloc/financial_event_state.dart';
 import '../data/financial_repository.dart';
@@ -19,10 +21,14 @@ class FinancialEntryListScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final apiClient = RepositoryProvider.of<ApiClient>(context);
+    final congCubit = context.read<CongregationContextCubit>();
     return BlocProvider(
       create: (_) => FinancialBloc(
         repository: FinancialRepository(apiClient: apiClient),
-      )..add(const FinancialEntriesLoadRequested()),
+        congregationCubit: congCubit,
+      )..add(FinancialEntriesLoadRequested(
+          congregationId: congCubit.state.activeCongregationId,
+        )),
       child: const _EntryListView(),
     );
   }
@@ -463,6 +469,9 @@ class _EntryTile extends StatelessWidget {
                     const SizedBox(height: 2),
                     Row(
                       children: [
+                        CongregationBadge(congregationName: entry.congregationName),
+                        if (entry.congregationName != null && entry.congregationName!.isNotEmpty)
+                          const SizedBox(width: AppSpacing.xs),
                         Text(
                           _formatDateBR(entry.entryDate),
                           style: AppTypography.bodySmall.copyWith(color: AppColors.textMuted),

@@ -7,6 +7,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/searchable_entity_dropdown.dart';
+import '../../congregations/bloc/congregation_context_cubit.dart';
 import '../../members/data/member_repository.dart';
 import '../bloc/ebd_bloc.dart';
 import '../bloc/ebd_event_state.dart';
@@ -20,9 +21,11 @@ class EbdClassDetailScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final apiClient = RepositoryProvider.of<ApiClient>(context);
+    final congCubit = context.read<CongregationContextCubit>();
     return BlocProvider(
       create: (_) => EbdBloc(
         repository: EbdRepository(apiClient: apiClient),
+        congregationCubit: congCubit,
       )..add(EbdClassDetailLoadRequested(classId: classId)),
       child: _ClassDetailView(classId: classId),
     );

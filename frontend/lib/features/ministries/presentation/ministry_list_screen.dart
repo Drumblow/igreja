@@ -6,6 +6,8 @@ import '../../../core/network/api_client.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../core/widgets/congregation_badge.dart';
+import '../../congregations/bloc/congregation_context_cubit.dart';
 import '../bloc/ministry_bloc.dart';
 import '../bloc/ministry_event_state.dart';
 import '../data/ministry_repository.dart';
@@ -17,10 +19,14 @@ class MinistryListScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final apiClient = RepositoryProvider.of<ApiClient>(context);
+    final congCubit = context.read<CongregationContextCubit>();
     return BlocProvider(
       create: (_) => MinistryBloc(
         repository: MinistryRepository(apiClient: apiClient),
-      )..add(const MinistriesLoadRequested()),
+        congregationCubit: congCubit,
+      )..add(MinistriesLoadRequested(
+          congregationId: congCubit.state.activeCongregationId,
+        )),
       child: const _MinistryListView(),
     );
   }
@@ -323,6 +329,9 @@ class _MinistryTile extends StatelessWidget {
                       ),
                     Row(
                       children: [
+                        CongregationBadge(congregationName: ministry.congregationName),
+                        if (ministry.congregationName != null && ministry.congregationName!.isNotEmpty)
+                          const SizedBox(width: AppSpacing.xs),
                         if (ministry.leaderName != null) ...[
                           Icon(Icons.person_outlined,
                               size: 14, color: AppColors.textMuted),

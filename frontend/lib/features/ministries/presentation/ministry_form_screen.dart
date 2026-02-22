@@ -6,6 +6,8 @@ import '../../../core/network/api_client.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../core/widgets/congregation_dropdown_field.dart';
+import '../../congregations/bloc/congregation_context_cubit.dart';
 import '../../members/data/member_repository.dart';
 import '../../members/data/models/member_models.dart';
 import '../bloc/ministry_bloc.dart';
@@ -28,10 +30,14 @@ class MinistryFormScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final apiClient = RepositoryProvider.of<ApiClient>(context);
     final repo = MinistryRepository(apiClient: apiClient);
+    final congCubit = context.read<CongregationContextCubit>();
 
     if (existingMinistry != null || ministryId == null) {
       return BlocProvider(
-        create: (_) => MinistryBloc(repository: repo),
+        create: (_) => MinistryBloc(
+          repository: repo,
+          congregationCubit: congCubit,
+        ),
         child: _MinistryFormView(existingMinistry: existingMinistry),
       );
     }
@@ -53,7 +59,10 @@ class MinistryFormScreen extends StatelessWidget {
           );
         }
         return BlocProvider(
-          create: (_) => MinistryBloc(repository: repo),
+          create: (_) => MinistryBloc(
+            repository: repo,
+            congregationCubit: congCubit,
+          ),
           child: _MinistryFormView(existingMinistry: snapshot.data),
         );
       },
@@ -82,12 +91,15 @@ class _MinistryFormViewState extends State<_MinistryFormView> {
 
   String? _selectedLeaderId;
   String? _selectedLeaderName;
+  String? _selectedCongregationId;
 
   @override
   void initState() {
     super.initState();
     _selectedLeaderId = widget.existingMinistry?.leaderId;
     _selectedLeaderName = widget.existingMinistry?.leaderName;
+    _selectedCongregationId = widget.existingMinistry?.congregationId
+        ?? context.read<CongregationContextCubit>().state.activeCongregationId;
   }
 
   @override
@@ -113,6 +125,7 @@ class _MinistryFormViewState extends State<_MinistryFormView> {
     if (_selectedLeaderId != null) {
       data['leader_id'] = _selectedLeaderId;
     }
+    data['congregation_id'] = _selectedCongregationId;
 
     if (_isEditing) {
       data['is_active'] = _isActive;
@@ -212,6 +225,16 @@ class _MinistryFormViewState extends State<_MinistryFormView> {
                   decoration: const InputDecoration(
                     hintText: 'Descrição do ministério...',
                   ),
+                ),
+              ),
+
+              const SizedBox(height: AppSpacing.xxl),
+              _sectionTitle('Congregação', Icons.church_outlined),
+              const SizedBox(height: AppSpacing.md),
+              _card(
+                child: CongregationDropdownField(
+                  value: _selectedCongregationId,
+                  onChanged: (v) => setState(() => _selectedCongregationId = v),
                 ),
               ),
 

@@ -6,6 +6,7 @@ import '../../../core/network/api_client.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../congregations/bloc/congregation_context_cubit.dart';
 import '../bloc/financial_bloc.dart';
 import '../bloc/financial_event_state.dart';
 import '../data/financial_repository.dart';
@@ -17,10 +18,14 @@ class FinancialOverviewScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final apiClient = RepositoryProvider.of<ApiClient>(context);
+    final congCubit = context.read<CongregationContextCubit>();
     return BlocProvider(
       create: (_) => FinancialBloc(
         repository: FinancialRepository(apiClient: apiClient),
-      )..add(const FinancialBalanceLoadRequested()),
+        congregationCubit: congCubit,
+      )..add(FinancialBalanceLoadRequested(
+          congregationId: congCubit.state.activeCongregationId,
+        )),
       child: const _FinancialOverviewView(),
     );
   }

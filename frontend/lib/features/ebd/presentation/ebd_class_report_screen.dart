@@ -5,6 +5,7 @@ import '../../../core/network/api_client.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../congregations/bloc/congregation_context_cubit.dart';
 import '../bloc/ebd_bloc.dart';
 import '../bloc/ebd_event_state.dart';
 import '../data/ebd_repository.dart';
@@ -16,9 +17,11 @@ class EbdClassReportScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final apiClient = RepositoryProvider.of<ApiClient>(context);
+    final congCubit = context.read<CongregationContextCubit>();
     return BlocProvider(
       create: (_) => EbdBloc(
         repository: EbdRepository(apiClient: apiClient),
+        congregationCubit: congCubit,
       )..add(EbdClassReportLoadRequested(classId: classId)),
       child: _ReportView(classId: classId),
     );

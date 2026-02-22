@@ -1,8 +1,8 @@
 # 📊 Andamento do Projeto — Igreja Manager
 
 > **Última atualização:** 21 de fevereiro de 2026  
-> **Versão do documento:** 1.19
-> **Status geral do projeto:** Em Desenvolvimento Ativo (~99.9% concluído)
+> **Versão do documento:** 1.20
+> **Status geral do projeto:** Em Desenvolvimento Ativo (~100% concluído)
 
 ---
 
@@ -34,7 +34,7 @@ O **Igreja Manager** é uma plataforma de gestão para igrejas composta por **6 
 | Frontend — Financeiro | ![95%](https://img.shields.io/badge/95%25-green) | 🟢 7 telas + BLoC + Paginação + Filtro data + Swipe-to-delete + Fechamento Mensal |
 | Frontend — Patrimônio | ![95%](https://img.shields.io/badge/95%25-green) | 🟢 12 telas + BLoC + Paginação + Filtro categoria + Edit navigation fix |
 | Frontend — EBD | ![98%](https://img.shields.io/badge/98%25-brightgreen) | ✅ Overview + 10 telas + BLoC + Relatórios + Paginação (E1–E7 + F1) |
-| Frontend — Relatórios | ![100%](https://img.shields.io/badge/100%25-brightgreen) | ✅ Tela central + métricas (4 módulos) + Gráficos fl_chart (pie + bar) + aniversariantes |
+| Frontend — Relatórios | ![100%](https://img.shields.io/badge/100%25-brightgreen) | ✅ Tela central + métricas (4 módulos) + Gráficos fl_chart (pie + bar) + aniversariantes + Filtro por congregação |
 | Backend — Congregações | ![100%](https://img.shields.io/badge/100%25-brightgreen) | ✅ CRUD + Stats + Users + Assign Members + Overview + Compare (13 endpoints) + Audit + Cache |
 | Frontend — Congregações | ![100%](https://img.shields.io/badge/100%25-brightgreen) | ✅ 6 telas + BLoC + Context Cubit + Selector no AppShell + Nav item + Relatórios |
 | Frontend — Configurações | ![100%](https://img.shields.io/badge/100%25-brightgreen) | ✅ NOVO — Igrejas + Usuários/Papéis + Congregações (3 telas + BLoC + Repositório) |
@@ -1084,7 +1084,55 @@ Crates/packages importados mas ainda sem uso no código — preparados para fase
 
 ---
 
-## 9.1 Changelog — Sessão v1.19 (21/02/2026)
+## 9.1 Changelog — Sessão v1.20 (21/02/2026)
+
+Conclusão do **Padrão de Integração Modular** (doc 11, itens 12–15) — frontend Flutter totalmente integrado com congregações em todos os 5 módulos.
+
+### Flutter — BLoC Listener Auto-Reload (item 12)
+- **`financial_bloc.dart`** — Escuta `CongregationContextCubit` e re-dispatcha `FinancialEntriesLoadRequested` (preserva filtros)
+- **`ministry_bloc.dart`** — Escuta e re-dispatcha `MinistriesLoadRequested` (preserva search)
+- **`asset_bloc.dart`** — Escuta e re-dispatcha `AssetsLoadRequested` (preserva search/status/condition)
+- **`ebd_bloc.dart`** — Escuta e re-dispatcha `EbdTermsLoadRequested` ou `EbdClassesLoadRequested` dependendo do estado
+
+### Flutter — Telas Atualizadas com `congregationCubit` (item 12 cont.)
+- **30+ telas** recebem `context.read<CongregationContextCubit>()` e passam ao BLoC:
+  - Financeiro (7 telas): overview, entry list/form, campaigns, bank accounts, account plans, monthly closings
+  - Ministérios (2 telas): list, form (2 BlocProviders)
+  - Patrimônio (7 telas): overview, list, form, categories, loans, inventory, maintenance
+  - EBD (11 telas): terms, classes, class detail, attendance, activities, lessons, lesson detail, students, student profile, class report, report
+
+### Flutter — Badge de Congregação (item 14)
+- **Novo widget**: `core/widgets/congregation_badge.dart` — `CongregationBadge` com ícone igreja + nome, só visível quando "Todas" selecionada
+- Adicionado em 4 list tiles: `_EntryTile` (financeiro), `_MinistryTile`, `_AssetTile`, `_ClassTile` (EBD)
+
+### Flutter — Dropdown de Congregação nos Forms (item 13)
+- **Novo widget**: `core/widgets/congregation_dropdown_field.dart` — `CongregationDropdownField` reutilizável com "Sede / Geral" + congregações ativas
+- Adicionado em 6 formulários:
+  - `member_form_screen.dart` — seção "Congregação" com pré-seleção
+  - `financial_entry_form_screen.dart` — dropdown antes do submit
+  - `ministry_form_screen.dart` — seção "Congregação" em card
+  - `asset_form_screen.dart` — seção "Congregação" antes do final
+  - `ebd_term_list_screen.dart` — dropdown no dialog de criação
+  - `ebd_class_list_screen.dart` — dropdown no dialog de criação
+- Todos incluem `congregation_id` no data map de submit
+
+### Flutter — Relatórios Filtram por Congregação (item 15)
+- **`reports_screen.dart`** — Escuta `CongregationContextCubit`, auto-recarrega ao trocar congregação
+  - `memberRepo.getStats(congregationId:)`, `memberRepo.getMembers(congregationId:)`
+  - `financialRepo.getBalanceReport(congregationId:)`
+  - `_loadAssetStats(congregationId:)`, `_loadEbdStats(congregationId:)`
+
+### Documentação
+- **doc 11** — Checklist items 12–16 todos ✅ (100% concluído)
+- **doc 07** — v1.20 changelog + tabela "O que falta" atualizada
+
+### Estatísticas
+- **Arquivos modificados**: 40+ (4 BLoCs + 30 telas + 2 novos widgets + 1 relatório + 2 docs)
+- **flutter analyze**: 0 errors (65 info/warnings pre-existentes)
+
+---
+
+## 9.2 Changelog — Sessão v1.19 (21/02/2026)
 
 Implementação do **Padrão de Integração Modular** (doc 11) — `congregation_id` integrado em todos os 5 módulos (Membros, Financeiro, Patrimônio, EBD, Ministérios) tanto no backend Rust como no frontend Flutter.
 
@@ -1196,16 +1244,16 @@ Implementação do **Padrão de Integração Modular** (doc 11) — `congregatio
 
 | # | Tarefa | Descrição | Prioridade |
 |---|--------|-----------|:----------:|
-| 1 | Dropdown de congregação nos forms | Widget reutilizável de seleção em formulários de criação/edição de todos os módulos | 🟡 Média |
-| 2 | Badge de congregação nas listas | Chip/tag mostrando nome da congregação nos cards de listagem (visão "Todas") | 🟡 Média |
-| 3 | BLoC listener no CongregationContextCubit | Telas de lista devem auto-recarregar ao trocar congregação (como Membros já faz) | 🟡 Média |
-| 4 | Relatórios filtram por congregação | Tela de relatórios gerais deve passar `congregationId` nas queries | 🟡 Média |
+| 1 | ~~Dropdown de congregação nos forms~~ | ✅ **Concluído** (v1.20) — `CongregationDropdownField` em 6 forms | — |
+| 2 | ~~Badge de congregação nas listas~~ | ✅ **Concluído** (v1.20) — `CongregationBadge` em 4 listas | — |
+| 3 | ~~BLoC listener no CongregationContextCubit~~ | ✅ **Concluído** (v1.20) — 4 BLoCs + 30 telas atualizadas | — |
+| 4 | ~~Relatórios filtram por congregação~~ | ✅ **Concluído** (v1.20) — `ReportsScreen` passa `congregationId` | — |
 | 5 | `resolve_congregation_access()` | Backend: restringir acesso por papel (dirigente só vê sua congregação) | 🔴 Alta |
 | 6 | Feature Flags (tabela `church_modules`) | Habilitar/desabilitar módulos por tenant | 🟢 Baixa |
 
 ---
 
-## 9.2 Changelog — Sessão v1.18 (20/02/2026)
+## 9.3 Changelog — Sessão v1.18 (20/02/2026)
 
 Evolução do módulo de Congregações: endpoint comparativo, relatórios, gestão de usuários, transaction safety e correções de navegação.
 
@@ -1261,7 +1309,7 @@ Evolução do módulo de Congregações: endpoint comparativo, relatórios, gest
 
 ---
 
-## 9.3 Changelog — Sessão v1.17 (20/02/2026)
+## 9.4 Changelog — Sessão v1.17 (20/02/2026)
 
 Integração do módulo de Congregações com módulos existentes (Fases 2 e 4 parciais):
 
@@ -1302,7 +1350,7 @@ Integração do módulo de Congregações com módulos existentes (Fases 2 e 4 p
 
 ---
 
-## 9.4 Changelog — Sessão v1.16 (20/02/2026)
+## 9.5 Changelog — Sessão v1.16 (20/02/2026)
 
 Melhorias implementadas nesta sessão:
 
@@ -1357,7 +1405,7 @@ Melhorias implementadas nesta sessão:
 
 ---
 
-## 9.5 Changelog — Sessão v1.15 (19/02/2026)
+## 9.6 Changelog — Sessão v1.15 (19/02/2026)
 
 Melhorias implementadas nesta sessão:
 
@@ -1403,7 +1451,7 @@ Melhorias implementadas nesta sessão:
 
 ---
 
-## 9.6 Changelog — Sessão v1.14 (20/02/2026)
+## 9.7 Changelog — Sessão v1.14 (20/02/2026)
 
 Melhorias implementadas nesta sessão para aumentar completude do frontend:
 

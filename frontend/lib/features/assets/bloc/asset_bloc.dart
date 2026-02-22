@@ -1,12 +1,20 @@
+import 'dart:async';
+
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../congregations/bloc/congregation_context_cubit.dart';
 import '../data/asset_repository.dart';
 import 'asset_event_state.dart';
 
 class AssetBloc extends Bloc<AssetEvent, AssetState> {
   final AssetRepository _repository;
+  final CongregationContextCubit _congregationCubit;
+  late final StreamSubscription<CongregationContextState> _congSub;
 
-  AssetBloc({required AssetRepository repository})
-      : _repository = repository,
+  AssetBloc({
+    required AssetRepository repository,
+    required CongregationContextCubit congregationCubit,
+  })  : _repository = repository,
+        _congregationCubit = congregationCubit,
         super(const AssetInitial()) {
     on<AssetsLoadRequested>(_onAssetsLoadRequested);
     on<AssetCreateRequested>(_onAssetCreateRequested);
@@ -23,6 +31,29 @@ class AssetBloc extends Bloc<AssetEvent, AssetState> {
     on<AssetLoansLoadRequested>(_onLoansLoadRequested);
     on<AssetLoanCreateRequested>(_onLoanCreateRequested);
     on<AssetLoanReturnRequested>(_onLoanReturnRequested);
+
+    // Re-load assets when active congregation changes
+    _congSub = _congregationCubit.stream.listen((congState) {
+      if (state is AssetListLoaded) {
+        final current = state as AssetListLoaded;
+        add(AssetsLoadRequested(
+          page: 1,
+          search: current.activeSearch,
+          status: current.activeStatus,
+          condition: current.activeCondition,
+          congregationId: congState.activeCongregationId,
+        ));
+      }
+    });
+  }
+
+  String? get _activeCongregationId =>
+      _congregationCubit.state.activeCongregationId;
+
+  @override
+  Future<void> close() {
+    _congSub.cancel();
+    return super.close();
   }
 
   Future<void> _onAssetsLoadRequested(
@@ -30,6 +61,7 @@ class AssetBloc extends Bloc<AssetEvent, AssetState> {
     Emitter<AssetState> emit,
   ) async {
     if (event.page == 1) emit(const AssetLoading());
+    final congregationId = event.congregationId ?? _activeCongregationId;
     try {
       final result = await _repository.getAssets(
         page: event.page,
@@ -37,7 +69,7 @@ class AssetBloc extends Bloc<AssetEvent, AssetState> {
         categoryId: event.categoryId,
         status: event.status,
         condition: event.condition,
-        congregationId: event.congregationId,
+        congregationId: congregationId,
       );
       final allAssets = event.page > 1 && state is AssetListLoaded
           ? [...(state as AssetListLoaded).assets, ...result.items]

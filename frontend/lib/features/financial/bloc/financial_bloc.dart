@@ -1,12 +1,20 @@
+import 'dart:async';
+
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../congregations/bloc/congregation_context_cubit.dart';
 import '../data/financial_repository.dart';
 import 'financial_event_state.dart';
 
 class FinancialBloc extends Bloc<FinancialEvent, FinancialState> {
   final FinancialRepository _repository;
+  final CongregationContextCubit _congregationCubit;
+  late final StreamSubscription<CongregationContextState> _congSub;
 
-  FinancialBloc({required FinancialRepository repository})
-      : _repository = repository,
+  FinancialBloc({
+    required FinancialRepository repository,
+    required CongregationContextCubit congregationCubit,
+  })  : _repository = repository,
+        _congregationCubit = congregationCubit,
         super(const FinancialInitial()) {
     on<FinancialEntriesLoadRequested>(_onEntriesLoadRequested);
     on<FinancialBalanceLoadRequested>(_onBalanceLoadRequested);
@@ -21,6 +29,31 @@ class FinancialBloc extends Bloc<FinancialEvent, FinancialState> {
     on<CampaignCreateRequested>(_onCampaignCreateRequested);
     on<MonthlyClosingsLoadRequested>(_onMonthlyClosingsLoadRequested);
     on<MonthlyClosingCreateRequested>(_onMonthlyClosingCreateRequested);
+
+    // Re-load entries when active congregation changes
+    _congSub = _congregationCubit.stream.listen((congState) {
+      if (state is FinancialEntriesLoaded) {
+        final current = state as FinancialEntriesLoaded;
+        add(FinancialEntriesLoadRequested(
+          page: 1,
+          search: current.activeSearch,
+          type: current.activeType,
+          status: current.activeStatus,
+          dateFrom: current.activeDateFrom,
+          dateTo: current.activeDateTo,
+          congregationId: congState.activeCongregationId,
+        ));
+      }
+    });
+  }
+
+  String? get _activeCongregationId =>
+      _congregationCubit.state.activeCongregationId;
+
+  @override
+  Future<void> close() {
+    _congSub.cancel();
+    return super.close();
   }
 
   Future<void> _onEntriesLoadRequested(
@@ -28,6 +61,7 @@ class FinancialBloc extends Bloc<FinancialEvent, FinancialState> {
     Emitter<FinancialState> emit,
   ) async {
     if (event.page == 1) emit(const FinancialLoading());
+    final congregationId = event.congregationId ?? _activeCongregationId;
     try {
       final result = await _repository.getEntries(
         page: event.page,
@@ -36,7 +70,7 @@ class FinancialBloc extends Bloc<FinancialEvent, FinancialState> {
         status: event.status,
         dateFrom: event.dateFrom,
         dateTo: event.dateTo,
-        congregationId: event.congregationId,
+        congregationId: congregationId,
       );
       final allEntries = event.page > 1 && state is FinancialEntriesLoaded
           ? [...(state as FinancialEntriesLoaded).entries, ...result.items]
@@ -62,10 +96,11 @@ class FinancialBloc extends Bloc<FinancialEvent, FinancialState> {
   ) async {
     emit(const FinancialLoading());
     try {
+      final congregationId = event.congregationId ?? _activeCongregationId;
       final balance = await _repository.getBalanceReport(
         dateFrom: event.dateFrom,
         dateTo: event.dateTo,
-        congregationId: event.congregationId,
+        congregationId: congregationId,
       );
       emit(FinancialBalanceLoaded(balance: balance));
     } catch (e) {

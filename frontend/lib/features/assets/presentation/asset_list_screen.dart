@@ -6,6 +6,8 @@ import '../../../core/network/api_client.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../core/widgets/congregation_badge.dart';
+import '../../congregations/bloc/congregation_context_cubit.dart';
 import '../bloc/asset_bloc.dart';
 import '../bloc/asset_event_state.dart';
 import '../data/asset_repository.dart';
@@ -17,10 +19,14 @@ class AssetListScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final apiClient = RepositoryProvider.of<ApiClient>(context);
+    final congCubit = context.read<CongregationContextCubit>();
     return BlocProvider(
       create: (_) => AssetBloc(
         repository: AssetRepository(apiClient: apiClient),
-      )..add(const AssetsLoadRequested()),
+        congregationCubit: congCubit,
+      )..add(AssetsLoadRequested(
+          congregationId: congCubit.state.activeCongregationId,
+        )),
       child: const _AssetListView(),
     );
   }
@@ -364,6 +370,9 @@ class _AssetTile extends StatelessWidget {
                     const SizedBox(height: 4),
                     Row(
                       children: [
+                        CongregationBadge(congregationName: asset.congregationName),
+                        if (asset.congregationName != null && asset.congregationName!.isNotEmpty)
+                          const SizedBox(width: AppSpacing.xs),
                         if (asset.categoryName != null)
                           Text(
                             asset.categoryName!,

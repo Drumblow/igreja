@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -8,6 +10,7 @@ import '../../../core/network/api_client.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../congregations/bloc/congregation_context_cubit.dart';
 import '../../financial/data/financial_repository.dart';
 import '../../financial/data/models/financial_models.dart';
 import '../../financial/presentation/format_utils.dart';
@@ -89,10 +92,21 @@ class _ReportsScreenState extends State<ReportsScreen> {
   // EBD
   _EbdReportStats? _ebdStats;
 
+  late final StreamSubscription<CongregationContextState> _congSub;
+
   @override
   void initState() {
     super.initState();
+    _congSub = context.read<CongregationContextCubit>().stream.listen((_) {
+      _loadReportData();
+    });
     _loadReportData();
+  }
+
+  @override
+  void dispose() {
+    _congSub.cancel();
+    super.dispose();
   }
 
   Future<void> _loadReportData() async {
@@ -102,16 +116,18 @@ class _ReportsScreenState extends State<ReportsScreen> {
       final apiClient = RepositoryProvider.of<ApiClient>(context);
       final memberRepo = MemberRepository(apiClient: apiClient);
       final financialRepo = FinancialRepository(apiClient: apiClient);
+      final congregationId = context.read<CongregationContextCubit>().state.activeCongregationId;
 
       final now = DateTime.now();
 
       final results = await Future.wait([
-        memberRepo.getStats(),
+        memberRepo.getStats(congregationId: congregationId),
         memberRepo.getMembers(
           perPage: 50,
           status: 'ativo',
+          congregationId: congregationId,
         ),
-        financialRepo.getBalanceReport().catchError(
+        financialRepo.getBalanceReport(congregationId: congregationId).catchError(
             (_) => const FinancialBalance(
                   totalIncome: 0,
                   totalExpense: 0,
@@ -119,8 +135,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   incomeByCategory: [],
                   expenseByCategory: [],
                 )),
-        _loadAssetStats(apiClient),
-        _loadEbdStats(apiClient),
+        _loadAssetStats(apiClient, congregationId),
+        _loadEbdStats(apiClient, congregationId),
       ]);
 
       if (mounted) {
@@ -149,9 +165,11 @@ class _ReportsScreenState extends State<ReportsScreen> {
     }
   }
 
-  Future<_AssetReportStats?> _loadAssetStats(ApiClient apiClient) async {
+  Future<_AssetReportStats?> _loadAssetStats(ApiClient apiClient, String? congregationId) async {
     try {
-      final response = await apiClient.dio.get('/v1/assets/stats');
+      final params = <String, dynamic>{};
+      if (congregationId != null) params['congregation_id'] = congregationId;
+      final response = await apiClient.dio.get('/v1/assets/stats', queryParameters: params);
       return _AssetReportStats.fromJson(
           response.data['data'] as Map<String, dynamic>);
     } catch (_) {
@@ -159,9 +177,11 @@ class _ReportsScreenState extends State<ReportsScreen> {
     }
   }
 
-  Future<_EbdReportStats?> _loadEbdStats(ApiClient apiClient) async {
+  Future<_EbdReportStats?> _loadEbdStats(ApiClient apiClient, String? congregationId) async {
     try {
-      final response = await apiClient.dio.get('/v1/ebd/stats');
+      final params = <String, dynamic>{};
+      if (congregationId != null) params['congregation_id'] = congregationId;
+      final response = await apiClient.dio.get('/v1/ebd/stats', queryParameters: params);
       return _EbdReportStats.fromJson(
           response.data['data'] as Map<String, dynamic>);
     } catch (_) {
